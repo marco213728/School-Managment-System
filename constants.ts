@@ -1,4 +1,6 @@
-import { User, Role, Student, Class, Activity, ActivityType, AttendanceRecord, AttendanceStatus, Notification, SupportContact, Intervention, InterventionType, OvpActivity, OvpAxis, HealthRecord, Institution, OcrSubmission, OcrSubmissionStatus, ScheduleEntry, MedicalVisit, Shift, TimeSlot, Subject, Room, Timetable, ViccIntervention, ViccInterventionType, ExitPass, Citacion, CitacionStatus, AcademicCalendarEvent, LeccionarioEntry } from './types';
+import { User, Role, Student, Class, Activity, ActivityType, AttendanceRecord, AttendanceStatus, Notification, SupportContact, Intervention, InterventionType, OvpActivity, OvpAxis, HealthRecord, Institution, OcrSubmission, OcrSubmissionStatus, ScheduleEntry, MedicalVisit, Shift, TimeSlot, Subject, Room, Timetable, ViccIntervention, ViccInterventionType, ExitPass, Citacion, CitacionStatus, AcademicCalendarEvent, LeccionarioEntry, MicroPlan, CurricularPlanStatus, GradeLevel, GRADE_LEVELS, Dcd, EvaluationCriterion, EvaluationIndicator, Competency, COMPETENCIES } from './types';
+
+export { GRADE_LEVELS, COMPETENCIES };
 
 export const ATTENDANCE_OBSERVATIONS: { [key: number]: string } = {
   1: 'Atraso a la hora clase',
@@ -115,7 +117,6 @@ export const MOCK_INSTITUTIONS: Institution[] = [
       },
       checkInOut: {
         enabled: true,
-        // FIX: Changed channel from 'internalMessaging' to 'sms' to align with the type definition which requires 'sms' | 'pushNotifications'.
         channel: 'sms',
         template: 'Salida Registrada: Su hijo/a [STUDENT_NAME] ha salido de la institución a las [TIME] acompañado/a por [RESPONSIBLE_NAME].',
       },
@@ -600,5 +601,162 @@ export const MOCK_LECCIONARIO_ENTRIES: LeccionarioEntry[] = [
     topics: 'Revisión de sumas y restas con llevadas.',
     tasks: 'Realizar ejercicios de la página 25 del libro de texto.',
     observations: 'Grupo participativo. Juan Martinez necesita refuerzo en restas.',
+  }
+];
+
+export const MOCK_MICRO_PLANS: MicroPlan[] = [
+  {
+    id: 'mp1',
+    institutionId: 'uemol',
+    teacherId: 'teacher1',
+    classId: 'class1',
+    subjectId: 'subj1',
+    academicYear: '2024-2025',
+    unitTitle: 'Unidad 1: Números Naturales',
+    unitObjectives: 'Comprender y utilizar los números naturales para resolver problemas cotidianos.',
+    dcdIds: ['dcd-m-1'],
+    methodology: 'Inicio: Lluvia de ideas sobre dónde vemos números. Desarrollo: Actividades con material concreto (ábaco, base 10). Cierre: Juego de bingo numérico.',
+    resources: 'Ábaco, material base 10, fichas de trabajo, proyector.',
+    evaluation: 'Observación directa, revisión de fichas, participación en el juego.',
+    adaptations: [{ studentId: 'student5', dcdModificada: 'Representar, escribir y leer los números naturales del 0 al 100.' }],
+    status: CurricularPlanStatus.Draft,
+    creationDate: '2024-08-20T10:00:00Z',
+  },
+  {
+    id: 'mp2',
+    institutionId: 'uemol',
+    teacherId: 'teacher2',
+    classId: 'class2',
+    subjectId: 'subj2',
+    academicYear: '2024-2025',
+    unitTitle: 'Unidad 1: La Antigua Grecia',
+    unitObjectives: 'Identificar los aportes de la civilización griega a la cultura occidental.',
+    dcdIds: ['dcd-ll-1'],
+    methodology: 'Presentación de video introductorio, trabajo en grupos para investigar sobre polis, arte y filosofía. Debate final.',
+    resources: 'Video, acceso a internet, cartulinas, marcadores.',
+    evaluation: 'Rúbrica para el trabajo grupal y participación en el debate.',
+    adaptations: [],
+    status: CurricularPlanStatus.PendingReview,
+    creationDate: '2024-08-21T11:00:00Z',
+    submittedDate: '2024-08-22T09:00:00Z',
+  },
+  {
+    id: 'mp3',
+    institutionId: 'uemol',
+    teacherId: 'teacher1',
+    classId: 'class1',
+    subjectId: 'subj1',
+    academicYear: '2024-2025',
+    unitTitle: 'Unidad 2: Suma y Resta',
+    unitObjectives: 'Aplicar algoritmos de la adición y sustracción con números naturales.',
+    dcdIds: ['dcd-m-1'],
+    methodology: 'Resolución de problemas en la pizarra, trabajo individual en el cuaderno, competencia por equipos.',
+    resources: 'Libro de texto, cuaderno, pizarra digital.',
+    evaluation: 'Revisión de cuadernos, prueba corta al final de la unidad.',
+    adaptations: [],
+    status: CurricularPlanStatus.Approved,
+    creationDate: '2024-08-15T14:00:00Z',
+    submittedDate: '2024-08-16T10:00:00Z',
+    reviewDate: '2024-08-18T15:00:00Z',
+    reviewerId: 'vicerrector1',
+  },
+   {
+    id: 'mp4',
+    institutionId: 'uemol',
+    teacherId: 'teacher2',
+    classId: 'class2',
+    subjectId: 'subj2',
+    academicYear: '2024-2025',
+    unitTitle: 'Unidad 2: El Imperio Romano',
+    unitObjectives: 'Analizar la expansión del Imperio Romano y su legado.',
+    dcdIds: ['dcd-ll-2'],
+    methodology: 'Análisis de mapas históricos, lectura de textos, creación de una línea de tiempo.',
+    resources: 'Mapas, textos, material para línea de tiempo.',
+    evaluation: 'Presentación de la línea de tiempo.',
+    adaptations: [],
+    status: CurricularPlanStatus.RequiresAdjustments,
+    creationDate: '2024-08-22T16:00:00Z',
+    submittedDate: '2024-08-23T10:00:00Z',
+    reviewDate: '2024-08-24T12:00:00Z',
+    reviewerId: 'vicerrector1',
+    reviewComments: 'Por favor, incluya una actividad de evaluación formativa intermedia para medir la comprensión de los estudiantes antes de la evaluación final. También, es necesario añadir una adaptación curricular para la estudiante Ana Diaz según el informe del DECE.'
+  }
+];
+
+export const MOCK_EVALUATION_CRITERIA: EvaluationCriterion[] = [
+  {
+    id: 'ce-ll-4-1',
+    institutionId: 'uemol',
+    code: 'CE.LL.4.1.',
+    description: 'Explica los aportes de la cultura escrita al desarrollo histórico, social y cultural de la humanidad y valora la diversidad del mundo expresada en textos escritos representativos de las diferentes culturas, en diversas épocas históricas.',
+    subjectId: 'subj2',
+    gradeLevel: 'EGB Superior',
+  },
+  {
+    id: 'ce-ll-4-2',
+    institutionId: 'uemol',
+    code: 'CE.LL.4.2.',
+    description: 'Explica la influencia de las variaciones lingüísticas socioculturales y situacionales del Ecuador en las relaciones sociales.',
+    subjectId: 'subj2',
+    gradeLevel: 'EGB Superior',
+  },
+  {
+    id: 'ce-m-4-1',
+    institutionId: 'uemol',
+    code: 'CE.M.4.1.',
+    description: 'Emplea las relaciones de orden, las propiedades algebraicas (adición y multiplicación), las operaciones con distintos tipos de números (Z, Q, I) y expresiones algebraicas, para afrontar inecuaciones y ecuaciones.',
+    subjectId: 'subj1',
+    gradeLevel: 'EGB Superior',
+  },
+];
+
+export const MOCK_EVALUATION_INDICATORS: EvaluationIndicator[] = [
+  {
+    id: 'ie-ll-4-1-1',
+    institutionId: 'uemol',
+    code: 'I.LL.4.1.1.',
+    description: 'Explica el origen, el desarrollo y la influencia de la escritura en distintos momentos históricos, regiones y culturas del mundo.',
+    criterionId: 'ce-ll-4-1',
+  },
+  {
+    id: 'ie-ll-4-2-1',
+    institutionId: 'uemol',
+    code: 'I.LL.4.2.1.',
+    description: 'Explica la influencia de las variaciones lingüísticas sociales y situacionales del Ecuador en las relaciones sociales.',
+    criterionId: 'ce-ll-4-2',
+  },
+];
+
+
+export const MOCK_DCDS: Dcd[] = [
+  {
+    id: 'dcd-m-1',
+    institutionId: 'uemol',
+    code: 'M.4.1.1.',
+    description: 'Reconocer los elementos del conjunto de números enteros Z, ejemplificando situaciones reales en las que se utilizan los números enteros negativos.',
+    subjectId: 'subj1',
+    gradeLevel: 'EGB Superior',
+    criterionId: 'ce-m-4-1',
+    competencies: ['Matemática']
+  },
+  {
+    id: 'dcd-ll-1',
+    institutionId: 'uemol',
+    code: 'LL.4.1.1.',
+    description: 'Indagar y explicar los aportes de la cultura escrita al desarrollo histórico, social y cultural de la humanidad.',
+    subjectId: 'subj2',
+    gradeLevel: 'EGB Superior',
+    criterionId: 'ce-ll-4-1',
+    competencies: ['Comunicacional', 'Socioemocional']
+  },
+  {
+    id: 'dcd-ll-2',
+    institutionId: 'uemol',
+    code: 'LL.4.1.3.',
+    description: 'Indagar sobre las variaciones lingüísticas socioculturales del Ecuador y explicar su influencia en las relaciones sociales.',
+    subjectId: 'subj2',
+    gradeLevel: 'EGB Superior',
+    criterionId: 'ce-ll-4-2',
+    competencies: ['Comunicacional']
   }
 ];

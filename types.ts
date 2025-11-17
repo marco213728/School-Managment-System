@@ -419,3 +419,74 @@ export interface LeccionarioEntry {
   tasks: string;
   observations: string;
 }
+
+// Curricular Planning Module Types
+export enum CurricularPlanStatus {
+  Draft = 'Borrador',
+  PendingReview = 'Pendiente de Revisión',
+  RequiresAdjustments = 'Requiere Ajustes',
+  Approved = 'Aprobado',
+}
+
+export interface AdaptacionCurricular {
+  studentId: string;
+  dcdModificada: string;
+}
+
+export interface MicroPlan {
+  id: string;
+  institutionId: string;
+  teacherId: string;
+  classId: string;
+  subjectId: string;
+  academicYear: string;
+  unitTitle: string;
+  unitObjectives: string;
+  dcdIds: string[];
+  methodology: string;
+  resources: string;
+  evaluation: string;
+  adaptations: AdaptacionCurricular[];
+  status: CurricularPlanStatus;
+  // Workflow fields
+  creationDate: string;
+  submittedDate?: string;
+  reviewDate?: string;
+  reviewerId?: string;
+  reviewComments?: string;
+}
+
+// Curriculum Repository Types
+export const GRADE_LEVELS = ['EGB Preparatoria', 'EGB Elemental', 'EGB Media', 'EGB Superior', 'BGU'] as const;
+export type GradeLevel = typeof GRADE_LEVELS[number];
+
+export const COMPETENCIES = ['Comunicacional', 'Matemática', 'Digital', 'Socioemocional'] as const;
+export type Competency = typeof COMPETENCIES[number];
+
+export interface EvaluationCriterion {
+  id: string;
+  institutionId: string;
+  code: string;
+  description: string;
+  subjectId: string;
+  gradeLevel: GradeLevel;
+}
+
+export interface EvaluationIndicator {
+  id: string;
+  institutionId: string;
+  code: string;
+  description: string;
+  criterionId: string;
+}
+
+export interface Dcd {
+  id: string;
+  institutionId: string;
+  code: string;
+  description: string;
+  subjectId: string;
+  gradeLevel: GradeLevel;
+  criterionId: string;
+  competencies: Competency[];
+}

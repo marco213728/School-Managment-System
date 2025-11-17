@@ -1,4 +1,3 @@
-
 import React, { useState, useContext, useMemo } from 'react';
 import { UserContext } from '../contexts/UserContext';
 import { MOCK_STUDENTS, MOCK_OCR_SUBMISSIONS, ATTENDANCE_OBSERVATIONS } from '../constants';
@@ -162,11 +161,14 @@ const TakeAttendanceManual: React.FC<AttendancePageProps> = ({ classes, timeSlot
             if (studentData) {
                 const existingRecord = existingRecordMap.get(student.id);
                 if (existingRecord) {
-                    updatedRecords.push({
+                    // FIX: Spread types may only be created from object types.
+                    // By separating the object creation with spread from the push call, we help the type checker.
+                    const updatedRecord = {
                         ...existingRecord,
                         status: studentData.status,
-                        observations: studentData.observations
-                    });
+                        observations: studentData.observations,
+                    };
+                    updatedRecords.push(updatedRecord);
                 } else {
                     newRecords.push({
                         id: `att-${student.id}-${selectedDate}-${selectedTimeSlot}`,
@@ -186,7 +188,6 @@ const TakeAttendanceManual: React.FC<AttendancePageProps> = ({ classes, timeSlot
              return !isForThisSession;
         });
 
-// FIX: Replaced spread syntax with `concat` to resolve a potential type inference issue with the spread operator.
         onUpdateAttendance(otherRecords.concat(updatedRecords, newRecords));
         setIsSubmitted(true);
         setTimeout(() => setIsSubmitted(false), 3000);

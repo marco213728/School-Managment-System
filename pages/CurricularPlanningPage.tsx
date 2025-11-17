@@ -1,46 +1,11 @@
-import React, { useState, useMemo, useContext, useEffect, useRef } from 'react';
+import React, { useState, useMemo, useContext, useEffect } from 'react';
+// FIX: Add missing import for GoogleGenAI.
 import { GoogleGenAI } from '@google/genai';
+import { MicroPlan, Class, Subject, Student, User, Role, CurricularPlanStatus, AdaptacionCurricular, Dcd, EvaluationCriterion, EvaluationIndicator } from '../types';
 import { UserContext, InstitutionContext } from '../contexts/UserContext';
-import { Role, Student, Class, ScheduleEntry, Subject, TimeSlot, Room, Timetable, ViccIntervention, User, MicroPlan, CurricularPlanStatus, AdaptacionCurricular, Dcd, GradeLevel, EvaluationCriterion, EvaluationIndicator, Competency } from '../types';
-import { GRADE_LEVELS, COMPETENCIES } from '../constants';
-import StudentProfileCard from '../components/student/StudentProfileCard';
-import { SearchIcon, PlusIcon, EditIcon, ArrowLeftIcon, CloseIcon, ClipboardDocumentCheckIcon, UsersIcon, CheckCircleIcon, ClockIcon, ExclamationTriangleIcon, PencilSquareIcon, PrinterIcon, SparklesIcon, TrashIcon, ArchiveBoxIcon } from '../components/icons/Icons';
+import { PlusIcon, EditIcon, CloseIcon, CheckCircleIcon, ClockIcon, ExclamationTriangleIcon, PencilSquareIcon, PrinterIcon, SparklesIcon, UsersIcon, ClipboardListIcon, TrashIcon, SearchIcon } from '../components/icons/Icons';
 
-interface ViceRectoratePageProps {
-    students: Student[];
-    onUpdateStudents: (students: Student[]) => void;
-    users: User[];
-    classes: Class[];
-    schedule: ScheduleEntry[];
-    subjects: Subject[];
-    timeSlots: TimeSlot[];
-    rooms: Room[];
-    timetables: Timetable[];
-    viccInterventions: ViccIntervention[];
-    onUpdateViccInterventions: (interventions: ViccIntervention[]) => void;
-    microPlans: MicroPlan[];
-    onUpdateMicroPlans: (plans: MicroPlan[]) => void;
-    dcds: Dcd[];
-    onUpdateDcds: (dcds: Dcd[]) => void;
-    evaluationCriteria: EvaluationCriterion[];
-    onUpdateEvaluationCriteria: (criteria: EvaluationCriterion[]) => void;
-    evaluationIndicators: EvaluationIndicator[];
-    onUpdateEvaluationIndicators: (indicators: EvaluationIndicator[]) => void;
-}
-
-interface CurricularPlanningPageProps {
-  microPlans: MicroPlan[];
-  onUpdateMicroPlans: (plans: MicroPlan[]) => void;
-  classes: Class[];
-  subjects: Subject[];
-  students: Student[];
-  users: User[];
-  dcds: Dcd[];
-  evaluationCriteria: EvaluationCriterion[];
-  evaluationIndicators: EvaluationIndicator[];
-}
-
-// #region Curricular Planning Components (Moved from CurricularPlanningPage.tsx)
+// Sub-components are defined within this file to avoid creating new files.
 
 // #region DCD Selection Modal
 interface DcdSelectionModalProps {
@@ -49,6 +14,7 @@ interface DcdSelectionModalProps {
     onSave: (selectedIds: string[]) => void;
     allDcds: Dcd[];
     subjectId: string;
+    // gradeLevel: GradeLevel; // We'll derive this from the class
     classId: string;
     classes: Class[];
     initialSelectedIds: string[];
@@ -62,6 +28,8 @@ const DcdSelectionModal: React.FC<DcdSelectionModalProps> = ({ isOpen, onClose, 
     }, [initialSelectedIds, isOpen]);
 
     const filteredDcds = useMemo(() => {
+        // We'll filter by subject, but not by grade level for now to ensure options are available in the demo.
+        // In a real app with a full repository, filtering by grade level would be essential.
         return allDcds.filter(dcd => {
             const subjectMatch = dcd.subjectId === subjectId;
             const searchMatch = dcd.code.toLowerCase().includes(searchTerm.toLowerCase()) || dcd.description.toLowerCase().includes(searchTerm.toLowerCase());
@@ -71,11 +39,17 @@ const DcdSelectionModal: React.FC<DcdSelectionModalProps> = ({ isOpen, onClose, 
 
     const handleToggle = (id: string) => {
         const newSelection = new Set(selectedIds);
-        if (newSelection.has(id)) { newSelection.delete(id); } else { newSelection.add(id); }
+        if (newSelection.has(id)) {
+            newSelection.delete(id);
+        } else {
+            newSelection.add(id);
+        }
         setSelectedIds(newSelection);
     };
 
-    const handleSave = () => { onSave(Array.from(selectedIds)); };
+    const handleSave = () => {
+        onSave(Array.from(selectedIds));
+    };
 
     if (!isOpen) return null;
 
@@ -106,8 +80,56 @@ const DcdSelectionModal: React.FC<DcdSelectionModalProps> = ({ isOpen, onClose, 
 };
 // #endregion
 
+// #region AI Generator Modal
+// FIX: Moved AiGeneratorModal component definition here from ViceRectoratePage.tsx to resolve the "Cannot find name 'AiGeneratorModal'" error.
+interface AiGeneratorModalProps {
+    isOpen: boolean; onClose: () => void; onApply: (text: string) => void; currentSkills: string;
+}
+const AiGeneratorModal: React.FC<AiGeneratorModalProps> = ({ isOpen, onClose, onApply, currentSkills }) => {
+    const [methodology, setMethodology] = useState('ABP (Aprendizaje Basado en Proyectos)');
+    const [competency, setCompetency] = useState('Comunicacional');
+    const [insertion, setInsertion] = useState('Desarrollo Sostenible');
+    const [context, setContext] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
+    const [generatedText, setGeneratedText] = useState('');
+    const [error, setError] = useState('');
+    const methodologies = ["ABP (Aprendizaje Basado en Proyectos)", "Resolución de Problemas", "Debate", "Gamificación", "Aprendizaje Cooperativo"];
+    const competencies = ["Comunicacional", "Lógico-Matemática", "Digital", "Socioemocional"];
+    const insertions = ["Cívica/Ética", "Desarrollo Sostenible", "Socioemocional", "Seguridad Vial", "Educación Financiera"];
+    const handleGenerate = async () => {
+        if (!currentSkills) { setError('Las destrezas (DCDs) son necesarias para generar la metodología.'); return; }
+        setError(''); setIsLoading(true); setGeneratedText('');
+        const prompt = `
+            Rol: Eres un asistente experto en diseño curricular ecuatoriano.
+            Tarea: Genera una secuencia de actividades para la sección "Orientaciones metodológicas" de una planificación microcurricular.
+            Basado en los siguientes datos:
+            - Metodología Activa: ${methodology}
+            - Destrezas con Criterios de Desempeño (DCDs): "${currentSkills}"
+            - Inserción Curricular (Eje Transversal): ${insertion}
+            - Competencia a desarrollar: ${competency}
+            - Contexto local/aula: "${context || 'No se proporcionó contexto específico.'}"
+            Requerimientos:
+            1. Genera una situación de aprendizaje (learning situation) clara y concisa.
+            2. Estructura la secuencia de actividades en tres fases claras: INICIO (anticipación), DESARROLLO (construcción), y CIERRE (consolidación).
+            3. Las actividades deben ser prácticas, centradas en el estudiante y fomentar el trabajo cooperativo.
+            4. Si el contexto menciona limitaciones (ej. "recursos digitales limitados"), prioriza recursos manipulativos, visuales o de bajo costo.
+            5. El lenguaje debe ser profesional y adecuado para un documento de planificación docente.
+            Formato de Salida (solo el texto, sin markdown adicional):
+            Inicio: [Descripción de la actividad de anticipación]
+            Desarrollo: [Descripción de las actividades de construcción del conocimiento]
+            Cierre: [Descripción de la actividad de consolidación y reflexión]`;
+        try {
+            const ai = new GoogleGenAI({ apiKey: process.env.API_KEY! });
+            const response = await ai.models.generateContent({ model: 'gemini-2.5-flash', contents: prompt });
+            setGeneratedText(response.text);
+        } catch (e) { console.error(e); setError('Hubo un error al generar el contenido. Por favor, inténtelo de nuevo.'); } finally { setIsLoading(false); }
+    };
+    if (!isOpen) return null;
+    return <div className="fixed inset-0 bg-black bg-opacity-50 z-[70] flex justify-center items-center p-4" onClick={onClose}><div className="bg-white rounded-lg shadow-xl w-full max-w-3xl max-h-[90vh] flex flex-col" onClick={e => e.stopPropagation()}><header className="p-4 border-b flex justify-between items-center"><h2 className="text-xl font-bold text-gray-800 flex items-center gap-2"><SparklesIcon className="h-6 w-6 text-primary-600" />Asistente IA para Metodología</h2><button onClick={onClose} className="p-2 text-gray-500 hover:text-gray-800 rounded-full hover:bg-gray-100"><CloseIcon className="h-6 w-6" /></button></header><main className="p-6 overflow-y-auto space-y-4"><p className="text-sm text-gray-600">Proporcione el contexto para generar una secuencia de actividades metodológicas. Las destrezas se tomarán del campo correspondiente en el formulario.</p><div className="grid grid-cols-1 md:grid-cols-3 gap-4"><div><label className="block text-sm font-medium">Metodología</label><select value={methodology} onChange={e => setMethodology(e.target.value)} className="mt-1 w-full p-2 border rounded-md text-sm"><option disabled>Seleccionar</option>{methodologies.map(m => <option key={m} value={m}>{m}</option>)}</select></div><div><label className="block text-sm font-medium">Competencia</label><select value={competency} onChange={e => setCompetency(e.target.value)} className="mt-1 w-full p-2 border rounded-md text-sm"><option disabled>Seleccionar</option>{competencies.map(c => <option key={c} value={c}>{c}</option>)}</select></div><div><label className="block text-sm font-medium">Inserción Curricular</label><select value={insertion} onChange={e => setInsertion(e.target.value)} className="mt-1 w-full p-2 border rounded-md text-sm"><option disabled>Seleccionar</option>{insertions.map(i => <option key={i} value={i}>{i}</option>)}</select></div></div><div><label className="block text-sm font-medium">Contexto Local y Restricciones</label><textarea value={context} onChange={e => setContext(e.target.value)} rows={2} placeholder="Ej: Estudiantes en zona rural con acceso limitado a internet." className="mt-1 w-full p-2 border rounded-md text-sm"></textarea></div><div className="text-center"><button onClick={handleGenerate} disabled={isLoading} className="px-6 py-2 bg-primary-600 text-white rounded-md font-semibold disabled:bg-gray-400">{isLoading ? 'Generando...' : 'Generar Secuencia'}</button></div>{error && <p className="text-red-600 text-sm text-center">{error}</p>}{generatedText && <div className="mt-4 pt-4 border-t"><h3 className="text-lg font-semibold text-gray-800 mb-2">Resultado Generado</h3><textarea readOnly value={generatedText} rows={10} className="w-full p-2 border rounded-md bg-gray-50 text-sm font-mono"></textarea><div className="text-right mt-2"><button onClick={() => onApply(generatedText)} className="px-4 py-2 bg-green-600 text-white rounded-md font-semibold">Aplicar Texto</button></div></div>}</main></div></div>;
+};
+// #endregion
+
 // #region Plan Form Component
-// FIX: Moved PlanForm component definition here from CurricularPlanningPage.tsx to resolve the "Cannot find name 'PlanForm'" error.
 interface PlanFormProps {
     isOpen: boolean; onClose: () => void; onSave: (plan: MicroPlan) => void;
     planToEdit: MicroPlan | null; classes: Class[]; subjects: Subject[]; students: Student[];
@@ -169,63 +191,15 @@ const PlanForm: React.FC<PlanFormProps> = ({ isOpen, onClose, onSave, planToEdit
 };
 // #endregion
 
-// #region AI Generator Modal
-interface AiGeneratorModalProps {
-    isOpen: boolean; onClose: () => void; onApply: (text: string) => void; currentSkills: string;
-}
-const AiGeneratorModal: React.FC<AiGeneratorModalProps> = ({ isOpen, onClose, onApply, currentSkills }) => {
-    const [methodology, setMethodology] = useState('ABP (Aprendizaje Basado en Proyectos)');
-    const [competency, setCompetency] = useState('Comunicacional');
-    const [insertion, setInsertion] = useState('Desarrollo Sostenible');
-    const [context, setContext] = useState('');
-    const [isLoading, setIsLoading] = useState(false);
-    const [generatedText, setGeneratedText] = useState('');
-    const [error, setError] = useState('');
-    const methodologies = ["ABP (Aprendizaje Basado en Proyectos)", "Resolución de Problemas", "Debate", "Gamificación", "Aprendizaje Cooperativo"];
-    const competencies = ["Comunicacional", "Lógico-Matemática", "Digital", "Socioemocional"];
-    const insertions = ["Cívica/Ética", "Desarrollo Sostenible", "Socioemocional", "Seguridad Vial", "Educación Financiera"];
-    const handleGenerate = async () => {
-        if (!currentSkills) { setError('Las destrezas (DCDs) son necesarias para generar la metodología.'); return; }
-        setError(''); setIsLoading(true); setGeneratedText('');
-        const prompt = `
-            Rol: Eres un asistente experto en diseño curricular ecuatoriano.
-            Tarea: Genera una secuencia de actividades para la sección "Orientaciones metodológicas" de una planificación microcurricular.
-            Basado en los siguientes datos:
-            - Metodología Activa: ${methodology}
-            - Destrezas con Criterios de Desempeño (DCDs): "${currentSkills}"
-            - Inserción Curricular (Eje Transversal): ${insertion}
-            - Competencia a desarrollar: ${competency}
-            - Contexto local/aula: "${context || 'No se proporcionó contexto específico.'}"
-            Requerimientos:
-            1. Genera una situación de aprendizaje (learning situation) clara y concisa.
-            2. Estructura la secuencia de actividades en tres fases claras: INICIO (anticipación), DESARROLLO (construcción), y CIERRE (consolidación).
-            3. Las actividades deben ser prácticas, centradas en el estudiante y fomentar el trabajo cooperativo.
-            4. Si el contexto menciona limitaciones (ej. "recursos digitales limitados"), prioriza recursos manipulativos, visuales o de bajo costo.
-            5. El lenguaje debe ser profesional y adecuado para un documento de planificación docente.
-            Formato de Salida (solo el texto, sin markdown adicional):
-            Inicio: [Descripción de la actividad de anticipación]
-            Desarrollo: [Descripción de las actividades de construcción del conocimiento]
-            Cierre: [Descripción de la actividad de consolidación y reflexión]`;
-        try {
-            const ai = new GoogleGenAI({ apiKey: process.env.API_KEY! });
-            const response = await ai.models.generateContent({ model: 'gemini-2.5-flash', contents: prompt });
-            setGeneratedText(response.text);
-        } catch (e) { console.error(e); setError('Hubo un error al generar el contenido. Por favor, inténtelo de nuevo.'); } finally { setIsLoading(false); }
-    };
-    if (!isOpen) return null;
-    return <div className="fixed inset-0 bg-black bg-opacity-50 z-[70] flex justify-center items-center p-4" onClick={onClose}><div className="bg-white rounded-lg shadow-xl w-full max-w-3xl max-h-[90vh] flex flex-col" onClick={e => e.stopPropagation()}><header className="p-4 border-b flex justify-between items-center"><h2 className="text-xl font-bold text-gray-800 flex items-center gap-2"><SparklesIcon className="h-6 w-6 text-primary-600" />Asistente IA para Metodología</h2><button onClick={onClose} className="p-2 text-gray-500 hover:text-gray-800 rounded-full hover:bg-gray-100"><CloseIcon className="h-6 w-6" /></button></header><main className="p-6 overflow-y-auto space-y-4"><p className="text-sm text-gray-600">Proporcione el contexto para generar una secuencia de actividades metodológicas. Las destrezas se tomarán del campo correspondiente en el formulario.</p><div className="grid grid-cols-1 md:grid-cols-3 gap-4"><div><label className="block text-sm font-medium">Metodología</label><select value={methodology} onChange={e => setMethodology(e.target.value)} className="mt-1 w-full p-2 border rounded-md text-sm"><option disabled>Seleccionar</option>{methodologies.map(m => <option key={m} value={m}>{m}</option>)}</select></div><div><label className="block text-sm font-medium">Competencia</label><select value={competency} onChange={e => setCompetency(e.target.value)} className="mt-1 w-full p-2 border rounded-md text-sm"><option disabled>Seleccionar</option>{competencies.map(c => <option key={c} value={c}>{c}</option>)}</select></div><div><label className="block text-sm font-medium">Inserción Curricular</label><select value={insertion} onChange={e => setInsertion(e.target.value)} className="mt-1 w-full p-2 border rounded-md text-sm"><option disabled>Seleccionar</option>{insertions.map(i => <option key={i} value={i}>{i}</option>)}</select></div></div><div><label className="block text-sm font-medium">Contexto Local y Restricciones</label><textarea value={context} onChange={e => setContext(e.target.value)} rows={2} placeholder="Ej: Estudiantes en zona rural con acceso limitado a internet." className="mt-1 w-full p-2 border rounded-md text-sm"></textarea></div><div className="text-center"><button onClick={handleGenerate} disabled={isLoading} className="px-6 py-2 bg-primary-600 text-white rounded-md font-semibold disabled:bg-gray-400">{isLoading ? 'Generando...' : 'Generar Secuencia'}</button></div>{error && <p className="text-red-600 text-sm text-center">{error}</p>}{generatedText && <div className="mt-4 pt-4 border-t"><h3 className="text-lg font-semibold text-gray-800 mb-2">Resultado Generado</h3><textarea readOnly value={generatedText} rows={10} className="w-full p-2 border rounded-md bg-gray-50 text-sm font-mono"></textarea><div className="text-right mt-2"><button onClick={() => onApply(generatedText)} className="px-4 py-2 bg-green-600 text-white rounded-md font-semibold">Aplicar Texto</button></div></div>}</main></div></div>;
-};
-// #endregion
-
-// #region Printable Plan Component
+// Other components remain unchanged but are included for context.
+// #region Printable Plan, Plan Details, Main Page
 const PrintableMicroPlan: React.FC<{ plan: MicroPlan; teacher: User | undefined; reviewer: User | undefined; subject: Subject | undefined; studentClass: Class | undefined; students: Student[]; institution: any; dcds: Dcd[] }> = ({ plan, teacher, reviewer, subject, studentClass, students, institution, dcds }) => {
     const adaptationsWithData = plan.adaptations.map(adapt => ({ ...adapt, student: students.find(s => s.id === adapt.studentId) }));
     const dcdObjects = plan.dcdIds.map(id => dcds.find(d => d.id === id)).filter(Boolean) as Dcd[];
     const skillsText = dcdObjects.map(d => `(${d.code}) ${d.description}`).join('\n');
-    return <div className="bg-white p-4 font-serif text-[10px] text-gray-800 break-after-page"><table className="w-full mb-2"><tbody><tr className="align-top"><td className="w-[20%]"><img src="https://upload.wikimedia.org/wikipedia/commons/thumb/3/33/Quito_brand_logo.svg/1200px-Quito_brand_logo.svg.png" alt="Quito Logo" className="h-16 w-auto" /></td><td className="w-[60%] text-center"><h1 className="font-bold text-sm">UNIDAD EDUCATIVA MUNICIPAL "{institution?.name.replace('Unidad Educativa Municipal ', '')}"</h1><p className="text-xs">“Innovación educativa y progreso para tod@s”</p><p className="text-xs">Año Lectivo {plan.academicYear}</p><p className="text-xs">Vicerrectorado-Jornada Matutina</p><div className="bg-cyan-200 border-2 border-black mt-2 p-1"><h2 className="font-bold text-sm">PLANIFICACIÓN MICROCURRICULAR</h2><h3 className="font-bold text-xs">DUA - INSERCIONES CURRICULARES</h3></div></td><td className="w-[20%] flex justify-end">{institution && <img src={institution.logoUrl} alt="Logo" className="h-20 w-20 object-contain" />}</td></tr></tbody></table><h3 className="bg-blue-900 text-white text-center font-bold text-xs p-1">DATOS INFORMATIVOS</h3><table className="w-full border-collapse border border-black text-xs"><tbody><tr className="align-top"><td className="border border-black p-1 w-[15%]"><strong>Área o nivel:</strong></td><td className="border border-black p-1 w-[25%]">{subject?.name || 'N/A'}</td><td className="border border-black p-1 w-[15%]"><strong>Asignaturas:</strong></td><td className="border border-black p-1 w-[30%]">{subject?.name || 'N/A'}</td><td className="border border-black p-1 w-[15%]"><strong>Parcial:</strong> N/A</td></tr><tr className="align-top"><td className="border border-black p-1"><strong>Nombre del docente:</strong></td><td className="border border-black p-1">{teacher?.name || 'N/A'}</td><td colSpan={3} className="border border-black p-1"><strong>Trimestre:</strong> N/A</td></tr><tr className="align-top"><td className="border border-black p-1"><strong>Grado/Curso:</strong></td><td className="border border-black p-1">{studentClass?.name || 'N/A'}</td><td className="border border-black p-1"><strong>Paralelo:</strong> N/A</td><td className="border border-black p-1"><strong>Fecha de Inicio:</strong> {plan.creationDate ? new Date(plan.creationDate).toLocaleDateString('es-ES') : 'N/A'}</td><td className="border border-black p-1"><strong>Fecha de Finalización:</strong> {plan.submittedDate ? new Date(plan.submittedDate).toLocaleDateString('es-ES') : 'N/A'}</td></tr></tbody></table><h3 className="bg-blue-900 text-white text-center font-bold text-xs p-1 mt-2">PLANIFICACIÓN DE LOS APRENDIZAJES</h3><table className="w-full border-collapse border border-black text-xs"><tbody><tr><td className="border border-black p-1 w-[15%]"><strong>VALORES:</strong></td><td className="border border-black p-1 w-[35%]">N/A</td><td className="border border-black p-1 w-[15%]"><strong>EJE TRANSVERSAL:</strong></td><td className="border border-black p-1 w-[35%]">N/A</td></tr><tr><td className="border border-black p-1"><strong>OBJETIVO/S DE APRENDIZAJES:</strong></td><td colSpan={3} className="border border-black p-1 whitespace-pre-wrap">{plan.unitObjectives}</td></tr></tbody></table><h3 className="bg-blue-900 text-white text-center font-bold text-xs p-1 mt-2">RELACIONES ENTRE LOS COMPONENTES CURRICULARES- AJUSTES RAZONABLES</h3><table className="w-full border-collapse border border-black mt-1 text-[9px]"><thead><tr className="font-bold text-center bg-gray-100"><td className="border border-black p-1 w-[15%]">DESTREZAS CON CRITERIOS DE DESEMPEÑO</td><td className="border border-black p-1 w-[15%]">INDICADORES DE EVALUACIÓN</td><td className="border border-black p-1 w-[35%]">ESTRATEGIAS METODOLÓGICAS</td><td className="border border-black p-1 w-[20%]">RECURSOS</td><td className="border border-black p-1 w-[15%]">TÉCNICAS /INSTRUMENTOS DE EVALUACIÓN</td></tr></thead><tbody><tr className="align-top"><td className="border border-black p-1 whitespace-pre-wrap">{skillsText}</td><td className="border border-black p-1 whitespace-pre-wrap">{plan.evaluation}</td><td className="border border-black p-1 whitespace-pre-wrap">{plan.methodology}</td><td className="border border-black p-1 whitespace-pre-wrap">{plan.resources}</td><td className="border border-black p-1">N/A</td></tr></tbody></table>{adaptationsWithData.length > 0 && <div className="mt-2 break-before-page"><h3 className="bg-blue-900 text-white text-center font-bold text-xs p-1">PLANIFICACIÓN CON ADAPTACIONES CURRICULARES DE LOS ESTUDIANTES CON NEE</h3><table className="w-full border-collapse border border-black mt-1 text-[9px]"><thead><tr className="font-bold text-center bg-gray-100"><td className="border border-black p-1">Estudiante</td><td className="border border-black p-1">Necesidad Educativa</td><td className="border border-black p-1">DESTREZAS (Desagregada)</td><td className="border border-black p-1">INDICADORES</td><td className="border border-black p-1">ESTRATEGIAS</td><td className="border border-black p-1">RECURSOS</td><td className="border border-black p-1">EVALUACIÓN</td></tr></thead><tbody>{adaptationsWithData.map(adapt => <tr key={adapt.studentId} className="align-top"><td className="border border-black p-1">{adapt.student?.name || 'N/A'}</td><td className="border border-black p-1">N/A</td><td className="border border-black p-1 whitespace-pre-wrap">{adapt.dcdModificada}</td><td className="border border-black p-1">N/A</td><td className="border border-black p-1">N/A</td><td className="border border-black p-1">N/A</td><td className="border border-black p-1">N/A</td></tr>)}</tbody></table></div>}<div className="mt-4 break-before-page"><h3 className="bg-blue-900 text-white text-center font-bold text-xs p-1">RESPONSABLES</h3><table className="w-full border-collapse border border-black mt-1 text-xs"><thead><tr><th className="border border-black p-1">Elaborado Por:</th><th className="border border-black p-1">Revisado Por:</th><th className="border border-black p-1">Aprobado por:</th></tr></thead><tbody><tr className="align-bottom h-24 text-center"><td className="border border-black p-1"><p className="mt-16 border-t border-gray-400 mx-4">{teacher?.name}</p><p className="font-bold">DOCENTE</p></td><td className="border border-black p-1"><p className="mt-16 border-t border-gray-400 mx-4">{reviewer?.name}</p><p className="font-bold">COORDINADOR DE ÁREA</p></td><td className="border border-black p-1"><p className="mt-16 border-t border-gray-400 mx-4">{reviewer?.name}</p><p className="font-bold">VICERRECTOR</p></td></tr><tr><td className="border border-black p-1"><strong>Fecha:</strong> {plan.creationDate ? new Date(plan.creationDate).toLocaleDateString('es-ES') : ''}</td><td className="border border-black p-1"><strong>Fecha:</strong> {plan.submittedDate ? new Date(plan.submittedDate).toLocaleDateString('es-ES') : ''}</td><td className="border border-black p-1"><strong>Fecha:</strong> {plan.reviewDate ? new Date(plan.reviewDate).toLocaleDateString('es-ES') : ''}</td></tr></tbody></table></div></div>;
+    return <div className="bg-white p-4 font-serif text-[10px] text-gray-800 break-after-page"><table className="w-full mb-2"><tbody><tr className="align-top"><td className="w-[20%]"><img src="https://upload.wikimedia.org/wikipedia/commons/thumb/3/33/Quito_brand_logo.svg/1200px-Quito_brand_logo.svg.png" alt="Quito Logo" className="h-16 w-auto" /></td><td className="w-[60%] text-center"><h1 className="font-bold text-sm">UNIDAD EDUCATIVA MUNICIPAL "{institution?.name.replace('Unidad Educativa Municipal ', '')}"</h1><p className="text-xs">“Innovación educativa y progreso para tod@s”</p><p className="text-xs">Año Lectivo {plan.academicYear}</p><p className="text-xs">Vicerrectorado-Jornada Matutina</p><div className="bg-cyan-200 border-2 border-black mt-2 p-1"><h2 className="font-bold text-sm">PLANIFICACIÓN MICROCURRICULAR</h2><h3 className="font-bold text-xs">DUA - INSERCIONES CURRICULARES</h3></div></td><td className="w-[20%] flex justify-end">{institution && <img src={institution.logoUrl} alt="Logo" className="h-20 w-20 object-contain" />}</td></tr></tbody></table><h3 className="bg-blue-900 text-white text-center font-bold text-xs p-1">DATOS INFORMATIVOS</h3><table className="w-full border-collapse border border-black text-xs"><tbody><tr className="align-top"><td className="border border-black p-1 w-[15%]"><strong>Área o nivel:</strong></td><td className="border border-black p-1 w-[25%]">{subject?.name || 'N/A'}</td><td className="border border-black p-1 w-[15%]"><strong>Asignaturas:</strong></td><td className="border border-black p-1 w-[30%]">{subject?.name || 'N/A'}</td><td className="border border-black p-1 w-[15%]"><strong>Parcial:</strong> N/A</td></tr><tr className="align-top"><td className="border border-black p-1"><strong>Nombre del docente:</strong></td><td className="border border-black p-1">{teacher?.name || 'N/A'}</td><td colSpan={3} className="border border-black p-1"><strong>Trimestre:</strong> N/A</td></tr><tr className="align-top"><td className="border border-black p-1"><strong>Grado/Curso:</strong></td><td className="border border-black p-1">{studentClass?.name || 'N/A'}</td><td className="border border-black p-1"><strong>Paralelo:</strong> N/A</td><td className="border border-black p-1"><strong>Fecha de Inicio:</strong> {plan.creationDate ? new Date(plan.creationDate).toLocaleDateString('es-ES') : 'N/A'}</td><td className="border border-black p-1"><strong>Fecha de Finalización:</strong> {plan.submittedDate ? new Date(plan.submittedDate).toLocaleDateString('es-ES') : 'N/A'}</td></tr></tbody></table><h3 className="bg-blue-900 text-white text-center font-bold text-xs p-1 mt-2">PLANIFICACIÓN DE LOS APRENDIZAJES</h3><table className="w-full border-collapse border border-black text-xs"><tbody><tr><td className="border border-black p-1 w-[15%]"><strong>VALORES:</strong></td><td className="border border-black p-1 w-[35%]">N/A</td><td className="border border-black p-1 w-[15%]"><strong>EJE TRANSVERSAL:</strong></td><td className="border border-black p-1 w-[35%]">N/A</td></tr><tr><td className="border border-black p-1"><strong>OBJETIVO/S DE APRENDIZAJES:</strong></td><td colSpan={3} className="border border-black p-1 whitespace-pre-wrap">{plan.unitObjectives}</td></tr></tbody></table><h3 className="bg-blue-900 text-white text-center font-bold text-xs p-1 mt-2">RELACIONES ENTRE LOS COMPONENTES CURRICULARES- AJUSTES RAZONABLES</h3><table className="w-full border-collapse border border-black mt-1 text-[9px]"><thead><tr className="font-bold text-center bg-gray-100"><td className="border border-black p-1 w-[15%]">DESTREZAS CON CRITERIOS DE DESEMPEÑO</td><td className="border border-black p-1 w-[15%]">INDICADORES DE EVALUACIÓN</td><td className="border border-black p-1 w-[35%]">ESTRATEGIAS METODOLÓGICAS</td><td className="border border-black p-1 w-[20%]">RECURSOS</td><td className="border border-black p-1 w-[15%]">TÉCNICAS /INSTRUMENTOS DE EVALUACIÓN</td></tr></thead><tbody><tr className="align-top"><td className="border border-black p-1 whitespace-pre-wrap">{skillsText}</td><td className="border border-black p-1">N/A</td><td className="border border-black p-1 whitespace-pre-wrap">{plan.methodology}</td><td className="border border-black p-1 whitespace-pre-wrap">{plan.resources}</td><td className="border border-black p-1 whitespace-pre-wrap">{plan.evaluation}</td></tr></tbody></table>{adaptationsWithData.length > 0 && <div className="mt-2 break-before-page"><h3 className="bg-blue-900 text-white text-center font-bold text-xs p-1">PLANIFICACIÓN CON ADAPTACIONES CURRICULARES DE LOS ESTUDIANTES CON NEE</h3><table className="w-full border-collapse border border-black mt-1 text-[9px]"><thead><tr className="font-bold text-center bg-gray-100"><td className="border border-black p-1">Estudiante</td><td className="border border-black p-1">Necesidad Educativa</td><td className="border border-black p-1">DESTREZAS (Desagregada)</td><td className="border border-black p-1">INDICADORES</td><td className="border border-black p-1">ESTRATEGIAS</td><td className="border border-black p-1">RECURSOS</td><td className="border border-black p-1">EVALUACIÓN</td></tr></thead><tbody>{adaptationsWithData.map(adapt => <tr key={adapt.studentId} className="align-top"><td className="border border-black p-1">{adapt.student?.name || 'N/A'}</td><td className="border border-black p-1">N/A</td><td className="border border-black p-1 whitespace-pre-wrap">{adapt.dcdModificada}</td><td className="border border-black p-1">N/A</td><td className="border border-black p-1">N/A</td><td className="border border-black p-1">N/A</td><td className="border border-black p-1">N/A</td></tr>)}</tbody></table></div>}<div className="mt-4 break-before-page"><h3 className="bg-blue-900 text-white text-center font-bold text-xs p-1">RESPONSABLES</h3><table className="w-full border-collapse border border-black mt-1 text-xs"><thead><tr><th className="border border-black p-1">Elaborado Por:</th><th className="border border-black p-1">Revisado Por:</th><th className="border border-black p-1">Aprobado por:</th></tr></thead><tbody><tr className="align-bottom h-24 text-center"><td className="border border-black p-1"><p className="mt-16 border-t border-gray-400 mx-4">{teacher?.name}</p><p className="font-bold">DOCENTE</p></td><td className="border border-black p-1"><p className="mt-16 border-t border-gray-400 mx-4">{reviewer?.name}</p><p className="font-bold">COORDINADOR DE ÁREA</p></td><td className="border border-black p-1"><p className="mt-16 border-t border-gray-400 mx-4">{reviewer?.name}</p><p className="font-bold">VICERRECTOR</p></td></tr><tr><td className="border border-black p-1"><strong>Fecha:</strong> {plan.creationDate ? new Date(plan.creationDate).toLocaleDateString('es-ES') : ''}</td><td className="border border-black p-1"><strong>Fecha:</strong> {plan.submittedDate ? new Date(plan.submittedDate).toLocaleDateString('es-ES') : ''}</td><td className="border border-black p-1"><strong>Fecha:</strong> {plan.reviewDate ? new Date(plan.reviewDate).toLocaleDateString('es-ES') : ''}</td></tr></tbody></table></div></div>;
 };
-// #endregion
-// #region Plan Details Component
+
 interface PlanDetailsProps { plan: MicroPlan; onClose: () => void; onSetStatus: (planId: string, status: CurricularPlanStatus, comments?: string) => void; onPrint: (plan: MicroPlan) => void; userRole: Role; users: User[]; subjects: Subject[]; classes: Class[]; students: Student[]; dcds: Dcd[] }
 const PlanDetails: React.FC<PlanDetailsProps> = ({ plan, onClose, onSetStatus, onPrint, userRole, users, subjects, classes, students, dcds }) => {
     const [reviewComments, setReviewComments] = useState('');

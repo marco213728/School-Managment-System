@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { User, Institution, Role, Class, Student, ScheduleEntry, Notification, SupportContact, HealthRecord, MedicalVisit, Subject, TimeSlot, Room, Timetable, ViccIntervention, AttendanceRecord, ExitPass, Citacion, AcademicCalendarEvent, LeccionarioEntry } from './types';
-import { MOCK_USERS, MOCK_INSTITUTIONS, MOCK_CLASSES, MOCK_STUDENTS, MOCK_SCHEDULE_ENTRIES, MOCK_NOTIFICATIONS, MOCK_SUPPORT_CONTACTS, MOCK_HEALTH_RECORDS, MOCK_MEDICAL_VISITS, MOCK_SUBJECTS, MOCK_TIME_SLOTS, MOCK_ROOMS, MOCK_TIMETABLES, MOCK_VICC_INTERVENTIONS, MOCK_ATTENDANCE, MOCK_EXIT_PASSES, MOCK_CITACIONES, MOCK_ACADEMIC_CALENDAR_EVENTS, MOCK_LECCIONARIO_ENTRIES } from './constants';
+import { User, Institution, Role, Class, Student, ScheduleEntry, Notification, SupportContact, HealthRecord, MedicalVisit, Subject, TimeSlot, Room, Timetable, ViccIntervention, AttendanceRecord, ExitPass, Citacion, AcademicCalendarEvent, LeccionarioEntry, MicroPlan, Dcd, EvaluationCriterion, EvaluationIndicator } from './types';
+import { MOCK_USERS, MOCK_INSTITUTIONS, MOCK_CLASSES, MOCK_STUDENTS, MOCK_SCHEDULE_ENTRIES, MOCK_NOTIFICATIONS, MOCK_SUPPORT_CONTACTS, MOCK_HEALTH_RECORDS, MOCK_MEDICAL_VISITS, MOCK_SUBJECTS, MOCK_TIME_SLOTS, MOCK_ROOMS, MOCK_TIMETABLES, MOCK_VICC_INTERVENTIONS, MOCK_ATTENDANCE, MOCK_EXIT_PASSES, MOCK_CITACIONES, MOCK_ACADEMIC_CALENDAR_EVENTS, MOCK_LECCIONARIO_ENTRIES, MOCK_MICRO_PLANS, MOCK_DCDS, MOCK_EVALUATION_CRITERIA, MOCK_EVALUATION_INDICATORS } from './constants';
 import LoginPage from './pages/LoginPage';
 import DashboardLayout from './components/layout/DashboardLayout';
 import { UserContext, InstitutionContext } from './contexts/UserContext';
@@ -31,6 +31,10 @@ export default function App() {
   const [citaciones, setCitaciones] = useState<Citacion[]>(MOCK_CITACIONES);
   const [academicCalendarEvents, setAcademicCalendarEvents] = useState<AcademicCalendarEvent[]>(MOCK_ACADEMIC_CALENDAR_EVENTS);
   const [leccionarioEntries, setLeccionarioEntries] = useState<LeccionarioEntry[]>(MOCK_LECCIONARIO_ENTRIES);
+  const [microPlans, setMicroPlans] = useState<MicroPlan[]>(MOCK_MICRO_PLANS);
+  const [dcds, setDcds] = useState<Dcd[]>(MOCK_DCDS);
+  const [evaluationCriteria, setEvaluationCriteria] = useState<EvaluationCriterion[]>(MOCK_EVALUATION_CRITERIA);
+  const [evaluationIndicators, setEvaluationIndicators] = useState<EvaluationIndicator[]>(MOCK_EVALUATION_INDICATORS);
 
 
   const handleLogin = (email: string, password: string): boolean => {
@@ -76,6 +80,11 @@ export default function App() {
   const handleUpdateCitaciones = (updatedCitaciones: Citacion[]) => setCitaciones(updatedCitaciones);
   const handleUpdateAcademicCalendarEvents = (updatedEvents: AcademicCalendarEvent[]) => setAcademicCalendarEvents(updatedEvents);
   const handleUpdateLeccionarioEntries = (updatedEntries: LeccionarioEntry[]) => setLeccionarioEntries(updatedEntries);
+  const handleUpdateMicroPlans = (updatedPlans: MicroPlan[]) => setMicroPlans(updatedPlans);
+  const handleUpdateDcds = (newDcds: Dcd[]) => setDcds(prev => [...prev, ...newDcds]);
+  const handleUpdateEvaluationCriteria = (newCriteria: EvaluationCriterion[]) => setEvaluationCriteria(prev => [...prev, ...newCriteria]);
+  const handleUpdateEvaluationIndicators = (newIndicators: EvaluationIndicator[]) => setEvaluationIndicators(prev => [...prev, ...newIndicators]);
+
 
   const userContextValue = useMemo(() => ({
     user: currentUser,
@@ -130,6 +139,10 @@ export default function App() {
             citaciones={citaciones}
             academicCalendarEvents={academicCalendarEvents}
             leccionarioEntries={leccionarioEntries}
+            microPlans={microPlans}
+            dcds={dcds}
+            evaluationCriteria={evaluationCriteria}
+            evaluationIndicators={evaluationIndicators}
             onUpdateUsers={handleUpdateUsers}
             onUpdateClasses={handleUpdateClasses}
             onUpdateSchedule={handleUpdateSchedule}
@@ -148,6 +161,10 @@ export default function App() {
             onUpdateCitaciones={handleUpdateCitaciones}
             onUpdateAcademicCalendarEvents={handleUpdateAcademicCalendarEvents}
             onUpdateLeccionarioEntries={handleUpdateLeccionarioEntries}
+            onUpdateMicroPlans={handleUpdateMicroPlans}
+            onUpdateDcds={handleUpdateDcds}
+            onUpdateEvaluationCriteria={handleUpdateEvaluationCriteria}
+            onUpdateEvaluationIndicators={handleUpdateEvaluationIndicators}
           />
         )}
       </InstitutionContext.Provider>

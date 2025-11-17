@@ -1,17 +1,12 @@
-
-
 import React, { useContext, useState, useMemo } from 'react';
 import { UserContext } from '../contexts/UserContext';
-// FIX: Add User and Class to imports.
 import { Role, Student, User, Class, HealthRecord, MedicalVisit, ScheduleEntry, Subject, TimeSlot, Room, Timetable, ViccIntervention } from '../types';
-import { MOCK_CLASSES } from '../constants';
 import StudentProfileCard from '../components/student/StudentProfileCard';
 import { SearchIcon } from '../components/icons/Icons';
 
 interface HealthPageProps {
     students: Student[];
     onUpdateStudents: (students: Student[]) => void;
-    // FIX: Add users and classes props.
     users: User[];
     classes: Class[];
     healthRecords: HealthRecord[];
@@ -27,7 +22,6 @@ interface HealthPageProps {
     onUpdateViccInterventions: (interventions: ViccIntervention[]) => void;
 }
 
-// FIX: Update component signature to accept new props.
 const HealthPage: React.FC<HealthPageProps> = ({ students, onUpdateStudents, users, classes, healthRecords, onUpdateHealthRecords, medicalVisits, onUpdateMedicalVisits, schedule, subjects, timeSlots, rooms, timetables, viccInterventions, onUpdateViccInterventions }) => {
     const { user } = useContext(UserContext);
     const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
@@ -36,7 +30,6 @@ const HealthPage: React.FC<HealthPageProps> = ({ students, onUpdateStudents, use
     const authorizedRoles = [Role.InstitutionAdmin, Role.HealthProfessional];
 
     const institutionStudents = useMemo(() => students.filter(s => s.institutionId === user?.institutionId), [students, user]);
-    // FIX: Use 'classes' prop instead of MOCK_CLASSES.
     const institutionClasses = useMemo(() => classes.filter(c => c.institutionId === user?.institutionId), [classes, user]);
 
     const studentsWithClass = useMemo(() => institutionStudents.map(student => {

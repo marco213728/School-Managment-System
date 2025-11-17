@@ -133,7 +133,7 @@ const CitacionesPage: React.FC<CitacionesPageProps> = ({ users, students, citaci
                             <div className="flex items-center gap-2">
                                 <button onClick={() => setPrintingCitacion(null)} className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 text-sm font-semibold">Cerrar</button>
                                 <button onClick={() => window.print()} className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white font-semibold rounded-md hover:bg-primary-700 text-sm">
-                                    <PrinterIcon className="h-5 w-5" /> Imprimir
+                                    <PrinterIcon className="h-5 w-5" /> Imprimir / PDF
                                 </button>
                             </div>
                         </header>

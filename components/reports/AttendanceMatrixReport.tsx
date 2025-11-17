@@ -1,4 +1,3 @@
-
 import React, { useMemo, useContext } from 'react';
 import { Student, AttendanceRecord, AttendanceStatus, AcademicCalendarEvent } from '../../types';
 import { InstitutionContext } from '../../contexts/UserContext';
@@ -120,7 +119,7 @@ const AttendanceMatrixReport: React.FC<AttendanceMatrixReportProps> = ({ student
                 <h2 className="text-xl font-bold text-gray-800">Registro Matricial de Asistencia - {className}</h2>
                 <button onClick={handlePrint} className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white font-semibold rounded-md hover:bg-primary-700">
                     <PrinterIcon className="h-5 w-5" />
-                    Imprimir
+                    Imprimir / PDF
                 </button>
             </header>
             
@@ -194,9 +193,12 @@ const AttendanceMatrixReport: React.FC<AttendanceMatrixReportProps> = ({ student
                                                 case AttendanceStatus.Tardy: mark = 'A'; break;
                                                 default: mark = '';
                                             }
-// FIX: Add Array.isArray check to satisfy TypeScript's type checker which infers `observations` as 'unknown'.
-                                            if (record.observations && Array.isArray(record.observations) && record.observations.length > 0) {
-                                                mark += `, ${record.observations.join(', ')}`;
+                                            // FIX: Property 'length' does not exist on type 'unknown'.
+                                            // Split the condition into nested `if` statements to help TypeScript's type inference.
+                                            if (record.observations && Array.isArray(record.observations)) {
+                                                if (record.observations.length > 0) {
+                                                    mark += `, ${record.observations.join(', ')}`;
+                                                }
                                             }
                                         }
 
@@ -215,19 +217,6 @@ const AttendanceMatrixReport: React.FC<AttendanceMatrixReportProps> = ({ student
                     </tbody>
                 </table>
             </div>
-            <style>{`
-                @media print {
-                    .print-only { display: block; }
-                    #attendance-matrix-section {
-                        box-shadow: none;
-                        border: none;
-                    }
-                    th, td {
-                        font-size: 8px !important;
-                        padding: 2px !important;
-                    }
-                }
-            `}</style>
         </div>
     );
 };

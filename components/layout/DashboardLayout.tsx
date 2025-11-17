@@ -8,7 +8,7 @@ import ReportsPage from '../../pages/ReportsPage';
 import ManagePage from '../../pages/ManagePage';
 import DecePage from '../../pages/DecePage';
 import HealthPage from '../../pages/HealthPage';
-import { User, Class, Student, ScheduleEntry, Notification, SupportContact, HealthRecord, MedicalVisit, Subject, TimeSlot, Room, Timetable, ViccIntervention, AttendanceRecord, ExitPass, Citacion, AcademicCalendarEvent, LeccionarioEntry } from '../../types';
+import { User, Class, Student, ScheduleEntry, Notification, SupportContact, HealthRecord, MedicalVisit, Subject, TimeSlot, Room, Timetable, ViccIntervention, AttendanceRecord, ExitPass, Citacion, AcademicCalendarEvent, LeccionarioEntry, MicroPlan, Dcd, EvaluationCriterion, EvaluationIndicator } from '../../types';
 import StudentManagementPage from '../../pages/StudentManagementPage';
 import CommunicationsPage from '../../pages/CommunicationsPage';
 import SchedulePage from '../../pages/SchedulePage';
@@ -16,9 +16,10 @@ import ViceRectoratePage from '../../pages/ViceRectoratePage';
 import InspectionPage from '../../pages/InspectionPage';
 import CitacionesPage from '../../pages/CitacionesPage';
 import LeccionarioPage from '../../pages/LeccionarioPage';
+import CurricularPlanningPage from '../../pages/CurricularPlanningPage';
 
 
-type Page = 'dashboard' | 'attendance' | 'activities' | 'reports' | 'manage' | 'dece' | 'health' | 'students' | 'communications' | 'schedule' | 'vicerrectorate' | 'inspection' | 'citaciones' | 'leccionario';
+type Page = 'dashboard' | 'attendance' | 'activities' | 'reports' | 'manage' | 'dece' | 'health' | 'students' | 'communications' | 'schedule' | 'vicerrectorate' | 'inspection' | 'citaciones' | 'leccionario' | 'curricular_planning' | 'curriculum_repository';
 
 interface DashboardLayoutProps {
   users: User[];
@@ -39,6 +40,10 @@ interface DashboardLayoutProps {
   citaciones: Citacion[];
   academicCalendarEvents: AcademicCalendarEvent[];
   leccionarioEntries: LeccionarioEntry[];
+  microPlans: MicroPlan[];
+  dcds: Dcd[];
+  evaluationCriteria: EvaluationCriterion[];
+  evaluationIndicators: EvaluationIndicator[];
   onUpdateUsers: (users: User[]) => void;
   onUpdateClasses: (classes: Class[]) => void;
   onUpdateSchedule: (schedule: ScheduleEntry[]) => void;
@@ -57,6 +62,10 @@ interface DashboardLayoutProps {
   onUpdateCitaciones: (citaciones: Citacion[]) => void;
   onUpdateAcademicCalendarEvents: (events: AcademicCalendarEvent[]) => void;
   onUpdateLeccionarioEntries: (entries: LeccionarioEntry[]) => void;
+  onUpdateMicroPlans: (plans: MicroPlan[]) => void;
+  onUpdateDcds: (dcds: Dcd[]) => void;
+  onUpdateEvaluationCriteria: (criteria: EvaluationCriterion[]) => void;
+  onUpdateEvaluationIndicators: (indicators: EvaluationIndicator[]) => void;
 }
 
 const DashboardLayout: React.FC<DashboardLayoutProps> = (props) => {
@@ -69,6 +78,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = (props) => {
     timeSlots,
     leccionarioEntries, 
     onUpdateLeccionarioEntries,
+    microPlans,
     ...restProps
   } = props;
 
@@ -129,7 +139,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = (props) => {
       case 'schedule':
         return <SchedulePage {...restProps} schedule={schedule} subjects={subjects} timeSlots={timeSlots} users={users} classes={classes} />;
       case 'vicerrectorate':
-        return <ViceRectoratePage {...restProps} users={users} classes={classes} schedule={schedule} subjects={subjects} timeSlots={timeSlots} />;
+        return <ViceRectoratePage {...restProps} users={users} classes={classes} schedule={schedule} subjects={subjects} timeSlots={timeSlots} microPlans={microPlans} />;
       case 'inspection':
         return <InspectionPage {...restProps} classes={classes} users={users} />;
       case 'citaciones':
@@ -143,6 +153,19 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = (props) => {
             subjects={subjects}
             users={users}
             timeSlots={timeSlots}
+            microPlans={microPlans}
+        />;
+      case 'curricular_planning':
+        return <CurricularPlanningPage
+            microPlans={props.microPlans}
+            onUpdateMicroPlans={props.onUpdateMicroPlans}
+            classes={props.classes}
+            subjects={props.subjects}
+            students={props.students}
+            users={props.users}
+            dcds={props.dcds}
+            evaluationCriteria={props.evaluationCriteria}
+            evaluationIndicators={props.evaluationIndicators}
         />;
       default:
         return <DashboardPage {...restProps} schedule={schedule} classes={classes} subjects={subjects} timeSlots={timeSlots} rooms={restProps.rooms} timetables={restProps.timetables} users={users} />;

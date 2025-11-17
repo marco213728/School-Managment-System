@@ -296,7 +296,7 @@ const ReportsPage: React.FC<ReportsPageProps> = (props) => {
                         <div className="flex-shrink-0 flex items-center gap-2 no-print">
                             <button onClick={handlePrintPDF} className="flex items-center gap-2 text-sm px-3 py-1.5 bg-gray-600 text-white rounded-md hover:bg-gray-700">
                                 <PrinterIcon className="h-4 w-4" />
-                                Exportar a PDF
+                                Imprimir / PDF
                             </button>
                             <button onClick={handleDownloadXML} className="flex items-center gap-2 text-sm px-3 py-1.5 bg-blue-600 text-white rounded-md hover:bg-blue-700">
                                 <DownloadIcon className="h-4 w-4" />
@@ -363,18 +363,27 @@ const ReportsPage: React.FC<ReportsPageProps> = (props) => {
                 />
             )}
             {dailyReportData && (
-                <DailyAttendanceBehavioralReport 
-                    classId={dailyReportData.classId}
-                    date={dailyReportData.date}
-                    students={institutionStudents}
-                    classes={institutionClasses}
-                    attendanceRecords={institutionAttendance}
-                    timeSlots={timeSlots}
-                    timetables={timetables}
-                    users={users}
-                    subjects={subjects}
-                    schedule={schedule}
-                />
+                <div className="bg-white p-6 rounded-xl shadow-md mt-6">
+                    <div className="no-print flex justify-between items-center mb-4">
+                        <h3 className="text-lg font-semibold text-gray-700">Informe Diario de Asistencia y Comportamiento</h3>
+                        <button onClick={handlePrintPDF} className="flex items-center gap-2 text-sm px-3 py-1.5 bg-gray-600 text-white rounded-md hover:bg-gray-700">
+                            <PrinterIcon className="h-4 w-4" />
+                            Imprimir / PDF
+                        </button>
+                    </div>
+                    <DailyAttendanceBehavioralReport 
+                        classId={dailyReportData.classId}
+                        date={dailyReportData.date}
+                        students={institutionStudents}
+                        classes={institutionClasses}
+                        attendanceRecords={institutionAttendance}
+                        timeSlots={timeSlots}
+                        timetables={timetables}
+                        users={users}
+                        subjects={subjects}
+                        schedule={schedule}
+                    />
+                </div>
             )}
         </div>
     );

@@ -2,11 +2,11 @@ import React, { useContext } from 'react';
 import { Role } from '../../types';
 // FIX: Corrected import path for InstitutionContext and merged with UserContext import.
 import { UserContext, InstitutionContext } from '../../contexts/UserContext';
-import { DashboardIcon, AttendanceIcon, ActivityIcon, ReportIcon, ManageIcon, CloseIcon, DeceIcon, HealthIcon, UsersIcon, ChatBubbleIcon, CalendarIcon, VicerrectoradoIcon, InspectionIcon, CitacionIcon, LeccionarioIcon } from '../icons/Icons';
+import { DashboardIcon, AttendanceIcon, ActivityIcon, ReportIcon, ManageIcon, CloseIcon, DeceIcon, HealthIcon, UsersIcon, ChatBubbleIcon, CalendarIcon, VicerrectoradoIcon, InspectionIcon, CitacionIcon, LeccionarioIcon, ClipboardDocumentCheckIcon, ArchiveBoxIcon } from '../icons/Icons';
 
 interface SidebarProps {
   currentPage: string;
-  setCurrentPage: (page: 'dashboard' | 'attendance' | 'activities' | 'reports' | 'manage' | 'dece' | 'health' | 'students' | 'communications' | 'schedule' | 'vicerrectorate' | 'inspection' | 'citaciones' | 'leccionario') => void;
+  setCurrentPage: (page: 'dashboard' | 'attendance' | 'activities' | 'reports' | 'manage' | 'dece' | 'health' | 'students' | 'communications' | 'schedule' | 'vicerrectorate' | 'inspection' | 'citaciones' | 'leccionario' | 'curricular_planning' | 'curriculum_repository') => void;
   isSidebarOpen: boolean;
   setSidebarOpen: (isOpen: boolean) => void;
 }
@@ -56,6 +56,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentPage, setCurrentPage, isSideba
     [Role.Teacher]: [
       ...commonLinks,
       { page: 'leccionario', icon: <LeccionarioIcon className="h-6 w-6" />, text: 'Leccionario' },
+      { page: 'curricular_planning', icon: <ClipboardDocumentCheckIcon className="h-6 w-6" />, text: 'Planificación' },
       { page: 'attendance', icon: <AttendanceIcon className="h-6 w-6" />, text: 'Pase de Lista' },
       { page: 'activities', icon: <ActivityIcon className="h-6 w-6" />, text: 'Actividades' },
       { page: 'reports', icon: <ReportIcon className="h-6 w-6" />, text: 'Informes de Clase' },

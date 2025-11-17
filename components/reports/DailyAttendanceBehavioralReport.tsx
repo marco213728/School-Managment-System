@@ -174,21 +174,6 @@ const DailyAttendanceBehavioralReport: React.FC<DailyAttendanceBehavioralReportP
                     </div>
                 </div>
             </div>
-             <style>{`
-                @media print {
-                    @page {
-                        size: A4 landscape;
-                        margin: 0.5cm;
-                    }
-                    body {
-                        -webkit-print-color-adjust: exact;
-                        print-color-adjust: exact;
-                    }
-                    #daily-attendance-report-section {
-                        padding: 0 !important;
-                    }
-                }
-            `}</style>
         </div>
     );
 };

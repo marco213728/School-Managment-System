@@ -1,9 +1,9 @@
 import React, { useState, useMemo, useContext } from 'react';
-import { User, Class, Subject, TimeSlot, ScheduleEntry, LeccionarioEntry } from '../types';
+import { User, Class, Subject, TimeSlot, ScheduleEntry, LeccionarioEntry, MicroPlan, CurricularPlanStatus } from '../types';
 import { UserContext } from '../contexts/UserContext';
 import LeccionarioForm from '../components/leccionario/LeccionarioForm';
 import PrintableLeccionario from '../components/leccionario/PrintableLeccionario';
-import { PrinterIcon, EditIcon, PlusIcon } from '../components/icons/Icons';
+import { PrinterIcon, EditIcon, PlusIcon, ClipboardDocumentCheckIcon } from '../components/icons/Icons';
 
 interface LeccionarioPageProps {
     leccionarioEntries: LeccionarioEntry[];
@@ -13,9 +13,10 @@ interface LeccionarioPageProps {
     subjects: Subject[];
     users: User[];
     timeSlots: TimeSlot[];
+    microPlans: MicroPlan[]; // Added microPlans to props
 }
 
-const LeccionarioPage: React.FC<LeccionarioPageProps> = ({ leccionarioEntries, onUpdateLeccionarioEntries, schedule, classes, subjects, users, timeSlots }) => {
+const LeccionarioPage: React.FC<LeccionarioPageProps> = ({ leccionarioEntries, onUpdateLeccionarioEntries, schedule, classes, subjects, users, timeSlots, microPlans }) => {
     const { user: currentUser } = useContext(UserContext);
     const [selectedClassId, setSelectedClassId] = useState<string>('');
     const [selectedDate, setSelectedDate] = useState(new Date());
@@ -118,8 +119,8 @@ const LeccionarioPage: React.FC<LeccionarioPageProps> = ({ leccionarioEntries, o
                     </div>
                 )}
             </div>
-            {isFormOpen && (<LeccionarioForm isOpen={isFormOpen} onClose={() => setIsFormOpen(false)} onSave={handleSaveEntry} entryToEdit={editingEntryData.entry} classId={selectedClassId} subjectId={editingEntryData.subjectId} date={selectedDate.toISOString().split('T')[0]} timeSlotId={editingEntryData.timeSlotId} />)}
-            {isPrintOpen && selectedClassId && (<div className="fixed inset-0 bg-black bg-opacity-60 z-50 flex justify-center items-center p-4"><div id="leccionario-print-section" className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] flex flex-col"><header className="p-4 flex justify-between items-center bg-gray-50 border-b no-print sticky top-0 z-10"><h3 className="text-lg font-semibold">Vista Previa</h3><div className="flex items-center gap-2"><button onClick={() => setIsPrintOpen(false)} className="px-4 py-2 bg-gray-200 rounded-md">Cerrar</button><button onClick={() => window.print()} className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-md"><PrinterIcon className="h-5 w-5" />Imprimir</button></div></header><div className="overflow-y-auto"><PrintableLeccionario leccionarioEntries={leccionarioEntries.filter(e => e.classId === selectedClassId && e.date === selectedDate.toISOString().split('T')[0])} selectedClass={classes.find(c => c.id === selectedClassId)!} selectedDate={selectedDate} scheduleForDay={scheduleForDay} /></div></div></div>)}
+            {isFormOpen && (<LeccionarioForm isOpen={isFormOpen} onClose={() => setIsFormOpen(false)} onSave={handleSaveEntry} entryToEdit={editingEntryData.entry} classId={selectedClassId} subjectId={editingEntryData.subjectId} date={selectedDate.toISOString().split('T')[0]} timeSlotId={editingEntryData.timeSlotId} microPlans={microPlans} />)}
+            {isPrintOpen && selectedClassId && (<div className="fixed inset-0 bg-black bg-opacity-60 z-50 flex justify-center items-center p-4"><div id="leccionario-print-section" className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] flex flex-col"><header className="p-4 flex justify-between items-center bg-gray-50 border-b no-print sticky top-0 z-10"><h3 className="text-lg font-semibold">Vista Previa</h3><div className="flex items-center gap-2"><button onClick={() => setIsPrintOpen(false)} className="px-4 py-2 bg-gray-200 rounded-md">Cerrar</button><button onClick={() => window.print()} className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-md"><PrinterIcon className="h-5 w-5" />Imprimir / PDF</button></div></header><div className="overflow-y-auto"><PrintableLeccionario leccionarioEntries={leccionarioEntries.filter(e => e.classId === selectedClassId && e.date === selectedDate.toISOString().split('T')[0])} selectedClass={classes.find(c => c.id === selectedClassId)!} selectedDate={selectedDate} scheduleForDay={scheduleForDay} /></div></div></div>)}
         </div>
     );
 };
