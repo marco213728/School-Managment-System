@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo } from 'react';
 import { Institution, User, Role } from '../../types';
 import { CloseIcon } from '../icons/Icons';
@@ -17,6 +18,7 @@ const initialFormData: Omit<Institution, 'id' | 'contact'> & { id?: string; cont
     contact: { phone: '', email: '', address: '' },
     activeModules: { dece: false, health: false },
     adminIds: [],
+    methodologyFocus: 'DUA', // Default to DUA
 };
 
 const InstitutionForm: React.FC<InstitutionFormProps> = ({ isOpen, onClose, onSave, institutionToEdit, allUsers }) => {
@@ -37,6 +39,7 @@ const InstitutionForm: React.FC<InstitutionFormProps> = ({ isOpen, onClose, onSa
                 contact: institutionToEdit.contact,
                 activeModules: institutionToEdit.activeModules || { dece: false, health: false },
                 adminIds: institutionToEdit.adminIds || [],
+                methodologyFocus: institutionToEdit.methodologyFocus || 'DUA',
             });
             setLogoPreview(null);
         } else {
@@ -113,6 +116,17 @@ const InstitutionForm: React.FC<InstitutionFormProps> = ({ isOpen, onClose, onSa
                         <label className="block text-sm font-medium text-gray-700">Nombre de la Institución</label>
                         <input type="text" name="name" value={formData.name} onChange={handleChange} required className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500" />
                     </div>
+                    
+                    {/* DUA Requirement */}
+                    <div className="p-3 bg-blue-50 border border-blue-200 rounded-md">
+                        <h4 className="font-bold text-blue-800 text-sm mb-1">Configuración de Metodología (PCI)</h4>
+                        <div className="flex items-center">
+                            <input type="radio" checked readOnly className="h-4 w-4 text-blue-600" />
+                            <label className="ml-2 text-sm font-medium text-blue-900">Enfoque Prioritario: Diseño Universal para el Aprendizaje (DUA) - Obligatorio</label>
+                        </div>
+                        <p className="text-xs text-blue-700 mt-1 ml-6">El sistema configurará automáticamente los formatos de planificación según la normativa.</p>
+                    </div>
+
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                             <label className="block text-sm font-medium text-gray-700">Email de Contacto</label>

@@ -1,3 +1,4 @@
+
 import React, { useState, useContext } from 'react';
 import Sidebar from './Sidebar';
 import Header from './Header';
@@ -18,9 +19,10 @@ import LeccionarioPage from '../../pages/LeccionarioPage';
 import CurricularPlanningPage from '../../pages/CurricularPlanningPage';
 import CurriculumRepositoryPage from '../../pages/CurriculumRepositoryPage';
 import GradebookPage from '../../pages/GradebookPage';
+import VicerrectoradoPage from '../../pages/VicerrectoradoPage';
 
 
-type Page = 'dashboard' | 'attendance' | 'activities' | 'reports' | 'manage' | 'dece' | 'health' | 'students' | 'communications' | 'schedule' | 'inspection' | 'citaciones' | 'leccionario' | 'curricular_planning' | 'curriculum_repository' | 'gradebook';
+type Page = 'dashboard' | 'attendance' | 'activities' | 'reports' | 'manage' | 'dece' | 'health' | 'students' | 'communications' | 'schedule' | 'inspection' | 'citaciones' | 'leccionario' | 'curricular_planning' | 'curriculum_repository' | 'gradebook' | 'vicerrector_dashboard';
 
 interface DashboardLayoutProps {
   users: User[];
@@ -84,6 +86,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = (props) => {
     leccionarioEntries, 
     onUpdateLeccionarioEntries,
     microPlans,
+    dcds,
     ...restProps
   } = props;
 
@@ -106,6 +109,8 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = (props) => {
           gradebooks={props.gradebooks}
           onUpdateGradebooks={props.onUpdateGradebooks}
           users={props.users}
+          microPlans={microPlans}
+          dcds={dcds}
         />;
       case 'reports':
         return <ReportsPage 
@@ -118,6 +123,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = (props) => {
           timetables={restProps.timetables}
           users={users}
           subjects={subjects}
+          gradebooks={props.gradebooks}
          />;
       case 'manage':
         return <ManagePage 
@@ -200,6 +206,19 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = (props) => {
           schedule={props.schedule}
           activities={props.activities}
         />;
+      case 'vicerrector_dashboard':
+          return <VicerrectoradoPage
+              microPlans={props.microPlans}
+              viccInterventions={props.viccInterventions}
+              gradebooks={props.gradebooks}
+              users={props.users}
+              subjects={props.subjects}
+              classes={props.classes}
+              students={props.students}
+              onNavigate={setCurrentPage}
+              notifications={props.notifications}
+              onUpdateNotifications={props.onUpdateNotifications}
+          />;
       default:
         return <DashboardPage {...restProps} schedule={schedule} classes={classes} subjects={subjects} timeSlots={timeSlots} rooms={restProps.rooms} timetables={restProps.timetables} users={users} />;
     }

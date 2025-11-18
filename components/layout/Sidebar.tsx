@@ -1,12 +1,12 @@
+
 import React, { useContext } from 'react';
 import { Role } from '../../types';
-// FIX: Corrected import path for InstitutionContext and merged with UserContext import.
 import { UserContext, InstitutionContext } from '../../contexts/UserContext';
 import { DashboardIcon, AttendanceIcon, ActivityIcon, ReportIcon, ManageIcon, CloseIcon, DeceIcon, HealthIcon, UsersIcon, ChatBubbleIcon, CalendarIcon, VicerrectoradoIcon, InspectionIcon, CitacionIcon, LeccionarioIcon, ClipboardDocumentCheckIcon, ArchiveBoxIcon, ClipboardListIcon } from '../icons/Icons';
 
 interface SidebarProps {
   currentPage: string;
-  setCurrentPage: (page: 'dashboard' | 'attendance' | 'activities' | 'reports' | 'manage' | 'dece' | 'health' | 'students' | 'communications' | 'schedule' | 'inspection' | 'citaciones' | 'leccionario' | 'curricular_planning' | 'curriculum_repository' | 'gradebook') => void;
+  setCurrentPage: (page: 'dashboard' | 'attendance' | 'activities' | 'reports' | 'manage' | 'dece' | 'health' | 'students' | 'communications' | 'schedule' | 'inspection' | 'citaciones' | 'leccionario' | 'curricular_planning' | 'curriculum_repository' | 'gradebook' | 'vicerrector_dashboard') => void;
   isSidebarOpen: boolean;
   setSidebarOpen: (isOpen: boolean) => void;
 }
@@ -15,7 +15,6 @@ const Sidebar: React.FC<SidebarProps> = ({ currentPage, setCurrentPage, isSideba
   const { user } = useContext(UserContext);
   const { institution } = useContext(InstitutionContext);
 
-  // FIX: Changed JSX.Element to React.ReactNode to resolve namespace error.
   const NavLink = ({ page, icon, text }: { page: any, icon: React.ReactNode, text: string }) => {
     const isActive = currentPage === page;
     const baseClasses = "flex items-center px-3 py-2.5 text-slate-600 hover:bg-slate-100 rounded-lg transition-colors duration-200";
@@ -37,8 +36,6 @@ const Sidebar: React.FC<SidebarProps> = ({ currentPage, setCurrentPage, isSideba
     { page: 'dashboard', icon: <DashboardIcon className="h-6 w-6" />, text: 'Dashboard' }
   ];
 
-  const deceRoles = [Role.JefeDECE, Role.PsicologoEducativo, Role.TrabajadorSocial];
-
   const roleLinks = {
     [Role.InstitutionAdmin]: [
       ...commonLinks,
@@ -49,8 +46,9 @@ const Sidebar: React.FC<SidebarProps> = ({ currentPage, setCurrentPage, isSideba
       { page: 'citaciones', icon: <CitacionIcon className="h-6 w-6" />, text: 'Citaciones' },
       { page: 'dece', icon: <DeceIcon className="h-6 w-6" />, text: 'DECE' },
       { page: 'health', icon: <HealthIcon className="h-6 w-6" />, text: 'Salud' },
-      { page: 'curricular_planning', icon: <VicerrectoradoIcon className="h-6 w-6" />, text: 'Planificación Curricular' },
-      { page: 'curriculum_repository', icon: <ArchiveBoxIcon className="h-6 w-6" />, text: 'Repositorio Curricular' },
+      { page: 'vicerrector_dashboard', icon: <VicerrectoradoIcon className="h-6 w-6" />, text: 'Vicerrectorado' },
+      { page: 'curricular_planning', icon: <ClipboardDocumentCheckIcon className="h-6 w-6" />, text: 'Planificación' },
+      { page: 'curriculum_repository', icon: <ArchiveBoxIcon className="h-6 w-6" />, text: 'Repositorio' },
       { page: 'inspection', icon: <InspectionIcon className="h-6 w-6" />, text: 'Inspección' },
       { page: 'manage', icon: <ManageIcon className="h-6 w-6" />, text: 'Gestión Centro' },
     ],
@@ -98,14 +96,15 @@ const Sidebar: React.FC<SidebarProps> = ({ currentPage, setCurrentPage, isSideba
       { page: 'reports', icon: <ReportIcon className="h-6 w-6" />, text: 'Informes de Salud' },
     ],
     [Role.Vicerrector]: [
-        ...commonLinks,
-        { page: 'curricular_planning', icon: <VicerrectoradoIcon className="h-6 w-6" />, text: 'Planificación' },
+        { page: 'vicerrector_dashboard', icon: <VicerrectoradoIcon className="h-6 w-6" />, text: 'Dashboard Vicerrectorado' },
+        { page: 'curricular_planning', icon: <ClipboardDocumentCheckIcon className="h-6 w-6" />, text: 'Planificación Curricular' },
         { page: 'curriculum_repository', icon: <ArchiveBoxIcon className="h-6 w-6" />, text: 'Repositorio Curricular' },
         { page: 'citaciones', icon: <CitacionIcon className="h-6 w-6" />, text: 'Citaciones' },
     ],
     [Role.InspectorGeneral]: [
         ...commonLinks,
         { page: 'inspection', icon: <InspectionIcon className="h-6 w-6" />, text: 'Inspección' },
+        { page: 'students', icon: <UsersIcon className="h-6 w-6" />, text: 'Alumnos' },
         { page: 'attendance', icon: <AttendanceIcon className="h-6 w-6" />, text: 'Asistencia General' },
         { page: 'manage', icon: <ManageIcon className="h-6 w-6" />, text: 'Gestión Centro' },
         { page: 'citaciones', icon: <CitacionIcon className="h-6 w-6" />, text: 'Citaciones' },

@@ -1,4 +1,5 @@
-import { User, Role, Student, Class, Activity, ActivityType, AttendanceRecord, AttendanceStatus, Notification, SupportContact, Intervention, InterventionType, OvpActivity, OvpAxis, HealthRecord, Institution, OcrSubmission, OcrSubmissionStatus, ScheduleEntry, MedicalVisit, Shift, TimeSlot, Subject, Room, Timetable, ViccIntervention, ViccInterventionType, ExitPass, Citacion, CitacionStatus, AcademicCalendarEvent, LeccionarioEntry, MicroPlan, CurricularPlanStatus, GradeLevel, GRADE_LEVELS, Dcd, EvaluationCriterion, EvaluationIndicator, Competency, COMPETENCIES, CURRICULAR_INSERTIONS, AREAS_OF_KNOWLEDGE, SUBJECT_LEVELS, Gradebook, TrimesterRecord, StudentGradebook, GradeEntry, EVALUATION_CATEGORIES } from './types';
+
+import { User, Role, Student, Class, Activity, ActivityType, AttendanceRecord, AttendanceStatus, Notification, SupportContact, Intervention, InterventionType, OvpActivity, OvpAxis, HealthRecord, Institution, OcrSubmission, OcrSubmissionStatus, ScheduleEntry, MedicalVisit, Shift, TimeSlot, Subject, Room, Timetable, ViccIntervention, ViccInterventionType, ExitPass, Citacion, CitacionStatus, AcademicCalendarEvent, LeccionarioEntry, MicroPlan, CurricularPlanStatus, GradeLevel, GRADE_LEVELS, Dcd, EvaluationCriterion, EvaluationIndicator, Competency, COMPETENCIES, CURRICULAR_INSERTIONS, AREAS_OF_KNOWLEDGE, SUBJECT_LEVELS, Gradebook, TrimesterRecord, StudentGradebook, GradeEntry, EVALUATION_CATEGORIES, ClassroomObservation, TrainingSession, InstitutionalDocument, MeetingRecord, DisciplinaryAction, DisciplinarySeverity, InspectionVisit, ConflictMediation, QualityMetric, ClassroomVisit, RubricCriterion } from './types';
 
 export { GRADE_LEVELS, COMPETENCIES, CURRICULAR_INSERTIONS, AREAS_OF_KNOWLEDGE, SUBJECT_LEVELS, EVALUATION_CATEGORIES };
 
@@ -38,6 +39,55 @@ export const REGIMEN_DISCIPLINARIO: { [key: string]: string } = {
   'N': 'No cumplir con las disposiciones contenidas en la presente Ley;',
   'O': 'Obstaculizar o interferir en el normal desenvolvimiento de las actividades académicas y culturales de la Institución, siempre y cuando no tengan relación con el ejercicio de su derecho de expresión, asociación o protesta;',
 };
+
+export const DEFAULT_RUBRIC_CRITERIA: RubricCriterion[] = [
+    { id: 'c1', category: 'Planificación', description: 'La planificación microcurricular incluye elementos DUA y está alineada al currículo nacional.', maxScore: 4 },
+    { id: 'c2', category: 'Metodología', description: 'Implementa estrategias activas (DUA) que fomentan la participación de todos los estudiantes.', maxScore: 4 },
+    { id: 'c3', category: 'Clima de Aula', description: 'Mantiene un ambiente de respeto, gestión efectiva del comportamiento y motivación.', maxScore: 4 },
+    { id: 'c4', category: 'Uso de Recursos', description: 'Utiliza recursos didácticos y tecnológicos pertinentes para el objetivo de aprendizaje.', maxScore: 4 },
+    { id: 'c5', category: 'Evaluación', description: 'Aplica evaluación formativa y retroalimentación oportuna durante la clase.', maxScore: 4 },
+];
+
+export const MOCK_CLASSROOM_VISITS: ClassroomVisit[] = [
+    {
+        id: 'visit1',
+        institutionId: 'uemol',
+        teacherId: 'teacher1',
+        observerId: 'vicerrector1',
+        date: '2024-09-15',
+        startTime: '08:30',
+        className: 'ESO 1ºA',
+        subject: 'Matemáticas',
+        topic: 'Números Enteros',
+        focus: 'Metodología DUA',
+        status: 'Completed',
+        scores: [
+            { criteriaId: 'c1', score: 4, evidence: 'Planificación visible y completa.' },
+            { criteriaId: 'c2', score: 3, evidence: 'Buena participación, faltó diversificar actividades.' },
+            { criteriaId: 'c3', score: 4, evidence: 'Excelente clima.' },
+            { criteriaId: 'c4', score: 4, evidence: 'Uso de material concreto.' },
+            { criteriaId: 'c5', score: 3, evidence: 'Retroalimentación general, faltó individual.' },
+        ],
+        strengths: 'Buen dominio del grupo y uso de recursos.',
+        weaknesses: 'Mejorar la diferenciación en la evaluación.',
+        agreements: 'Aplicar rúbricas diferenciadas para la próxima unidad.',
+        rating: 3.6,
+        feedbackDate: '2024-09-16'
+    },
+    {
+        id: 'visit2',
+        institutionId: 'uemol',
+        teacherId: 'teacher2',
+        observerId: 'vicerrector1',
+        date: '2024-10-10',
+        startTime: '10:00',
+        className: 'ESO 1ºB',
+        subject: 'Historia',
+        topic: 'La Edad Media',
+        focus: 'Uso de TIC',
+        status: 'Scheduled',
+    }
+];
 
 
 export const MOCK_ACADEMIC_CALENDAR_EVENTS: AcademicCalendarEvent[] = [
@@ -80,6 +130,7 @@ export const MOCK_INSTITUTIONS: Institution[] = [
     },
     activeModules: { dece: true, health: true },
     adminIds: ['admin1'],
+    methodologyFocus: 'DUA',
     communicationChannels: {
       email: { enabled: true },
       sms: { enabled: true },
@@ -133,6 +184,7 @@ export const MOCK_INSTITUTIONS: Institution[] = [
     },
     activeModules: { dece: false, health: true },
     adminIds: ['admin2'],
+    methodologyFocus: 'Tradicional',
     communicationChannels: {
       email: { enabled: true },
       sms: { enabled: false },
@@ -637,10 +689,13 @@ export const MOCK_MICRO_PLANS: MicroPlan[] = [
     unitTitle: 'Unidad 1: Números Naturales',
     unitObjectives: 'Comprender y utilizar los números naturales para resolver problemas cotidianos.',
     dcdIds: ['dcd-m-1'],
-    methodology: 'Inicio: Lluvia de ideas sobre dónde vemos números. Desarrollo: Actividades con material concreto (ábaco, base 10). Cierre: Juego de bingo numérico.',
+    duaRepresentation: 'Proveer ejemplos concretos (ábaco) y visuales (recta numérica) para la representación de números.',
+    duaActionExpression: 'Permitir que los estudiantes demuestren comprensión mediante ejercicios escritos o explicación verbal en grupos.',
+    duaEngagement: 'Conectar el uso de números con situaciones de compra en la tienda escolar.',
+    methodology: 'Inicio: Lluvia de ideas. Desarrollo: Uso de ábaco. Cierre: Bingo.',
     resources: 'Ábaco, material base 10, fichas de trabajo, proyector.',
     evaluation: 'Observación directa, revisión de fichas, participación en el juego.',
-    adaptations: [{ studentId: 'student5', dcdModificada: 'Representar, escribir y leer los números naturales del 0 al 100.' }],
+    adaptations: [{ studentId: 'student5', dcdModificada: 'Representar, escribir y leer los números naturales del 0 al 100.', grade: '3' }],
     status: CurricularPlanStatus.Draft,
     creationDate: '2024-08-20T10:00:00Z',
   },
@@ -654,7 +709,10 @@ export const MOCK_MICRO_PLANS: MicroPlan[] = [
     unitTitle: 'Unidad 1: La Antigua Grecia',
     unitObjectives: 'Identificar los aportes de la civilización griega a la cultura occidental.',
     dcdIds: ['dcd-ll-1'],
-    methodology: 'Presentación de video introductorio, trabajo en grupos para investigar sobre polis, arte y filosofía. Debate final.',
+    duaRepresentation: 'Uso de videos documentales con subtítulos y mapas interactivos.',
+    duaActionExpression: 'Creación de maquetas, dramatizaciones o ensayos cortos.',
+    duaEngagement: 'Debate sobre la democracia actual comparada con la ateniense.',
+    methodology: 'Presentación de video, trabajo grupal, debate.',
     resources: 'Video, acceso a internet, cartulinas, marcadores.',
     evaluation: 'Rúbrica para el trabajo grupal y participación en el debate.',
     adaptations: [],
@@ -672,7 +730,10 @@ export const MOCK_MICRO_PLANS: MicroPlan[] = [
     unitTitle: 'Unidad 2: Suma y Resta',
     unitObjectives: 'Aplicar algoritmos de la adición y sustracción con números naturales.',
     dcdIds: ['dcd-m-1'],
-    methodology: 'Resolución de problemas en la pizarra, trabajo individual en el cuaderno, competencia por equipos.',
+    duaRepresentation: 'Uso de bloques lógicos y software educativo de matemáticas.',
+    duaActionExpression: 'Resolución de problemas en pizarra digital o cuaderno.',
+    duaEngagement: 'Juego de roles "El Mercado".',
+    methodology: 'Resolución de problemas, competencia por equipos.',
     resources: 'Libro de texto, cuaderno, pizarra digital.',
     evaluation: 'Revisión de cuadernos, prueba corta al final de la unidad.',
     adaptations: [],
@@ -682,27 +743,6 @@ export const MOCK_MICRO_PLANS: MicroPlan[] = [
     reviewDate: '2024-08-18T15:00:00Z',
     reviewerId: 'vicerrector1',
   },
-   {
-    id: 'mp4',
-    institutionId: 'uemol',
-    teacherId: 'teacher2',
-    classId: 'class2',
-    subjectId: 'subj2',
-    academicYear: '2024-2025',
-    unitTitle: 'Unidad 2: El Imperio Romano',
-    unitObjectives: 'Analizar la expansión del Imperio Romano y su legado.',
-    dcdIds: ['dcd-ll-2'],
-    methodology: 'Análisis de mapas históricos, lectura de textos, creación de una línea de tiempo.',
-    resources: 'Mapas, textos, material para línea de tiempo.',
-    evaluation: 'Presentación de la línea de tiempo.',
-    adaptations: [],
-    status: CurricularPlanStatus.RequiresAdjustments,
-    creationDate: '2024-08-22T16:00:00Z',
-    submittedDate: '2024-08-23T10:00:00Z',
-    reviewDate: '2024-08-24T12:00:00Z',
-    reviewerId: 'vicerrector1',
-    reviewComments: 'Por favor, incluya una actividad de evaluación formativa intermedia para medir la comprensión de los estudiantes antes de la evaluación final. También, es necesario añadir una adaptación curricular para la estudiante Ana Diaz según el informe del DECE.'
-  }
 ];
 
 export const MOCK_EVALUATION_CRITERIA: EvaluationCriterion[] = [
@@ -761,6 +801,7 @@ export const MOCK_DCDS: Dcd[] = [
     criterionId: 'ce-m-4-1',
     competencies: ['Lógico-Matemática'],
     curricularInsertions: ['Educación Financiera'],
+    isDisaggregated: false,
   },
   {
     id: 'dcd-ll-1',
@@ -772,6 +813,7 @@ export const MOCK_DCDS: Dcd[] = [
     criterionId: 'ce-ll-4-1',
     competencies: ['Comunicacional', 'Socioemocional'],
     curricularInsertions: ['Educación Cívica, Ética e Integridad', 'Socioemocional'],
+    isDisaggregated: false,
   },
   {
     id: 'dcd-ll-2',
@@ -783,6 +825,8 @@ export const MOCK_DCDS: Dcd[] = [
     criterionId: 'ce-ll-4-2',
     competencies: ['Comunicacional'],
     curricularInsertions: ['Educación para el Desarrollo Sostenible'],
+    isDisaggregated: true,
+    refCode: 'LL.4.1.3'
   }
 ];
 
@@ -869,4 +913,128 @@ export const MOCK_GRADEBOOKS: Gradebook[] = [
       createEmptyStudentGradebook('student5')
     ]
   }
+];
+
+export const MOCK_CLASSROOM_OBSERVATIONS: ClassroomObservation[] = [
+    {
+        id: 'obs1',
+        institutionId: 'uemol',
+        teacherId: 'teacher1',
+        observerId: 'vicerrector1',
+        date: '2024-09-15',
+        className: 'ESO 1ºA',
+        subject: 'Matemáticas',
+        topic: 'Números Enteros',
+        strengths: 'Buen dominio del grupo, uso de material concreto.',
+        recommendations: 'Mejorar el cierre de la clase y la evaluación formativa.',
+        rating: 4
+    }
+];
+
+export const MOCK_TRAINING_SESSIONS: TrainingSession[] = [
+    {
+        id: 'train1',
+        institutionId: 'uemol',
+        title: 'Taller sobre Metodología DUA',
+        date: '2024-08-25',
+        duration: '4 horas',
+        topic: 'Implementación del DUA en la planificación microcurricular',
+        trainer: 'MSc. Laura Torres',
+        attendees: ['teacher1', 'teacher2', 'teacher4']
+    }
+];
+
+export const MOCK_INSTITUTIONAL_DOCUMENTS: InstitutionalDocument[] = [
+    {
+        id: 'doc1',
+        institutionId: 'uemol',
+        type: 'PEI',
+        title: 'Proyecto Educativo Institucional 2024-2028',
+        status: 'Vigente',
+        lastUpdated: '2024-05-10',
+        version: '1.0'
+    },
+    {
+        id: 'doc2',
+        institutionId: 'uemol',
+        type: 'PCI',
+        title: 'Plan Curricular Institucional',
+        status: 'Revisión',
+        lastUpdated: '2024-08-20',
+        version: '2.3'
+    }
+];
+
+export const MOCK_MEETING_RECORDS: MeetingRecord[] = [
+    {
+        id: 'meet1',
+        institutionId: 'uemol',
+        type: 'Junta de Curso',
+        date: '2024-10-30',
+        title: 'Junta de 1er Trimestre - ESO 1ºA',
+        summary: 'Análisis de rendimiento académico y comportamental.',
+        agreements: 'Refuerzo académico para 3 estudiantes en Matemáticas.',
+        attendees: ['teacher1', 'teacher2', 'vicerrector1', 'dece1']
+    }
+];
+
+// Inspection Mock Data
+export const MOCK_DISCIPLINARY_ACTIONS: DisciplinaryAction[] = [
+    {
+        id: 'da1',
+        institutionId: 'uemol',
+        studentId: 'student3',
+        date: '2024-09-10',
+        infraction: 'Art. 134.N - Incumplimiento de disposiciones',
+        description: 'Uso de dispositivo móvil en evaluación sumativa.',
+        severity: DisciplinarySeverity.Serious,
+        status: 'En Proceso',
+        actionsTaken: 'Retiro del dispositivo, notificación a representantes.',
+    }
+];
+
+export const MOCK_INSPECTION_VISITS: InspectionVisit[] = [
+    {
+        id: 'iv1',
+        institutionId: 'uemol',
+        inspectorId: 'inspector1',
+        date: '2024-09-05',
+        type: 'Ordinaria',
+        target: 'Laboratorios de Computación',
+        findings: 'Equipos en buen estado, falta señalética de emergencia.',
+        status: 'Realizada',
+    }
+];
+
+export const MOCK_CONFLICT_MEDIATIONS: ConflictMediation[] = [
+    {
+        id: 'cm1',
+        institutionId: 'uemol',
+        date: '2024-10-01',
+        partiesInvolved: ['student1', 'student2'],
+        description: 'Disputa verbal durante el recreo.',
+        status: 'En Mediación',
+        agreements: '',
+    }
+];
+
+export const MOCK_QUALITY_METRICS: QualityMetric[] = [
+    {
+        id: 'qm1',
+        institutionId: 'uemol',
+        year: '2024',
+        category: 'Asistencia',
+        metric: 'Tasa de Asistencia Global',
+        value: 92.5,
+        target: 95,
+    },
+    {
+        id: 'qm2',
+        institutionId: 'uemol',
+        year: '2024',
+        category: 'Rendimiento',
+        metric: 'Promedio General Matemáticas',
+        value: 7.8,
+        target: 8.0,
+    }
 ];

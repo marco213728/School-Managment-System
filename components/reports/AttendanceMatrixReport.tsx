@@ -1,5 +1,3 @@
-
-
 import React, { useMemo, useContext } from 'react';
 import { Student, AttendanceRecord, AttendanceStatus, AcademicCalendarEvent } from '../../types';
 import { InstitutionContext } from '../../contexts/UserContext';
@@ -139,7 +137,7 @@ const AttendanceMatrixReport: React.FC<AttendanceMatrixReportProps> = ({ student
                             <th className="border border-gray-300 p-1" rowSpan={4}>Nº</th>
                             <th className="border border-gray-300 p-1" rowSpan={4}>APELLIDOS Y NOMBRES</th>
                             {Object.entries(groupedDates).map(([month, days]) => (
-                                <th key={month} colSpan={days.length} className="border border-gray-300 p-1 font-semibold">{month}</th>
+                                <th key={month} colSpan={(days as any[]).length} className="border border-gray-300 p-1 font-semibold">{month}</th>
                             ))}
                             <th colSpan={3} className="border border-gray-300 p-1 font-semibold" rowSpan={2}>RESUMEN</th>
                         </tr>
@@ -195,10 +193,8 @@ const AttendanceMatrixReport: React.FC<AttendanceMatrixReportProps> = ({ student
                                                 case AttendanceStatus.Tardy: mark = 'A'; break;
                                                 default: mark = '';
                                             }
-                                            // FIX: The 'observations' property is optional and can be undefined.
-                                            // By storing it in a variable, we help the type checker correctly narrow the type before use.
+                                            
                                             const obs = record.observations;
-                                            // FIX: Changed the check to a simpler truthy check for the array, which also resolves the type error.
                                             if (obs && obs.length > 0) {
                                                 mark += `, ${obs.join(', ')}`;
                                             }

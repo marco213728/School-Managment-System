@@ -1,9 +1,9 @@
+
 import React, { useState, useContext, useMemo, useEffect } from 'react';
 import { UserContext } from '../contexts/UserContext';
 import { MOCK_CLASSES, MOCK_USERS, EVALUATION_CATEGORIES, MOCK_GRADEBOOKS } from '../constants';
-// FIX: Import 'User' type to resolve type error in props.
-import { Role, Activity, ActivityType, Class, Subject, Student, Gradebook, StudentGradebook, GradeEntry, TrimesterRecord, EvaluationCategory, User } from '../types';
-import { EditIcon, TrashIcon, PlusIcon, CloseIcon } from '../components/icons/Icons';
+import { Role, Activity, ActivityType, Class, Subject, Student, Gradebook, StudentGradebook, GradeEntry, TrimesterRecord, EvaluationCategory, User, MicroPlan, Dcd } from '../types';
+import { EditIcon, TrashIcon, PlusIcon, CloseIcon, CheckCircleIcon } from '../components/icons/Icons';
 
 interface ActivityFormProps {
     isOpen: boolean;
@@ -12,15 +12,20 @@ interface ActivityFormProps {
     activityToEdit: Activity | null;
     classes: Class[];
     subjects: Subject[];
+    microPlans: MicroPlan[];
+    dcds: Dcd[];
 }
 
-const ActivityForm: React.FC<ActivityFormProps> = ({ isOpen, onClose, onSave, activityToEdit, classes, subjects }) => {
+const ActivityForm: React.FC<ActivityFormProps> = ({ isOpen, onClose, onSave, activityToEdit, classes, subjects, microPlans, dcds }) => {
     const [formData, setFormData] = useState({
         classId: '', subjectId: '', title: '', description: '', type: ActivityType.Homework,
         deliveryDate: new Date().toISOString().split('T')[0],
         trimester: '1' as '1' | '2' | '3',
         evaluationCategory: 'ACTIVIDAD_INDIVIDUAL' as EvaluationCategory,
-        gradebookIndex: '0' as '0'|'1'|'2'|'3'|'4'
+        gradebookIndex: '0' as '0'|'1'|'2'|'3'|'4',
+        microPlanId: '',
+        dcdId: '',
+        duaPrinciple: '' as 'representation' | 'actionExpression' | 'engagement' | '',
     });
 
     useEffect(() => {
@@ -35,6 +40,9 @@ const ActivityForm: React.FC<ActivityFormProps> = ({ isOpen, onClose, onSave, ac
                 trimester: String(activityToEdit.trimester) as '1'|'2'|'3',
                 evaluationCategory: activityToEdit.evaluationCategory,
                 gradebookIndex: String(activityToEdit.gradebookIndex || '0') as '0'|'1'|'2'|'3'|'4',
+                microPlanId: activityToEdit.microPlanId || '',
+                dcdId: activityToEdit.dcdId || '',
+                duaPrinciple: activityToEdit.duaPrinciple || '',
             });
         } else {
              setFormData({
@@ -42,7 +50,10 @@ const ActivityForm: React.FC<ActivityFormProps> = ({ isOpen, onClose, onSave, ac
                 deliveryDate: new Date().toISOString().split('T')[0],
                 trimester: '1' as '1' | '2' | '3',
                 evaluationCategory: 'ACTIVIDAD_INDIVIDUAL' as EvaluationCategory,
-                gradebookIndex: '0' as '0'|'1'|'2'|'3'|'4'
+                gradebookIndex: '0' as '0'|'1'|'2'|'3'|'4',
+                microPlanId: '',
+                dcdId: '',
+                duaPrinciple: '',
             });
         }
     }, [activityToEdit, isOpen]);
@@ -53,8 +64,25 @@ const ActivityForm: React.FC<ActivityFormProps> = ({ isOpen, onClose, onSave, ac
             ...formData,
             trimester: parseInt(formData.trimester) as 1 | 2 | 3,
             gradebookIndex: formData.evaluationCategory.startsWith('ACTIVIDAD') ? parseInt(formData.gradebookIndex) as 0|1|2|3|4 : undefined,
+            microPlanId: formData.microPlanId || undefined,
+            dcdId: formData.dcdId || undefined,
+            duaPrinciple: formData.duaPrinciple as 'representation' | 'actionExpression' | 'engagement' || undefined,
         }, activityToEdit?.id);
     };
+    
+    const relevantMicroPlans = useMemo(() => {
+        if (!formData.classId || !formData.subjectId) return [];
+        return microPlans.filter(mp => mp.classId === formData.classId && mp.subjectId === formData.subjectId);
+    }, [formData.classId, formData.subjectId, microPlans]);
+
+    const relevantDcds = useMemo(() => {
+        if (!formData.microPlanId) return [];
+        const plan = microPlans.find(p => p.id === formData.microPlanId);
+        if (!plan) return [];
+        return dcds.filter(d => plan.dcdIds.includes(d.id));
+    }, [formData.microPlanId, microPlans, dcds]);
+    
+    const selectedDcd = dcds.find(d => d.id === formData.dcdId);
 
     const isFormative = formData.evaluationCategory === 'ACTIVIDAD_INDIVIDUAL' || formData.evaluationCategory === 'ACTIVIDAD_GRUPAL';
 
@@ -62,20 +90,47 @@ const ActivityForm: React.FC<ActivityFormProps> = ({ isOpen, onClose, onSave, ac
 
     return (
         <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-center items-center p-4" onClick={onClose}>
-            <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-2xl max-h-[90vh] flex flex-col" onClick={e => e.stopPropagation()}>
+            <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-3xl max-h-[90vh] flex flex-col" onClick={e => e.stopPropagation()}>
                 <header className="flex justify-between items-center mb-4">
                     <h2 className="text-xl font-bold">{activityToEdit ? 'Editar' : 'Crear'} Actividad</h2>
                     <button onClick={onClose} className="p-1"><CloseIcon className="h-6 w-6" /></button>
                 </header>
                 <form onSubmit={handleSubmit} className="space-y-4 overflow-y-auto pr-2">
                     <input type="text" value={formData.title} onChange={e => setFormData(p => ({...p, title: e.target.value}))} placeholder="Título de la Actividad" required className="w-full p-2 border rounded"/>
-                    <textarea value={formData.description} onChange={e => setFormData(p => ({...p, description: e.target.value}))} placeholder="Descripción..." required rows={3} className="w-full p-2 border rounded"/>
+                    <textarea value={formData.description} onChange={e => setFormData(p => ({...p, description: e.target.value}))} placeholder="Descripción..." required rows={2} className="w-full p-2 border rounded"/>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <select value={formData.classId} onChange={e => setFormData(p => ({...p, classId: e.target.value}))} required className="w-full p-2 border rounded"><option value="">Clase</option>{classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select>
                         <select value={formData.subjectId} onChange={e => setFormData(p => ({...p, subjectId: e.target.value}))} required className="w-full p-2 border rounded"><option value="">Asignatura</option>{subjects.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}</select>
                         <input type="date" value={formData.deliveryDate} onChange={e => setFormData(p => ({...p, deliveryDate: e.target.value}))} required className="w-full p-2 border rounded"/>
                         <select value={formData.type} onChange={e => setFormData(p => ({...p, type: e.target.value as ActivityType}))} required className="w-full p-2 border rounded">{Object.values(ActivityType).map(t => <option key={t} value={t}>{t}</option>)}</select>
                     </div>
+
+                    <fieldset className="border p-4 rounded-md bg-blue-50 border-blue-200">
+                        <legend className="font-semibold px-2 text-blue-800">Vinculación Curricular (PUD/DUA)</legend>
+                        <div className="space-y-3">
+                             <select value={formData.microPlanId} onChange={e => setFormData(p => ({...p, microPlanId: e.target.value, dcdId: ''}))} className="w-full p-2 border rounded bg-white" disabled={!formData.classId || !formData.subjectId}>
+                                <option value="">Seleccionar Unidad de Planificación (PUD)</option>
+                                {relevantMicroPlans.map(mp => <option key={mp.id} value={mp.id}>{mp.unitTitle}</option>)}
+                            </select>
+                            <select value={formData.dcdId} onChange={e => setFormData(p => ({...p, dcdId: e.target.value}))} className="w-full p-2 border rounded bg-white" disabled={!formData.microPlanId}>
+                                <option value="">Seleccionar Destreza (DCD)</option>
+                                {relevantDcds.map(d => <option key={d.id} value={d.id}>{d.code} - {d.description.substring(0, 60)}...</option>)}
+                            </select>
+                            {selectedDcd && (
+                                <div className="text-xs bg-white p-2 rounded border text-gray-600">
+                                    <strong>Destreza Completa:</strong> {selectedDcd.description}
+                                    {selectedDcd.isDisaggregated && <span className="block text-yellow-600 font-semibold mt-1">Destreza Desagregada</span>}
+                                </div>
+                            )}
+                            <select value={formData.duaPrinciple} onChange={e => setFormData(p => ({...p, duaPrinciple: e.target.value as any}))} className="w-full p-2 border rounded bg-white">
+                                <option value="">Seleccionar Principio DUA (Metodología)</option>
+                                <option value="representation">1. Representación (El Qué)</option>
+                                <option value="actionExpression">2. Acción y Expresión (El Cómo)</option>
+                                <option value="engagement">3. Implicación (El Por Qué)</option>
+                            </select>
+                        </div>
+                    </fieldset>
+
                     <fieldset className="border p-4 rounded-md">
                         <legend className="font-semibold px-2">Vinculación con Registro Docente</legend>
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -95,34 +150,41 @@ const GradeDisplay: React.FC<{ grade?: number }> = ({ grade }) => (
     <span className="font-bold text-gray-800">{grade !== undefined ? grade.toFixed(2) : '-'}</span>
 );
 
-const ActivityCard: React.FC<{ activity: Activity; classInfo?: Class; grade?: GradeEntry }> = ({ activity, classInfo, grade }) => {
+const ActivityCard: React.FC<{ activity: Activity; classInfo?: Class; grade?: GradeEntry; dcd?: Dcd }> = ({ activity, classInfo, grade, dcd }) => {
     return (
-        <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
-            <div className="flex justify-between items-start">
-                <div>
-                    <p className="text-sm text-gray-500">{classInfo?.name}</p>
-                    <h4 className="font-bold text-gray-800">{activity.title}</h4>
-                </div>
-                <span className={`px-2 py-1 text-xs font-semibold rounded-full ${activity.type === ActivityType.Exam ? 'bg-red-100 text-red-800' : 'bg-blue-100 text-blue-800'}`}>{activity.type}</span>
-            </div>
-            <p className="text-sm text-gray-600 mt-2">{activity.description}</p>
-            <p className="text-sm font-semibold text-gray-700 mt-4">Fecha de Entrega: {activity.deliveryDate}</p>
-            {grade && (
-                <div className="mt-4 pt-3 border-t text-sm space-y-1">
-                    <h5 className="font-bold">Calificación</h5>
-                    <div className="flex justify-between"><span>Nota:</span> <GradeDisplay grade={grade.nota} /></div>
-                    {grade.mejora !== undefined && <div className="flex justify-between"><span>Mejora:</span> <GradeDisplay grade={grade.mejora} /></div>}
-                    {grade.refuerzo !== undefined && <div className="flex justify-between"><span>Refuerzo:</span> <GradeDisplay grade={grade.refuerzo} /></div>}
-                    <div className="flex justify-between font-semibold border-t pt-1 mt-1"><span>Promedio Final:</span> <GradeDisplay grade={grade.promedio} /></div>
+        <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200 flex flex-col h-full relative">
+             {activity.duaPrinciple && (
+                <div className="absolute top-2 right-2" title="Principio DUA">
+                    {activity.duaPrinciple === 'representation' && <span className="w-3 h-3 rounded-full bg-blue-500 block"></span>}
+                    {activity.duaPrinciple === 'actionExpression' && <span className="w-3 h-3 rounded-full bg-green-500 block"></span>}
+                    {activity.duaPrinciple === 'engagement' && <span className="w-3 h-3 rounded-full bg-purple-500 block"></span>}
                 </div>
             )}
+            <div className="flex justify-between items-start pr-4">
+                <div>
+                    <p className="text-xs text-gray-500">{classInfo?.name}</p>
+                    <h4 className="font-bold text-gray-800 text-sm">{activity.title}</h4>
+                </div>
+            </div>
+            <p className="text-xs text-gray-600 mt-2 flex-grow">{activity.description}</p>
+            {dcd && <p className="text-[10px] text-gray-500 mt-2 bg-gray-50 p-1 rounded border border-gray-100"><strong>DCD:</strong> {dcd.code}</p>}
+            <div className="mt-auto pt-3 border-t">
+                <p className="text-xs font-semibold text-gray-700 mb-2">Entrega: {new Date(activity.deliveryDate).toLocaleDateString()}</p>
+                {grade && (
+                    <div className="text-xs space-y-1 bg-gray-50 p-2 rounded">
+                        <div className="flex justify-between"><span>Nota:</span> <GradeDisplay grade={grade.nota} /></div>
+                        {grade.mejora !== undefined && <div className="flex justify-between text-blue-600"><span>Mejora:</span> <GradeDisplay grade={grade.mejora} /></div>}
+                        <div className="flex justify-between font-bold border-t border-gray-300 pt-1 mt-1"><span>Final:</span> <GradeDisplay grade={grade.promedio} /></div>
+                    </div>
+                )}
+            </div>
         </div>
     );
 };
 
 const createEmptyGradebook = (institutionId: string, classId: string, subjectId: string, studentIds: string[]): Gradebook => {
     const createEmptyTrimester = (): TrimesterRecord => ({
-        actividades: Array(5).fill(null).map(() => ({ promedio: 0 })),
+        actividades: Array(5).fill(null).map(() => ({ promedio: 0, activityId: undefined })),
         portafolio: { promedio: 0 },
         evaluacionSumativa: { promedio: 0 },
         proyectoIntegrador: { promedio: 0 },
@@ -157,6 +219,8 @@ interface ActivitiesPageProps {
     gradebooks: Gradebook[];
     onUpdateGradebooks: (gradebooks: Gradebook[]) => void;
     users: User[];
+    microPlans: MicroPlan[];
+    dcds: Dcd[];
 }
 
 interface ActivityGradebookModalProps {
@@ -238,6 +302,7 @@ const ActivityGradebookModal: React.FC<ActivityGradebookModalProps> = ({ isOpen,
                     gradeEntryRef.nota = studentGrades.nota;
                     gradeEntryRef.mejora = studentGrades.mejora;
                     gradeEntryRef.refuerzo = studentGrades.refuerzo;
+                    // Simple recalculation of average for display
                     gradeEntryRef.promedio = studentGrades.refuerzo ?? studentGrades.mejora ?? studentGrades.nota ?? 0;
                 }
             }
@@ -277,9 +342,9 @@ const ActivityGradebookModal: React.FC<ActivityGradebookModalProps> = ({ isOpen,
                                 return (
                                     <tr key={student.id}>
                                         <td className="px-4 py-2 text-sm font-medium">{student.name}</td>
-                                        <td><input type="number" step="0.1" min="0" max="10" value={grades.nota ?? ''} onChange={e => handleGradeChange(student.id, 'nota', e.target.value)} className="w-20 p-1 border rounded"/></td>
-                                        <td><input type="number" step="0.1" min="0" max="10" value={grades.mejora ?? ''} onChange={e => handleGradeChange(student.id, 'mejora', e.target.value)} className="w-20 p-1 border rounded"/></td>
-                                        <td><input type="number" step="0.1" min="0" max="10" value={grades.refuerzo ?? ''} onChange={e => handleGradeChange(student.id, 'refuerzo', e.target.value)} className="w-20 p-1 border rounded"/></td>
+                                        <td><input type="number" step="0.01" min="0" max="10" value={grades.nota ?? ''} onChange={e => handleGradeChange(student.id, 'nota', e.target.value)} className="w-20 p-1 border rounded"/></td>
+                                        <td><input type="number" step="0.01" min="0" max="10" value={grades.mejora ?? ''} onChange={e => handleGradeChange(student.id, 'mejora', e.target.value)} className="w-20 p-1 border rounded"/></td>
+                                        <td><input type="number" step="0.01" min="0" max="10" value={grades.refuerzo ?? ''} onChange={e => handleGradeChange(student.id, 'refuerzo', e.target.value)} className="w-20 p-1 border rounded"/></td>
                                         <td className="px-4 py-2 text-sm font-bold">{promedio.toFixed(2)}</td>
                                     </tr>
                                 );
@@ -358,7 +423,6 @@ const TeacherActivities: React.FC<ActivitiesPageProps> = (props) => {
     const handleDelete = (activityId: string) => {
         if (window.confirm('¿Seguro que quiere eliminar esta actividad?')) {
             props.onUpdateActivities(props.activities.filter(a => a.id !== activityId));
-            // Optional: Also unlink from gradebook
         }
     };
     
@@ -379,8 +443,12 @@ const TeacherActivities: React.FC<ActivitiesPageProps> = (props) => {
                     <div key={activity.id} className="bg-white p-4 rounded-lg shadow-sm border border-gray-200 flex justify-between items-center">
                         <div>
                              <p className="text-sm text-gray-500">{institutionClasses.find(c => c.id === activity.classId)?.name}</p>
-                            <h4 className="font-bold text-gray-800">{activity.title}</h4>
-                             <p className="text-sm font-semibold text-gray-700 mt-1">Entrega: {activity.deliveryDate}</p>
+                             <div className="flex items-center gap-2">
+                                <h4 className="font-bold text-gray-800">{activity.title}</h4>
+                                {activity.dcdId && <span className="text-[10px] bg-gray-100 border border-gray-300 px-1 rounded text-gray-600">DCD</span>}
+                                {activity.duaPrinciple && <span className="text-[10px] bg-blue-100 border border-blue-300 px-1 rounded text-blue-800">DUA</span>}
+                             </div>
+                             <p className="text-sm font-semibold text-gray-700 mt-1">Entrega: {new Date(activity.deliveryDate).toLocaleDateString()}</p>
                         </div>
                         <div className="flex items-center gap-2">
                              <button onClick={() => setGradingActivity(activity)} className="px-3 py-1 text-sm bg-blue-100 text-blue-800 rounded-md font-semibold hover:bg-blue-200">Calificar</button>
@@ -390,7 +458,7 @@ const TeacherActivities: React.FC<ActivitiesPageProps> = (props) => {
                     </div>
                 ))}
             </div>
-            {isFormOpen && <ActivityForm isOpen={isFormOpen} onClose={() => setIsFormOpen(false)} onSave={handleSave} activityToEdit={activityToEdit} classes={institutionClasses} subjects={teacherSubjects} />}
+            {isFormOpen && <ActivityForm isOpen={isFormOpen} onClose={() => setIsFormOpen(false)} onSave={handleSave} activityToEdit={activityToEdit} classes={institutionClasses} subjects={teacherSubjects} microPlans={props.microPlans} dcds={props.dcds} />}
             {gradingActivity && (
                 <ActivityGradebookModal
                     isOpen={!!gradingActivity}
@@ -449,7 +517,8 @@ const StudentParentActivities: React.FC<ActivitiesPageProps> = (props) => {
                 {activities.map(activity => {
                     const classInfo = institutionClasses.find(c => c.id === activity.classId);
                     const grade = studentGradebookRecords.get(activity.id);
-                    return <ActivityCard key={activity.id} activity={activity} classInfo={classInfo} grade={grade} />
+                    const dcd = props.dcds.find(d => d.id === activity.dcdId);
+                    return <ActivityCard key={activity.id} activity={activity} classInfo={classInfo} grade={grade} dcd={dcd} />
                 })}
             </div>
         </div>

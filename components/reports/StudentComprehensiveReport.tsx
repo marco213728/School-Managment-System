@@ -1,6 +1,7 @@
+
 import React, { useMemo } from 'react';
-import { MOCK_STUDENTS, MOCK_CLASSES, MOCK_USERS, MOCK_INTERVENTIONS, MOCK_OVP_ACTIVITIES, MOCK_HEALTH_RECORDS } from '../../constants';
-import { PrinterIcon, PhoneIcon, EmailIcon, LocationMarkerIcon } from '../icons/Icons';
+import { MOCK_STUDENTS, MOCK_CLASSES, MOCK_USERS, MOCK_INTERVENTIONS, MOCK_OVP_ACTIVITIES, MOCK_HEALTH_RECORDS, MOCK_VICC_INTERVENTIONS } from '../../constants';
+import { PrinterIcon, PhoneIcon, EmailIcon, LocationMarkerIcon, VicerrectoradoIcon, ClipboardListIcon } from '../icons/Icons';
 
 interface ReportProps {
     studentId: string;
@@ -13,14 +14,21 @@ const StudentComprehensiveReport: React.FC<ReportProps> = ({ studentId }) => {
 
         const classInfo = MOCK_CLASSES.find(c => c.id === student.classId);
         const parent = MOCK_USERS.find(u => u.id === student.parentId);
+        
+        // DECE Interventions
         const interventions = MOCK_INTERVENTIONS.filter(i => i.studentId === studentId)
             .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+            
+        // Vicerrectorado Interventions
+        const viccInterventions = MOCK_VICC_INTERVENTIONS.filter(i => i.studentId === studentId)
+            .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
         const ovpActivities = MOCK_OVP_ACTIVITIES.filter(a => a.studentId === studentId);
         const healthRecord = MOCK_HEALTH_RECORDS.find(hr => hr.studentId === studentId);
-        const deceProfessionals = new Map(MOCK_USERS.filter(u => u.role.startsWith('Jefe DECE') || u.role.startsWith('Psicólogo'))
-            .map(u => [u.id, u.name]));
+        
+        const staffMap = new Map(MOCK_USERS.map(u => [u.id, u.name]));
 
-        return { student, classInfo, parent, interventions, ovpActivities, healthRecord, deceProfessionals };
+        return { student, classInfo, parent, interventions, viccInterventions, ovpActivities, healthRecord, staffMap };
     }, [studentId]);
 
     const handlePrint = () => {
@@ -31,7 +39,7 @@ const StudentComprehensiveReport: React.FC<ReportProps> = ({ studentId }) => {
         return <div className="bg-white p-6 rounded-xl shadow-md mt-6">No se encontraron datos para el estudiante seleccionado.</div>;
     }
 
-    const { student, classInfo, parent, interventions, ovpActivities, healthRecord, deceProfessionals } = reportData;
+    const { student, classInfo, parent, interventions, viccInterventions, ovpActivities, healthRecord, staffMap } = reportData;
 
     return (
         <div id="report-section" className="bg-white p-6 sm:p-8 rounded-xl shadow-md space-y-8 mt-6">
@@ -91,6 +99,7 @@ const StudentComprehensiveReport: React.FC<ReportProps> = ({ studentId }) => {
                     </div>
                 </div>
                 <div className="md:col-span-2 space-y-8">
+                    {/* DECE Section */}
                     <section>
                         <h2 className="text-lg font-semibold text-gray-700 border-b pb-2 mb-4">Información DECE</h2>
                         <div className="space-y-6">
@@ -104,7 +113,13 @@ const StudentComprehensiveReport: React.FC<ReportProps> = ({ studentId }) => {
                                                 <p className="text-xs text-gray-500">{item.date}</p>
                                                 <p className="font-semibold text-primary-700">{item.type}</p>
                                                 <p className="text-sm text-gray-600">{item.summary}</p>
-                                                <p className="text-xs text-gray-500 italic mt-1">Registrado por: {deceProfessionals.get(item.deceProfessionalId) || 'Profesional'}</p>
+                                                {item.agreements && (
+                                                    <div className="mt-1 p-2 bg-gray-50 rounded text-xs text-gray-600 border border-gray-100">
+                                                        <strong className="block mb-1"><ClipboardListIcon className="inline h-3 w-3 mr-1"/>Acuerdos:</strong>
+                                                        {item.agreements.substring(0, 150)}{item.agreements.length > 150 ? '...' : ''}
+                                                    </div>
+                                                )}
+                                                <p className="text-xs text-gray-500 italic mt-1">Registrado por: {staffMap.get(item.deceProfessionalId) || 'Profesional'}</p>
                                             </li>
                                         ))}
                                     </ul>
@@ -124,6 +139,40 @@ const StudentComprehensiveReport: React.FC<ReportProps> = ({ studentId }) => {
                             </div>
                         </div>
                     </section>
+
+                    {/* Vicerrectorado Section */}
+                    <section>
+                        <h2 className="text-lg font-semibold text-gray-700 border-b pb-2 mb-4 flex items-center gap-2">
+                            <VicerrectoradoIcon className="h-5 w-5 text-gray-600" />
+                            Información Vicerrectorado
+                        </h2>
+                        <div className="space-y-6">
+                            <div>
+                                <h3 className="font-semibold text-gray-600 mb-2">Intervenciones y Acuerdos Académicos/Disciplinarios</h3>
+                                {viccInterventions.length > 0 ? (
+                                    <ul className="space-y-4 border-l-2 border-indigo-200 pl-4">
+                                        {viccInterventions.map(item => (
+                                            <li key={item.id} className="relative">
+                                                <div className="absolute -left-[27px] top-1.5 w-4 h-4 bg-indigo-500 rounded-full border-4 border-white"></div>
+                                                <p className="text-xs text-gray-500">{item.date}</p>
+                                                <p className="font-semibold text-indigo-700">{item.type}</p>
+                                                <p className="text-sm text-gray-600">{item.summary}</p>
+                                                {item.agreements && (
+                                                    <div className="mt-1 p-2 bg-indigo-50 rounded text-xs text-gray-700 border border-indigo-100 whitespace-pre-wrap">
+                                                        <strong className="block mb-1"><ClipboardListIcon className="inline h-3 w-3 mr-1"/>Acuerdos y Compromisos:</strong>
+                                                        {item.agreements}
+                                                    </div>
+                                                )}
+                                                <p className="text-xs text-gray-500 italic mt-1">Registrado por: {staffMap.get(item.vicerrectorId) || 'Vicerrectorado'}</p>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                ) : <p className="text-sm text-gray-500">No hay registros de Vicerrectorado.</p>}
+                            </div>
+                        </div>
+                    </section>
+
+                    {/* Health Section */}
                     <section>
                         <h2 className="text-lg font-semibold text-gray-700 border-b pb-2 mb-4">Información de Salud</h2>
                         {healthRecord ? (

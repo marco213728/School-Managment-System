@@ -58,7 +58,7 @@ const ObservationModal: React.FC<ObservationModalProps> = ({ isOpen, onClose, on
 
     return (
         <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-center items-center p-4" onClick={onClose}>
-            <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-lg relative max-h-[90vh] flex flex-col" onClick={e => e.stopPropagation()}>
+            <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-lg relative" onClick={e => e.stopPropagation()}>
                 <button onClick={onClose} className="absolute top-4 right-4 text-gray-500 hover:text-gray-800"><CloseIcon className="h-6 w-6" /></button>
                 <h2 className="text-xl font-bold mb-4">Registrar Observaciones</h2>
                 <div className="space-y-2 overflow-y-auto">
@@ -152,7 +152,7 @@ const TakeAttendanceManual: React.FC<AttendancePageProps> = ({ classes, timeSlot
 
         const newRecords: AttendanceRecord[] = [];
         const updatedRecords: AttendanceRecord[] = [];
-        const existingRecordMap = new Map(
+        const existingRecordMap = new Map<string, AttendanceRecord>(
             attendanceRecords
                 .filter(rec => rec.date === selectedDate && rec.timeSlot === selectedTimeSlot)
                 .map(rec => [rec.studentId, rec])

@@ -1,7 +1,10 @@
+
 import React, { useState, useMemo, useContext, useEffect } from 'react';
 import { UserContext } from '../contexts/UserContext';
 // FIX: Import GradeEntry to resolve type error.
 import { Gradebook, StudentGradebook, Class, Subject, Student, User, Role, TrimesterRecord, ScheduleEntry, Activity, GradeEntry } from '../types';
+import PrintableGradebook from '../components/reports/PrintableGradebook';
+import { PrinterIcon } from '../components/icons/Icons';
 
 interface GradebookPageProps {
     gradebooks: Gradebook[];
@@ -19,6 +22,7 @@ const GradebookPage: React.FC<GradebookPageProps> = ({ gradebooks, onUpdateGrade
     const [selectedClassId, setSelectedClassId] = useState('');
     const [selectedSubjectId, setSelectedSubjectId] = useState('');
     const [localGradebook, setLocalGradebook] = useState<Gradebook | null>(null);
+    const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
     
     const activityMap = useMemo(() => new Map(activities.map(a => [a.id, a.title])), [activities]);
 
@@ -156,15 +160,15 @@ const GradebookPage: React.FC<GradebookPageProps> = ({ gradebooks, onUpdateGrade
                 {([1, 2, 3] as const).map(trim => (
                     <React.Fragment key={trim}>
                         <th colSpan={20} className="border p-1">Evaluaciones Formativas (45%)</th>
-                        <th colSpan={1} className="border p-1" rowSpan={2}><div className="rotate-text">{getTitle(localGradebook?.records[0]?.[`trimester${trim}`]?.portafolio, 'Portafolio')} (5%)</div></th>
-                        <th colSpan={1} className="border p-1" rowSpan={2}><div className="rotate-text">{getTitle(localGradebook?.records[0]?.[`trimester${trim}`]?.evaluacionSumativa, 'Eval. Sumativa')} (25%)</div></th>
-                        <th colSpan={1} className="border p-1" rowSpan={2}><div className="rotate-text">{getTitle(localGradebook?.records[0]?.[`trimester${trim}`]?.proyectoIntegrador, 'Proyecto')} (25%)</div></th>
+                        <th colSpan={1} className="border p-1" rowSpan={2}><div className="rotate-text">Portafolio (5%)</div></th>
+                        <th colSpan={1} className="border p-1" rowSpan={2}><div className="rotate-text">Sumativa (25%)</div></th>
+                        <th colSpan={1} className="border p-1" rowSpan={2}><div className="rotate-text">Proyecto (25%)</div></th>
                         <th colSpan={1} className="border p-1" rowSpan={3}><div className="rotate-text">Suma Trim.</div></th>
                     </React.Fragment>
                 ))}
                  <th rowSpan={3} className="border p-1"><div className="rotate-text">Prom. Trimestral</div></th>
                  <th rowSpan={3} className="border p-1"><div className="rotate-text">Nota Anual (90%)</div></th>
-                 <th colSpan={1} rowSpan={2} className="border p-1"><div className="rotate-text">{getTitle(localGradebook?.records[0]?.proyectoFinal10, 'Proyecto Final')} (10%)</div></th>
+                 <th colSpan={1} rowSpan={2} className="border p-1"><div className="rotate-text">Proyecto Final (10%)</div></th>
                  <th rowSpan={3} className="border p-1"><div className="rotate-text">Nota Final (100%)</div></th>
                  <th rowSpan={3} className="border p-1"><div className="rotate-text">Ex. Supletorio</div></th>
                  <th rowSpan={3} className="border p-1"><div className="rotate-text">Nota Final c/ Supl.</div></th>
@@ -173,7 +177,7 @@ const GradebookPage: React.FC<GradebookPageProps> = ({ gradebooks, onUpdateGrade
             <tr>
                 {([1,2,3] as const).map(trim => (
                     <React.Fragment key={trim}>
-                        {[...Array(5).keys()].map(actIdx => <th key={actIdx} colSpan={4} className="border p-1"><div className="truncate w-28">{getTitle(localGradebook?.records[0]?.[`trimester${trim}`]?.actividades[actIdx], `Actividad ${actIdx + 1}`)}</div></th>)}
+                        {[...Array(5).keys()].map(actIdx => <th key={actIdx} colSpan={4} className="border p-1"><div className="truncate w-28" title={getTitle(localGradebook?.records[0]?.[`trimester${trim}`]?.actividades[actIdx], `Actividad ${actIdx + 1}`)}>{getTitle(localGradebook?.records[0]?.[`trimester${trim}`]?.actividades[actIdx], `Actividad ${actIdx + 1}`)}</div></th>)}
                     </React.Fragment>
                 ))}
             </tr>
@@ -243,7 +247,12 @@ const GradebookPage: React.FC<GradebookPageProps> = ({ gradebooks, onUpdateGrade
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
                     <select value={selectedClassId} onChange={e => setSelectedClassId(e.target.value)} className="w-full p-2 border rounded-md"><option value="">Seleccionar Clase</option>{teacherClasses.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select>
                     <select value={selectedSubjectId} onChange={e => setSelectedSubjectId(e.target.value)} className="w-full p-2 border rounded-md" disabled={!selectedClassId}><option value="">Seleccionar Asignatura</option>{teacherSubjects.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}</select>
-                    <button onClick={handleSave} disabled={!localGradebook} className="px-6 py-2 bg-primary-600 text-white font-semibold rounded-md hover:bg-primary-700 disabled:bg-gray-400">Guardar Cambios</button>
+                    <div className="flex gap-2">
+                        <button onClick={handleSave} disabled={!localGradebook} className="px-6 py-2 bg-primary-600 text-white font-semibold rounded-md hover:bg-primary-700 disabled:bg-gray-400">Guardar Cambios</button>
+                         <button onClick={() => setIsPrintModalOpen(true)} disabled={!localGradebook} className="px-4 py-2 bg-gray-600 text-white font-semibold rounded-md hover:bg-gray-700 disabled:bg-gray-400 flex items-center gap-2">
+                            <PrinterIcon className="h-5 w-5" /> Imprimir
+                        </button>
+                    </div>
                 </div>
                 {localGradebook ? (
                     <div className="overflow-auto border rounded-lg max-h-[70vh]">
@@ -258,6 +267,31 @@ const GradebookPage: React.FC<GradebookPageProps> = ({ gradebooks, onUpdateGrade
                     </div>
                 )}
             </div>
+
+            {isPrintModalOpen && localGradebook && (
+                <div className="fixed inset-0 bg-black bg-opacity-60 z-[60] flex justify-center items-center p-4">
+                    <div className="bg-white rounded-lg shadow-xl w-full max-w-[95vw] max-h-[95vh] flex flex-col">
+                        <header className="p-4 flex justify-between items-center bg-gray-50 border-b no-print sticky top-0 z-10">
+                            <h3 className="text-lg font-semibold text-gray-700">Vista Previa del Registro</h3>
+                            <div className="flex items-center gap-2">
+                                <button onClick={() => setIsPrintModalOpen(false)} className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 text-sm font-semibold">Cerrar</button>
+                                <button onClick={() => window.print()} className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white font-semibold rounded-md hover:bg-primary-700 text-sm">
+                                    <PrinterIcon className="h-5 w-5" /> Imprimir / PDF
+                                </button>
+                            </div>
+                        </header>
+                        <div className="overflow-y-auto bg-white">
+                            <PrintableGradebook
+                                gradebook={localGradebook}
+                                students={students}
+                                subject={subjects.find(s => s.id === selectedSubjectId)!}
+                                classInfo={classes.find(c => c.id === selectedClassId)!}
+                                activities={activities}
+                            />
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

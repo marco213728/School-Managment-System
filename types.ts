@@ -1,3 +1,4 @@
+
 export enum Role {
   SuperAdmin = 'Super Administrador',
   InstitutionAdmin = 'Administrador de Institución',
@@ -99,6 +100,11 @@ export interface Activity {
   trimester: 1 | 2 | 3;
   evaluationCategory: EvaluationCategory;
   gradebookIndex?: 0 | 1 | 2 | 3 | 4; // for 'actividades' array index
+  
+  // Curricular Linking
+  microPlanId?: string; // Link to PUD (Planificación Microcurricular)
+  dcdId?: string; // Link to specific DCD (Destreza con Criterio de Desempeño)
+  duaPrinciple?: 'representation' | 'actionExpression' | 'engagement'; // DUA Principle addressed
 }
 
 export enum AttendanceStatus {
@@ -182,6 +188,138 @@ export interface ViccIntervention {
   summary: string;
   participants?: string[];
   agreements?: string;
+}
+
+export interface RubricCriterion {
+  id: string;
+  category: string; // Planificación, Metodología, Clima, etc.
+  description: string;
+  maxScore: number; // Usually 4
+}
+
+export interface RubricScore {
+  criteriaId: string;
+  score: number; // 1-4
+  evidence?: string;
+}
+
+export interface ClassroomVisit {
+  id: string;
+  institutionId: string;
+  teacherId: string;
+  observerId: string; // Vicerrector or delegate
+  date: string; // Scheduled date
+  startTime?: string;
+  className: string;
+  subject: string;
+  topic?: string;
+  focus: string; // e.g., "Uso de TIC", "Adaptación Curricular", "Metodología DUA"
+  status: 'Scheduled' | 'Completed' | 'Cancelled';
+  
+  // Execution Data
+  scores?: RubricScore[];
+  strengths?: string;
+  weaknesses?: string; // Or "Areas for Improvement"
+  agreements?: string; // Compromisos
+  rating?: number; // Calculated average (e.g. 3.5/4)
+  feedbackDate?: string;
+}
+
+export interface ClassroomObservation {
+  id: string;
+  institutionId: string;
+  teacherId: string;
+  observerId: string; 
+  date: string;
+  className: string;
+  subject: string;
+  topic: string;
+  strengths: string;
+  recommendations: string;
+  rating: number; 
+}
+
+export interface TrainingSession {
+  id: string;
+  institutionId: string;
+  title: string;
+  date: string;
+  duration: string;
+  topic: string;
+  trainer: string;
+  attendees: string[]; // Teacher IDs
+}
+
+export interface InstitutionalDocument {
+  id: string;
+  institutionId: string;
+  type: 'PEI' | 'PCI' | 'PCA' | 'CodigoConvivencia' | 'PlanGestionRiesgos';
+  title: string;
+  status: 'Borrador' | 'Revisión' | 'Aprobado' | 'Vigente';
+  lastUpdated: string;
+  version: string;
+  url?: string;
+}
+
+export interface MeetingRecord {
+    id: string;
+    institutionId: string;
+    type: 'Junta de Curso' | 'Junta de Área' | 'Comisión Pedagógica';
+    date: string;
+    title: string;
+    summary: string;
+    agreements: string;
+    attendees: string[];
+}
+
+// Inspection Module Types
+export enum DisciplinarySeverity {
+  Minor = 'Leve',
+  Serious = 'Grave',
+  VerySerious = 'Muy Grave'
+}
+
+export interface DisciplinaryAction {
+  id: string;
+  institutionId: string;
+  studentId: string;
+  date: string;
+  infraction: string; // Linked to article/code
+  description: string;
+  severity: DisciplinarySeverity;
+  status: 'Abierto' | 'En Proceso' | 'Cerrado';
+  actionsTaken: string;
+}
+
+export interface InspectionVisit {
+  id: string;
+  institutionId: string;
+  inspectorId: string;
+  date: string;
+  type: 'Ordinaria' | 'Extraordinaria' | 'Auditoría';
+  target: string; // e.g., "Área de Matemáticas", "Secretaría"
+  findings: string;
+  status: 'Programada' | 'Realizada' | 'Informe Pendiente';
+}
+
+export interface ConflictMediation {
+  id: string;
+  institutionId: string;
+  date: string;
+  partiesInvolved: string[]; // Names or IDs
+  description: string;
+  status: 'Pendiente' | 'En Mediación' | 'Resuelto';
+  agreements: string;
+}
+
+export interface QualityMetric {
+  id: string;
+  institutionId: string;
+  year: string;
+  category: 'Asistencia' | 'Rendimiento' | 'Convivencia';
+  metric: string;
+  value: number;
+  target: number;
 }
 
 
@@ -280,6 +418,7 @@ export interface Institution {
     health: boolean;
   };
   adminIds?: string[];
+  methodologyFocus?: 'DUA' | 'Tradicional'; // Added for DUA compliance
   communicationChannels?: {
     email: { enabled: boolean };
     sms: { enabled: boolean };
@@ -381,6 +520,7 @@ export const AREAS_OF_KNOWLEDGE = [
   'Interdisciplinar',
   'Áreas Técnicas',
   'Acompañamiento Integral',
+  'Cívica y Acompañamiento Integral', // Updated for new curriculum
   'Currículo Integral'
 ] as const;
 export type AreaOfKnowledge = typeof AREAS_OF_KNOWLEDGE[number];
@@ -467,6 +607,7 @@ export enum CurricularPlanStatus {
 export interface AdaptacionCurricular {
   studentId: string;
   dcdModificada: string;
+  grade: '3'; // DUA covers Grade 1 & 2, so we only track Grade 3
 }
 
 export interface MicroPlan {
@@ -479,7 +620,15 @@ export interface MicroPlan {
   unitTitle: string;
   unitObjectives: string;
   dcdIds: string[];
-  methodology: string;
+  
+  // DUA Methodology Integration
+  duaRepresentation: string; // Principle 1: Representation (What)
+  duaActionExpression: string; // Principle 2: Action & Expression (How)
+  duaEngagement: string; // Principle 3: Engagement (Why)
+  
+  // Legacy field for backward compatibility (optional or computed)
+  methodology?: string; 
+
   resources: string;
   evaluation: string;
   adaptations: AdaptacionCurricular[];
@@ -535,6 +684,8 @@ export interface Dcd {
   criterionId: string;
   competencies: Competency[];
   curricularInsertions?: CurricularInsertion[];
+  isDisaggregated?: boolean; // Flag for disaggregation
+  refCode?: string; // Code of the original skill if disaggregated
 }
 
 // Teacher Gradebook Module Types
