@@ -1,7 +1,8 @@
 
 
+
 import React, { useState, useEffect, useMemo } from 'react';
-import { ScheduleEntry, Subject, Room } from '../../types';
+import { ScheduleEntry, Subject, Room, User, Role } from '../../types';
 import { CloseIcon } from '../icons/Icons';
 
 interface ScheduleFormProps {
@@ -9,6 +10,7 @@ interface ScheduleFormProps {
     onClose: () => void;
     onSave: (subjectId: string, roomId: string) => void;
     subjects: Subject[];
+    users: User[];
     rooms: Room[];
     day: ScheduleEntry['day'];
     classNameDisplay: string;
@@ -19,11 +21,13 @@ interface ScheduleFormProps {
 }
 
 const ScheduleForm: React.FC<ScheduleFormProps> = ({ 
-    isOpen, onClose, onSave, subjects, rooms, day, classNameDisplay, timeSlotDisplay, entryToEdit, unavailableSubjects, unavailableRoomIds 
+    isOpen, onClose, onSave, subjects, users, rooms, day, classNameDisplay, timeSlotDisplay, entryToEdit, unavailableSubjects, unavailableRoomIds 
 }) => {
     const [selectedSubjectId, setSelectedSubjectId] = useState(entryToEdit?.subjectId || '');
     const [selectedRoomId, setSelectedRoomId] = useState(entryToEdit?.roomId || '');
     
+    const teacherMap = useMemo(() => new Map(users.filter(u => u.role === Role.Teacher).map(t => [t.id, t.name])), [users]);
+
     useEffect(() => {
         setSelectedSubjectId(entryToEdit?.subjectId || '');
         setSelectedRoomId(entryToEdit?.roomId || '');
@@ -61,10 +65,11 @@ const ScheduleForm: React.FC<ScheduleFormProps> = ({
                                 const unavailability = unavailableSubjects.find(us => us.id === s.id);
                                 const isThisEntry = s.id === entryToEdit?.subjectId;
                                 const isDisabled = !!unavailability && !isThisEntry;
+                                const teacherName = teacherMap.get(s.teacherId) || 'Prof. Desconocido';
                                 
                                 return (
                                     <option key={s.id} value={s.id} disabled={isDisabled}>
-                                        {s.name} {isDisabled ? `(${unavailability.reason})` : ''}
+                                        {s.name} - {teacherName} {isDisabled ? `(${unavailability.reason})` : ''}
                                     </option>
                                 );
                             })}

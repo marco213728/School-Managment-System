@@ -75,15 +75,30 @@ export enum ActivityType {
   Exam = 'Examen',
 }
 
+export const EVALUATION_CATEGORIES = {
+  'ACTIVIDAD_INDIVIDUAL': 'Actividad Individual',
+  'ACTIVIDAD_GRUPAL': 'Actividad Grupal',
+  'PORTAFOLIO': 'Portafolio/Bitácora',
+  'EVALUACION_SUMATIVA': 'Evaluación Sumativa',
+  'PROYECTO_INTEGRADOR': 'Proyecto Integrador'
+} as const;
+
+export type EvaluationCategory = keyof typeof EVALUATION_CATEGORIES;
+
+
 export interface Activity {
   id: string;
   institutionId: string;
   classId: string;
+  subjectId: string;
   teacherId: string;
   title: string;
   description: string;
   type: ActivityType;
   deliveryDate: string;
+  trimester: 1 | 2 | 3;
+  evaluationCategory: EvaluationCategory;
+  gradebookIndex?: 0 | 1 | 2 | 3 | 4; // for 'actividades' array index
 }
 
 export enum AttendanceStatus {
@@ -355,12 +370,33 @@ export interface TimeSlot {
   isBreak: boolean;
 }
 
+export const AREAS_OF_KNOWLEDGE = [
+  'Lengua y Literatura',
+  'Matemática',
+  'Ciencias Naturales',
+  'Ciencias Sociales',
+  'Lengua Extranjera',
+  'Educación Física',
+  'Educación Cultural y Artística',
+  'Interdisciplinar',
+  'Áreas Técnicas',
+  'Acompañamiento Integral',
+  'Currículo Integral'
+] as const;
+export type AreaOfKnowledge = typeof AREAS_OF_KNOWLEDGE[number];
+
+export const SUBJECT_LEVELS = ['EGB', 'BGU', 'Todos'] as const;
+export type SubjectLevel = typeof SUBJECT_LEVELS[number];
+
 export interface Subject {
   id: string;
   institutionId: string;
-  name: string; // "Matemáticas"
+  name: string;
   teacherId: string;
   maxWeeklyHours?: number;
+  areaOfKnowledge: AreaOfKnowledge;
+  level: SubjectLevel;
+  isModule?: boolean;
 }
 
 export interface Room {
@@ -460,8 +496,17 @@ export interface MicroPlan {
 export const GRADE_LEVELS = ['EGB Preparatoria', 'EGB Elemental', 'EGB Media', 'EGB Superior', 'BGU'] as const;
 export type GradeLevel = typeof GRADE_LEVELS[number];
 
-export const COMPETENCIES = ['Comunicacional', 'Matemática', 'Digital', 'Socioemocional'] as const;
+export const COMPETENCIES = ['Comunicacional', 'Lógico-Matemática', 'Digital', 'Socioemocional'] as const;
 export type Competency = typeof COMPETENCIES[number];
+
+export const CURRICULAR_INSERTIONS = [
+  'Educación Cívica, Ética e Integridad',
+  'Educación para el Desarrollo Sostenible',
+  'Educación Financiera',
+  'Educación para la Seguridad Vial y Movilidad Sostenible',
+  'Socioemocional',
+] as const;
+export type CurricularInsertion = typeof CURRICULAR_INSERTIONS[number];
 
 export interface EvaluationCriterion {
   id: string;
@@ -489,4 +534,60 @@ export interface Dcd {
   gradeLevel: GradeLevel;
   criterionId: string;
   competencies: Competency[];
+  curricularInsertions?: CurricularInsertion[];
+}
+
+// Teacher Gradebook Module Types
+export interface GradeEntry {
+  activityId?: string;
+  nota?: number;
+  mejora?: number;
+  refuerzo?: number;
+  promedio: number;
+}
+
+export interface TrimesterRecord {
+  // Evaluaciones Formativas (45%)
+  actividades: GradeEntry[]; // Array of 5
+
+  // Portafolio (5%)
+  portafolio: GradeEntry;
+
+  // Evaluacion Sumativa y Proyectos (50%)
+  evaluacionSumativa: GradeEntry;
+  proyectoIntegrador: GradeEntry;
+
+  // Calculated totals
+  promedioFormativas: number;
+  sumaTrimestre: number; // Sum of weighted components
+}
+
+
+export interface StudentGradebook {
+  studentId: string;
+  trimester1: TrimesterRecord;
+  trimester2: TrimesterRecord;
+  trimester3: TrimesterRecord;
+  
+  // Final calculations
+  promedioTrimestralFinal: number; // Average of the 3 trimesters
+  notaAnual90: number; // The 90% part
+  proyectoFinal10: GradeEntry; // The 10% part
+  notaFinal100: number; // The final grade
+  
+  examenSupletorio?: number;
+  notaFinalConSupletorio?: number;
+  observacionFinal: 'Aprobado' | 'Reprobado' | 'Supletorio' | 'Pendiente';
+  
+  // Tracking
+  mejorasUtilizadas: number;
+}
+
+
+export interface Gradebook {
+  id: string;
+  institutionId: string;
+  classId: string;
+  subjectId: string;
+  records: StudentGradebook[];
 }

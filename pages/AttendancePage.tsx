@@ -1,3 +1,5 @@
+
+
 import React, { useState, useContext, useMemo } from 'react';
 import { UserContext } from '../contexts/UserContext';
 import { MOCK_STUDENTS, MOCK_OCR_SUBMISSIONS, ATTENDANCE_OBSERVATIONS } from '../constants';
@@ -161,9 +163,8 @@ const TakeAttendanceManual: React.FC<AttendancePageProps> = ({ classes, timeSlot
             if (studentData) {
                 const existingRecord = existingRecordMap.get(student.id);
                 if (existingRecord) {
-                    // FIX: Spread types may only be created from object types.
-                    // By separating the object creation with spread from the push call, we help the type checker.
-                    const updatedRecord = {
+                    // FIX: Replaced Object.assign with the more modern and type-safe spread syntax.
+                    const updatedRecord: AttendanceRecord = {
                         ...existingRecord,
                         status: studentData.status,
                         observations: studentData.observations,

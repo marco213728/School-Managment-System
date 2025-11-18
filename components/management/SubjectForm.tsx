@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Subject, User, Role } from '../../types';
+import { Subject, User, Role, AreaOfKnowledge, SubjectLevel, AREAS_OF_KNOWLEDGE, SUBJECT_LEVELS } from '../../types';
 import { CloseIcon } from '../icons/Icons';
 
 interface SubjectFormProps {
@@ -16,6 +16,9 @@ const SubjectForm: React.FC<SubjectFormProps> = ({ isOpen, onClose, onSave, subj
         name: '',
         teacherId: '',
         maxWeeklyHours: undefined as number | undefined,
+        areaOfKnowledge: 'Matemática' as AreaOfKnowledge,
+        level: 'Todos' as SubjectLevel,
+        isModule: false,
     });
 
     const teachers = useMemo(() => allUsers.filter(u => u.role === Role.Teacher), [allUsers]);
@@ -27,16 +30,33 @@ const SubjectForm: React.FC<SubjectFormProps> = ({ isOpen, onClose, onSave, subj
                 name: subjectToEdit.name,
                 teacherId: subjectToEdit.teacherId,
                 maxWeeklyHours: subjectToEdit.maxWeeklyHours,
+                areaOfKnowledge: subjectToEdit.areaOfKnowledge,
+                level: subjectToEdit.level,
+                isModule: subjectToEdit.isModule || false,
             });
         } else {
-            setFormData({ id: undefined, name: '', teacherId: '', maxWeeklyHours: undefined });
+            setFormData({
+                id: undefined,
+                name: '',
+                teacherId: '',
+                maxWeeklyHours: undefined,
+                areaOfKnowledge: AREAS_OF_KNOWLEDGE[0],
+                level: SUBJECT_LEVELS[2], // Default to 'Todos'
+                isModule: false,
+            });
         }
     }, [subjectToEdit, isOpen]);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         const { name, value, type } = e.target;
-        const isNumber = type === 'number';
-        setFormData(prev => ({ ...prev, [name]: isNumber ? (value ? Number(value) : undefined) : value }));
+        
+        if (type === 'checkbox') {
+            const checked = (e.target as HTMLInputElement).checked;
+            setFormData(prev => ({ ...prev, [name]: checked }));
+        } else {
+            const isNumber = type === 'number';
+            setFormData(prev => ({ ...prev, [name]: isNumber ? (value ? Number(value) : undefined) : value }));
+        }
     };
 
     const handleSubmit = (e: React.FormEvent) => {
@@ -56,9 +76,23 @@ const SubjectForm: React.FC<SubjectFormProps> = ({ isOpen, onClose, onSave, subj
                         <label className="block text-sm font-medium text-gray-700">Nombre de la Asignatura</label>
                         <input type="text" name="name" value={formData.name} onChange={handleChange} required className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm" placeholder="Ej: Matemáticas" />
                     </div>
-                     <div>
-                        <label className="block text-sm font-medium text-gray-700">Horas Semanales Máximas</label>
-                        <input type="number" name="maxWeeklyHours" value={formData.maxWeeklyHours || ''} onChange={handleChange} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm" placeholder="Ej: 5" />
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700">Área de Conocimiento</label>
+                        <select name="areaOfKnowledge" value={formData.areaOfKnowledge} onChange={handleChange} required className="mt-1 block w-full px-3 py-2 border border-gray-300 bg-white rounded-md shadow-sm">
+                            {AREAS_OF_KNOWLEDGE.map(area => <option key={area} value={area}>{area}</option>)}
+                        </select>
+                    </div>
+                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700">Nivel</label>
+                            <select name="level" value={formData.level} onChange={handleChange} required className="mt-1 block w-full px-3 py-2 border border-gray-300 bg-white rounded-md shadow-sm">
+                                {SUBJECT_LEVELS.map(level => <option key={level} value={level}>{level}</option>)}
+                            </select>
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700">Horas Semanales Máx.</label>
+                            <input type="number" name="maxWeeklyHours" value={formData.maxWeeklyHours || ''} onChange={handleChange} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm" placeholder="Ej: 5" />
+                        </div>
                     </div>
                     <div>
                         <label className="block text-sm font-medium text-gray-700">Profesor</label>
@@ -66,6 +100,12 @@ const SubjectForm: React.FC<SubjectFormProps> = ({ isOpen, onClose, onSave, subj
                             <option value="">-- Seleccionar Profesor --</option>
                             {teachers.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
                         </select>
+                    </div>
+                    <div>
+                        <label className="flex items-center">
+                            <input type="checkbox" name="isModule" checked={formData.isModule} onChange={handleChange} className="h-4 w-4 rounded text-primary-600 focus:ring-primary-500" />
+                            <span className="ml-2 text-gray-700">Es un módulo interdisciplinar</span>
+                        </label>
                     </div>
                     <div className="flex justify-end gap-4 pt-4">
                         <button type="button" onClick={onClose} className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300">Cancelar</button>

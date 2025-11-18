@@ -1,5 +1,6 @@
 
 
+
 import React, { useState, useMemo, useEffect } from 'react';
 import { ScheduleEntry, Class, TimeSlot, Subject, User, Role, Shift, Room, Timetable } from '../../types';
 import { DAYS_OF_WEEK } from '../../constants';
@@ -319,6 +320,7 @@ const ScheduleManagement: React.FC<ScheduleManagementProps> = ({ schedule, class
                     onClose={() => setIsFormOpen(false)}
                     onSave={handleSave}
                     subjects={subjects}
+                    users={users}
                     rooms={rooms}
                     day={editingData.day}
                     classNameDisplay={classMap.get(selectedClassId) || ''}

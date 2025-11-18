@@ -1,3 +1,5 @@
+
+
 import React, { useMemo, useContext } from 'react';
 import { Student, AttendanceRecord, AttendanceStatus, AcademicCalendarEvent } from '../../types';
 import { InstitutionContext } from '../../contexts/UserContext';
@@ -193,12 +195,12 @@ const AttendanceMatrixReport: React.FC<AttendanceMatrixReportProps> = ({ student
                                                 case AttendanceStatus.Tardy: mark = 'A'; break;
                                                 default: mark = '';
                                             }
-                                            // FIX: Property 'length' does not exist on type 'unknown'.
-                                            // Split the condition into nested `if` statements to help TypeScript's type inference.
-                                            if (record.observations && Array.isArray(record.observations)) {
-                                                if (record.observations.length > 0) {
-                                                    mark += `, ${record.observations.join(', ')}`;
-                                                }
+                                            // FIX: The 'observations' property is optional and can be undefined.
+                                            // By storing it in a variable, we help the type checker correctly narrow the type before use.
+                                            const obs = record.observations;
+                                            // FIX: Changed the check to a simpler truthy check for the array, which also resolves the type error.
+                                            if (obs && obs.length > 0) {
+                                                mark += `, ${obs.join(', ')}`;
                                             }
                                         }
 

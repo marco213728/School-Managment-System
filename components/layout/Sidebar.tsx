@@ -2,11 +2,11 @@ import React, { useContext } from 'react';
 import { Role } from '../../types';
 // FIX: Corrected import path for InstitutionContext and merged with UserContext import.
 import { UserContext, InstitutionContext } from '../../contexts/UserContext';
-import { DashboardIcon, AttendanceIcon, ActivityIcon, ReportIcon, ManageIcon, CloseIcon, DeceIcon, HealthIcon, UsersIcon, ChatBubbleIcon, CalendarIcon, VicerrectoradoIcon, InspectionIcon, CitacionIcon, LeccionarioIcon, ClipboardDocumentCheckIcon, ArchiveBoxIcon } from '../icons/Icons';
+import { DashboardIcon, AttendanceIcon, ActivityIcon, ReportIcon, ManageIcon, CloseIcon, DeceIcon, HealthIcon, UsersIcon, ChatBubbleIcon, CalendarIcon, VicerrectoradoIcon, InspectionIcon, CitacionIcon, LeccionarioIcon, ClipboardDocumentCheckIcon, ArchiveBoxIcon, ClipboardListIcon } from '../icons/Icons';
 
 interface SidebarProps {
   currentPage: string;
-  setCurrentPage: (page: 'dashboard' | 'attendance' | 'activities' | 'reports' | 'manage' | 'dece' | 'health' | 'students' | 'communications' | 'schedule' | 'vicerrectorate' | 'inspection' | 'citaciones' | 'leccionario' | 'curricular_planning' | 'curriculum_repository') => void;
+  setCurrentPage: (page: 'dashboard' | 'attendance' | 'activities' | 'reports' | 'manage' | 'dece' | 'health' | 'students' | 'communications' | 'schedule' | 'inspection' | 'citaciones' | 'leccionario' | 'curricular_planning' | 'curriculum_repository' | 'gradebook') => void;
   isSidebarOpen: boolean;
   setSidebarOpen: (isOpen: boolean) => void;
 }
@@ -49,13 +49,15 @@ const Sidebar: React.FC<SidebarProps> = ({ currentPage, setCurrentPage, isSideba
       { page: 'citaciones', icon: <CitacionIcon className="h-6 w-6" />, text: 'Citaciones' },
       { page: 'dece', icon: <DeceIcon className="h-6 w-6" />, text: 'DECE' },
       { page: 'health', icon: <HealthIcon className="h-6 w-6" />, text: 'Salud' },
-      { page: 'vicerrectorate', icon: <VicerrectoradoIcon className="h-6 w-6" />, text: 'Vicerrectorado' },
+      { page: 'curricular_planning', icon: <VicerrectoradoIcon className="h-6 w-6" />, text: 'Planificación Curricular' },
+      { page: 'curriculum_repository', icon: <ArchiveBoxIcon className="h-6 w-6" />, text: 'Repositorio Curricular' },
       { page: 'inspection', icon: <InspectionIcon className="h-6 w-6" />, text: 'Inspección' },
       { page: 'manage', icon: <ManageIcon className="h-6 w-6" />, text: 'Gestión Centro' },
     ],
     [Role.Teacher]: [
       ...commonLinks,
       { page: 'leccionario', icon: <LeccionarioIcon className="h-6 w-6" />, text: 'Leccionario' },
+      { page: 'gradebook', icon: <ClipboardListIcon className="h-6 w-6" />, text: 'Registro Docente' },
       { page: 'curricular_planning', icon: <ClipboardDocumentCheckIcon className="h-6 w-6" />, text: 'Planificación' },
       { page: 'attendance', icon: <AttendanceIcon className="h-6 w-6" />, text: 'Pase de Lista' },
       { page: 'activities', icon: <ActivityIcon className="h-6 w-6" />, text: 'Actividades' },
@@ -97,7 +99,8 @@ const Sidebar: React.FC<SidebarProps> = ({ currentPage, setCurrentPage, isSideba
     ],
     [Role.Vicerrector]: [
         ...commonLinks,
-        { page: 'vicerrectorate', icon: <VicerrectoradoIcon className="h-6 w-6" />, text: 'Vicerrectorado' },
+        { page: 'curricular_planning', icon: <VicerrectoradoIcon className="h-6 w-6" />, text: 'Planificación' },
+        { page: 'curriculum_repository', icon: <ArchiveBoxIcon className="h-6 w-6" />, text: 'Repositorio Curricular' },
         { page: 'citaciones', icon: <CitacionIcon className="h-6 w-6" />, text: 'Citaciones' },
     ],
     [Role.InspectorGeneral]: [

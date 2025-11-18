@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { User, Institution, Role, Class, Student, ScheduleEntry, Notification, SupportContact, HealthRecord, MedicalVisit, Subject, TimeSlot, Room, Timetable, ViccIntervention, AttendanceRecord, ExitPass, Citacion, AcademicCalendarEvent, LeccionarioEntry, MicroPlan, Dcd, EvaluationCriterion, EvaluationIndicator } from './types';
-import { MOCK_USERS, MOCK_INSTITUTIONS, MOCK_CLASSES, MOCK_STUDENTS, MOCK_SCHEDULE_ENTRIES, MOCK_NOTIFICATIONS, MOCK_SUPPORT_CONTACTS, MOCK_HEALTH_RECORDS, MOCK_MEDICAL_VISITS, MOCK_SUBJECTS, MOCK_TIME_SLOTS, MOCK_ROOMS, MOCK_TIMETABLES, MOCK_VICC_INTERVENTIONS, MOCK_ATTENDANCE, MOCK_EXIT_PASSES, MOCK_CITACIONES, MOCK_ACADEMIC_CALENDAR_EVENTS, MOCK_LECCIONARIO_ENTRIES, MOCK_MICRO_PLANS, MOCK_DCDS, MOCK_EVALUATION_CRITERIA, MOCK_EVALUATION_INDICATORS } from './constants';
+import { User, Institution, Role, Class, Student, ScheduleEntry, Notification, SupportContact, HealthRecord, MedicalVisit, Subject, TimeSlot, Room, Timetable, ViccIntervention, AttendanceRecord, ExitPass, Citacion, AcademicCalendarEvent, LeccionarioEntry, MicroPlan, Dcd, EvaluationCriterion, EvaluationIndicator, Gradebook, Activity } from './types';
+// FIX: Corrected typo from MOCK_VICC_INTERVENTions to MOCK_VICC_INTERVENTIONS.
+import { MOCK_USERS, MOCK_INSTITUTIONS, MOCK_CLASSES, MOCK_STUDENTS, MOCK_SCHEDULE_ENTRIES, MOCK_NOTIFICATIONS, MOCK_SUPPORT_CONTACTS, MOCK_HEALTH_RECORDS, MOCK_MEDICAL_VISITS, MOCK_SUBJECTS, MOCK_TIME_SLOTS, MOCK_ROOMS, MOCK_TIMETABLES, MOCK_VICC_INTERVENTIONS, MOCK_ATTENDANCE, MOCK_EXIT_PASSES, MOCK_CITACIONES, MOCK_ACADEMIC_CALENDAR_EVENTS, MOCK_LECCIONARIO_ENTRIES, MOCK_MICRO_PLANS, MOCK_DCDS, MOCK_EVALUATION_CRITERIA, MOCK_EVALUATION_INDICATORS, MOCK_GRADEBOOKS, MOCK_ACTIVITIES } from './constants';
 import LoginPage from './pages/LoginPage';
 import DashboardLayout from './components/layout/DashboardLayout';
 import { UserContext, InstitutionContext } from './contexts/UserContext';
@@ -25,6 +26,7 @@ export default function App() {
   const [timeSlots, setTimeSlots] = useState<TimeSlot[]>(MOCK_TIME_SLOTS);
   const [rooms, setRooms] = useState<Room[]>(MOCK_ROOMS);
   const [timetables, setTimetables] = useState<Timetable[]>(MOCK_TIMETABLES);
+  // FIX: Corrected typo from MOCK_VICC_INTERVENTions to MOCK_VICC_INTERVENTIONS.
   const [viccInterventions, setViccInterventions] = useState<ViccIntervention[]>(MOCK_VICC_INTERVENTIONS);
   const [attendanceRecords, setAttendanceRecords] = useState<AttendanceRecord[]>(MOCK_ATTENDANCE);
   const [exitPasses, setExitPasses] = useState<ExitPass[]>(MOCK_EXIT_PASSES);
@@ -35,6 +37,8 @@ export default function App() {
   const [dcds, setDcds] = useState<Dcd[]>(MOCK_DCDS);
   const [evaluationCriteria, setEvaluationCriteria] = useState<EvaluationCriterion[]>(MOCK_EVALUATION_CRITERIA);
   const [evaluationIndicators, setEvaluationIndicators] = useState<EvaluationIndicator[]>(MOCK_EVALUATION_INDICATORS);
+  const [gradebooks, setGradebooks] = useState<Gradebook[]>(MOCK_GRADEBOOKS);
+  const [activities, setActivities] = useState<Activity[]>(MOCK_ACTIVITIES);
 
 
   const handleLogin = (email: string, password: string): boolean => {
@@ -84,6 +88,8 @@ export default function App() {
   const handleUpdateDcds = (newDcds: Dcd[]) => setDcds(prev => [...prev, ...newDcds]);
   const handleUpdateEvaluationCriteria = (newCriteria: EvaluationCriterion[]) => setEvaluationCriteria(prev => [...prev, ...newCriteria]);
   const handleUpdateEvaluationIndicators = (newIndicators: EvaluationIndicator[]) => setEvaluationIndicators(prev => [...prev, ...newIndicators]);
+  const handleUpdateGradebooks = (updatedGradebooks: Gradebook[]) => setGradebooks(updatedGradebooks);
+  const handleUpdateActivities = (updatedActivities: Activity[]) => setActivities(updatedActivities);
 
 
   const userContextValue = useMemo(() => ({
@@ -143,6 +149,8 @@ export default function App() {
             dcds={dcds}
             evaluationCriteria={evaluationCriteria}
             evaluationIndicators={evaluationIndicators}
+            gradebooks={gradebooks}
+            activities={activities}
             onUpdateUsers={handleUpdateUsers}
             onUpdateClasses={handleUpdateClasses}
             onUpdateSchedule={handleUpdateSchedule}
@@ -165,6 +173,8 @@ export default function App() {
             onUpdateDcds={handleUpdateDcds}
             onUpdateEvaluationCriteria={handleUpdateEvaluationCriteria}
             onUpdateEvaluationIndicators={handleUpdateEvaluationIndicators}
+            onUpdateGradebooks={handleUpdateGradebooks}
+            onUpdateActivities={handleUpdateActivities}
           />
         )}
       </InstitutionContext.Provider>

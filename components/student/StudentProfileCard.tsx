@@ -1,9 +1,9 @@
 import React, { useState, useMemo, useEffect, useContext } from 'react';
 import { UserContext, InstitutionContext } from '../../contexts/UserContext';
-// FIX: Add User and Class to imports to support new props.
-import { Student, OvpAxis, HealthRecord, Intervention, InterventionType, User, Class, Role, MedicalVisit, ScheduleEntry, Subject, TimeSlot, Room, Timetable, ViccIntervention, ViccInterventionType } from '../../types';
+// FIX: Add User, Class, and RelatedContact to imports to support new props and features.
+import { Student, RelatedContact, OvpAxis, HealthRecord, Intervention, InterventionType, User, Class, Role, MedicalVisit, ScheduleEntry, Subject, TimeSlot, Room, Timetable, ViccIntervention, ViccInterventionType } from '../../types';
 import { MOCK_STUDENTS, MOCK_CLASSES, MOCK_USERS, MOCK_INTERVENTIONS, MOCK_OVP_ACTIVITIES, MOCK_HEALTH_RECORDS, MOCK_MEDICAL_VISITS, MOCK_VICC_INTERVENTIONS } from '../../constants';
-import { CloseIcon, ClipboardListIcon, GraduationCapIcon, PlusIcon, DeceIcon, StethoscopeIcon, EditIcon, UsersIcon, PrinterIcon, PhoneIcon, EmailIcon, LocationMarkerIcon, ExternalLinkIcon, ChatBubbleIcon, CalendarIcon, VicerrectoradoIcon } from '../icons/Icons';
+import { CloseIcon, ClipboardListIcon, GraduationCapIcon, PlusIcon, DeceIcon, StethoscopeIcon, EditIcon, UsersIcon, PrinterIcon, PhoneIcon, EmailIcon, LocationMarkerIcon, ExternalLinkIcon, ChatBubbleIcon, CalendarIcon, VicerrectoradoIcon, TrashIcon } from '../icons/Icons';
 import InterventionForm from '../dece/InterventionForm';
 import InterventionAgreementPrint from '../dece/InterventionAgreementPrint';
 import HealthRecordForm from '../health/HealthRecordForm';
@@ -14,7 +14,7 @@ import ViccInterventionForm from '../vicerrectorado/ViccInterventionForm';
 import ViccAgreementPrint from '../vicerrectorado/ViccAgreementPrint';
 
 
-// FIX: Added 'vicerrectorate' to support the Vice-Rectorate module.
+// FIX: Changed 'vicerrectorate' to support the Vice-Rectorate module.
 type DeceFileTab = 'info' | 'dece' | 'health' | 'schedule' | 'vicerrectorate';
 
 interface StudentProfileCardProps {
@@ -59,6 +59,89 @@ const InfoItem: React.FC<InfoItemProps> = ({ label, children, icon: Icon }) => (
     </div>
 );
 
+// Form for adding/editing a related contact
+interface ContactFormProps {
+    isOpen: boolean;
+    onClose: () => void;
+    onSave: (contact: Omit<RelatedContact, 'id'> & { id?: string }) => void;
+    contactToEdit: RelatedContact | null;
+}
+
+const ContactForm: React.FC<ContactFormProps> = ({ isOpen, onClose, onSave, contactToEdit }) => {
+    const [formData, setFormData] = useState({
+        id: undefined as string | undefined,
+        relation: '',
+        name: '',
+        occupation: '',
+        phone: '',
+        email: '',
+    });
+
+    useEffect(() => {
+        if (contactToEdit) {
+            setFormData({
+                id: contactToEdit.id,
+                relation: contactToEdit.relation,
+                name: contactToEdit.name,
+                occupation: contactToEdit.occupation || '',
+                phone: contactToEdit.phone || '',
+                email: contactToEdit.email || '',
+            });
+        } else {
+            setFormData({ id: undefined, relation: '', name: '', occupation: '', phone: '', email: '' });
+        }
+    }, [contactToEdit, isOpen]);
+
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const { name, value } = e.target;
+        setFormData(prev => ({ ...prev, [name]: value }));
+    };
+
+    const handleSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        onSave(formData);
+    };
+
+    if (!isOpen) return null;
+
+    return (
+        <div className="fixed inset-0 bg-black bg-opacity-60 z-50 flex justify-center items-center p-4" onClick={onClose}>
+            <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-lg relative" onClick={e => e.stopPropagation()}>
+                <button onClick={onClose} className="absolute top-4 right-4 text-gray-500 hover:text-gray-800"><CloseIcon className="h-6 w-6" /></button>
+                <h2 className="text-xl font-bold mb-4">{contactToEdit ? 'Editar' : 'Añadir'} Contacto</h2>
+                <form onSubmit={handleSubmit} className="space-y-4">
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700">Relación</label>
+                        <input type="text" name="relation" value={formData.relation} onChange={handleChange} required className="mt-1 w-full p-2 border rounded-md" placeholder="Ej: Padre, Tía, Vecino..." />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700">Nombre Completo</label>
+                        <input type="text" name="name" value={formData.name} onChange={handleChange} required className="mt-1 w-full p-2 border rounded-md" />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700">Ocupación</label>
+                        <input type="text" name="occupation" value={formData.occupation} onChange={handleChange} className="mt-1 w-full p-2 border rounded-md" />
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700">Teléfono</label>
+                            <input type="tel" name="phone" value={formData.phone} onChange={handleChange} className="mt-1 w-full p-2 border rounded-md" />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700">Email</label>
+                            <input type="email" name="email" value={formData.email} onChange={handleChange} className="mt-1 w-full p-2 border rounded-md" />
+                        </div>
+                    </div>
+                    <div className="flex justify-end gap-4 pt-4">
+                        <button type="button" onClick={onClose} className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300">Cancelar</button>
+                        <button type="submit" className="px-4 py-2 bg-primary-600 text-white font-semibold rounded-md hover:bg-primary-700">Guardar</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    );
+};
+
 
 // FIX: Update component signature to accept new props.
 const StudentProfileCard: React.FC<StudentProfileCardProps> = ({ studentId, onClose, isEditable, initialTab = 'info', isModal = true, allStudents, onUpdateStudents, allUsers, onUpdateUsers, allClasses, allHealthRecords, onUpdateHealthRecords, allMedicalVisits, onUpdateMedicalVisits, schedule, subjects, timeSlots, rooms, timetables, viccInterventions, onUpdateViccInterventions }) => {
@@ -74,6 +157,8 @@ const StudentProfileCard: React.FC<StudentProfileCardProps> = ({ studentId, onCl
     const [isViccInterventionModalOpen, setIsViccInterventionModalOpen] = useState(false);
     const [editingViccIntervention, setEditingViccIntervention] = useState<ViccIntervention | null>(null);
     const [printingViccIntervention, setPrintingViccIntervention] = useState<ViccIntervention | null>(null);
+    const [isContactFormOpen, setIsContactFormOpen] = useState(false);
+    const [editingContact, setEditingContact] = useState<RelatedContact | null>(null);
 
     const [studentData, setStudentData] = useState<Student | null>(null);
     
@@ -199,6 +284,53 @@ const StudentProfileCard: React.FC<StudentProfileCardProps> = ({ studentId, onCl
         setIsVisitFormOpen(false);
     };
 
+    const handleOpenContactForm = (contact: RelatedContact | null) => {
+        setEditingContact(contact);
+        setIsContactFormOpen(true);
+    };
+
+    const handleSaveContact = (contactData: Omit<RelatedContact, 'id'> & { id?: string }) => {
+        if (!studentData || !allStudents || !onUpdateStudents) return;
+
+        let updatedContacts: RelatedContact[];
+
+        if (contactData.id) { // Editing
+            updatedContacts = (studentData.relatedContacts || []).map(c =>
+                c.id === contactData.id ? { ...c, ...contactData } as RelatedContact : c
+            );
+        } else { // Adding
+            const newContact: RelatedContact = {
+                ...contactData,
+                id: `contact-${Date.now()}`,
+            };
+            updatedContacts = [...(studentData.relatedContacts || []), newContact];
+        }
+
+        const updatedStudent = { ...studentData, relatedContacts: updatedContacts };
+        
+        setStudentData(updatedStudent);
+
+        const updatedAllStudents = allStudents.map(s =>
+            s.id === studentData.id ? updatedStudent : s
+        );
+        onUpdateStudents(updatedAllStudents);
+        setIsContactFormOpen(false);
+    };
+    
+    const handleDeleteContact = (contactId: string) => {
+        if (!studentData || !allStudents || !onUpdateStudents) return;
+        if (window.confirm('¿Está seguro de que desea eliminar este contacto?')) {
+            const updatedContacts = (studentData.relatedContacts || []).filter(c => c.id !== contactId);
+            const updatedStudent = { ...studentData, relatedContacts: updatedContacts };
+            setStudentData(updatedStudent);
+
+            const updatedAllStudents = allStudents.map(s =>
+                s.id === studentData.id ? updatedStudent : s
+            );
+            onUpdateStudents(updatedAllStudents);
+        }
+    };
+
     const TabButton = ({ tab, label, icon }: { tab: DeceFileTab; label: string, icon: React.ReactNode }) => (
         <button
             onClick={() => setActiveTab(tab)}
@@ -239,38 +371,52 @@ const StudentProfileCard: React.FC<StudentProfileCardProps> = ({ studentId, onCl
     
                 {/* Right Column: Related Contacts */}
                 <div className="lg:col-span-3 bg-white p-4 rounded-lg border">
-                     <h3 className="text-lg font-semibold text-gray-700 mb-4 flex items-center">
-                        Familiares y Contactos
-                        {profileData.relatedContacts && profileData.relatedContacts.length > 0 && (
-                            <span className="ml-2 bg-gray-200 text-gray-700 text-xs font-bold px-2 py-1 rounded-full">
-                                {profileData.relatedContacts.length}
-                            </span>
+                     <div className="flex justify-between items-center mb-4">
+                        <h3 className="text-lg font-semibold text-gray-700 flex items-center">
+                            Familiares y Contactos
+                            {profileData.relatedContacts && profileData.relatedContacts.length > 0 && (
+                                <span className="ml-2 bg-gray-200 text-gray-700 text-xs font-bold px-2 py-1 rounded-full">
+                                    {profileData.relatedContacts.length}
+                                </span>
+                            )}
+                        </h3>
+                        {isEditable && (
+                            <button onClick={() => handleOpenContactForm(null)} className="flex items-center gap-2 px-3 py-1.5 bg-primary-600 text-white font-semibold rounded-md hover:bg-primary-700 text-sm">
+                                <PlusIcon className="h-4 w-4" />
+                                Añadir Contacto
+                            </button>
                         )}
-                    </h3>
+                    </div>
                     {profileData.relatedContacts && profileData.relatedContacts.length > 0 ? (
                         <div className="overflow-x-auto">
-                            <table className="min-w-full">
+                            <table className="w-full">
                                 <thead>
-                                    <tr>
-                                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Relación</th>
-                                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nombre</th>
-                                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ocupación</th>
-                                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contacto</th>
+                                    <tr className="border-b">
+                                        <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Relación</th>
+                                        <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nombre</th>
+                                        <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ocupación</th>
+                                        <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contacto</th>
+                                        {isEditable && <th className="px-2 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>}
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-gray-200">
                                     {profileData.relatedContacts.map(contact => (
                                         <tr key={contact.id}>
-                                            <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-800">{contact.relation}</td>
-                                            <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-800">{contact.name}</td>
-                                            <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">{contact.occupation || '-'}</td>
-                                            <td className="px-4 py-3 whitespace-nowrap text-sm">
-                                                <div className="flex items-center gap-3">
-                                                    {contact.phone && <a href={`tel:${contact.phone}`} title={contact.phone} className="text-gray-500 hover:text-primary-600"><PhoneIcon className="h-5 w-5" /></a>}
-                                                    {contact.email && <a href={`mailto:${contact.email}`} title={contact.email} className="text-gray-500 hover:text-primary-600"><EmailIcon className="h-5 w-5" /></a>}
-                                                    <button title="Chat" className="text-gray-400 cursor-not-allowed"><ChatBubbleIcon className="h-5 w-5" /></button>
+                                            <td className="px-2 py-3 text-sm text-gray-800">{contact.relation}</td>
+                                            <td className="px-2 py-3 text-sm text-gray-800 break-words">{contact.name}</td>
+                                            <td className="px-2 py-3 text-sm text-gray-500">{contact.occupation || '-'}</td>
+                                            <td className="px-2 py-3 text-sm">
+                                                <div className="flex items-center flex-wrap gap-3">
+                                                    {contact.phone && <a href={`tel:${contact.phone}`} title={contact.phone} className="flex items-center gap-1 text-gray-500 hover:text-primary-600"><PhoneIcon className="h-4 w-4" /> <span className="sr-only">Teléfono</span></a>}
+                                                    {contact.email && <a href={`mailto:${contact.email}`} title={contact.email} className="flex items-center gap-1 text-gray-500 hover:text-primary-600"><EmailIcon className="h-4 w-4" /> <span className="sr-only">Email</span></a>}
                                                 </div>
                                             </td>
+                                            {isEditable && (
+                                                <td className="px-2 py-3 text-right">
+                                                    <button onClick={() => handleOpenContactForm(contact)} className="p-1 text-gray-500 hover:text-blue-600" title="Editar"><EditIcon className="h-5 w-5" /></button>
+                                                    <button onClick={() => handleDeleteContact(contact.id)} className="p-1 text-gray-500 hover:text-red-600" title="Eliminar"><TrashIcon className="h-5 w-5" /></button>
+                                                </td>
+                                            )}
                                         </tr>
                                     ))}
                                 </tbody>
@@ -706,6 +852,14 @@ const StudentProfileCard: React.FC<StudentProfileCardProps> = ({ studentId, onCl
                         </div>
                     </div>
                 </div>
+            )}
+            {isContactFormOpen && (
+                <ContactForm
+                    isOpen={isContactFormOpen}
+                    onClose={() => setIsContactFormOpen(false)}
+                    onSave={handleSaveContact}
+                    contactToEdit={editingContact}
+                />
             )}
         </>
     );

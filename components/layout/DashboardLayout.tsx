@@ -8,18 +8,19 @@ import ReportsPage from '../../pages/ReportsPage';
 import ManagePage from '../../pages/ManagePage';
 import DecePage from '../../pages/DecePage';
 import HealthPage from '../../pages/HealthPage';
-import { User, Class, Student, ScheduleEntry, Notification, SupportContact, HealthRecord, MedicalVisit, Subject, TimeSlot, Room, Timetable, ViccIntervention, AttendanceRecord, ExitPass, Citacion, AcademicCalendarEvent, LeccionarioEntry, MicroPlan, Dcd, EvaluationCriterion, EvaluationIndicator } from '../../types';
+import { User, Class, Student, ScheduleEntry, Notification, SupportContact, HealthRecord, MedicalVisit, Subject, TimeSlot, Room, Timetable, ViccIntervention, AttendanceRecord, ExitPass, Citacion, AcademicCalendarEvent, LeccionarioEntry, MicroPlan, Dcd, EvaluationCriterion, EvaluationIndicator, Gradebook, Activity } from '../../types';
 import StudentManagementPage from '../../pages/StudentManagementPage';
 import CommunicationsPage from '../../pages/CommunicationsPage';
 import SchedulePage from '../../pages/SchedulePage';
-import ViceRectoratePage from '../../pages/ViceRectoratePage';
 import InspectionPage from '../../pages/InspectionPage';
 import CitacionesPage from '../../pages/CitacionesPage';
 import LeccionarioPage from '../../pages/LeccionarioPage';
 import CurricularPlanningPage from '../../pages/CurricularPlanningPage';
+import CurriculumRepositoryPage from '../../pages/CurriculumRepositoryPage';
+import GradebookPage from '../../pages/GradebookPage';
 
 
-type Page = 'dashboard' | 'attendance' | 'activities' | 'reports' | 'manage' | 'dece' | 'health' | 'students' | 'communications' | 'schedule' | 'vicerrectorate' | 'inspection' | 'citaciones' | 'leccionario' | 'curricular_planning' | 'curriculum_repository';
+type Page = 'dashboard' | 'attendance' | 'activities' | 'reports' | 'manage' | 'dece' | 'health' | 'students' | 'communications' | 'schedule' | 'inspection' | 'citaciones' | 'leccionario' | 'curricular_planning' | 'curriculum_repository' | 'gradebook';
 
 interface DashboardLayoutProps {
   users: User[];
@@ -44,6 +45,8 @@ interface DashboardLayoutProps {
   dcds: Dcd[];
   evaluationCriteria: EvaluationCriterion[];
   evaluationIndicators: EvaluationIndicator[];
+  gradebooks: Gradebook[];
+  activities: Activity[];
   onUpdateUsers: (users: User[]) => void;
   onUpdateClasses: (classes: Class[]) => void;
   onUpdateSchedule: (schedule: ScheduleEntry[]) => void;
@@ -66,6 +69,8 @@ interface DashboardLayoutProps {
   onUpdateDcds: (dcds: Dcd[]) => void;
   onUpdateEvaluationCriteria: (criteria: EvaluationCriterion[]) => void;
   onUpdateEvaluationIndicators: (indicators: EvaluationIndicator[]) => void;
+  onUpdateGradebooks: (gradebooks: Gradebook[]) => void;
+  onUpdateActivities: (activities: Activity[]) => void;
 }
 
 const DashboardLayout: React.FC<DashboardLayoutProps> = (props) => {
@@ -92,7 +97,16 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = (props) => {
       case 'attendance':
         return <AttendancePage classes={classes} timeSlots={timeSlots} timetables={restProps.timetables} attendanceRecords={restProps.attendanceRecords} onUpdateAttendance={restProps.onUpdateAttendance} />;
       case 'activities':
-        return <ActivitiesPage />;
+        return <ActivitiesPage 
+          activities={props.activities}
+          onUpdateActivities={props.onUpdateActivities}
+          classes={props.classes}
+          subjects={props.subjects}
+          students={props.students}
+          gradebooks={props.gradebooks}
+          onUpdateGradebooks={props.onUpdateGradebooks}
+          users={props.users}
+        />;
       case 'reports':
         return <ReportsPage 
           attendanceRecords={restProps.attendanceRecords} 
@@ -138,8 +152,6 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = (props) => {
         return <CommunicationsPage {...restProps} users={users} classes={classes} allNotifications={props.notifications} />;
       case 'schedule':
         return <SchedulePage {...restProps} schedule={schedule} subjects={subjects} timeSlots={timeSlots} users={users} classes={classes} />;
-      case 'vicerrectorate':
-        return <ViceRectoratePage {...restProps} users={users} classes={classes} schedule={schedule} subjects={subjects} timeSlots={timeSlots} microPlans={microPlans} />;
       case 'inspection':
         return <InspectionPage {...restProps} classes={classes} users={users} />;
       case 'citaciones':
@@ -166,6 +178,27 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = (props) => {
             dcds={props.dcds}
             evaluationCriteria={props.evaluationCriteria}
             evaluationIndicators={props.evaluationIndicators}
+        />;
+      case 'curriculum_repository':
+        return <CurriculumRepositoryPage
+            dcds={props.dcds}
+            onUpdateDcds={props.onUpdateDcds}
+            subjects={props.subjects}
+            evaluationCriteria={props.evaluationCriteria}
+            onUpdateEvaluationCriteria={props.onUpdateEvaluationCriteria}
+            evaluationIndicators={props.evaluationIndicators}
+            onUpdateEvaluationIndicators={props.onUpdateEvaluationIndicators}
+        />;
+      case 'gradebook':
+        return <GradebookPage
+          gradebooks={props.gradebooks}
+          onUpdateGradebooks={props.onUpdateGradebooks}
+          classes={props.classes}
+          subjects={props.subjects}
+          students={props.students}
+          users={props.users}
+          schedule={props.schedule}
+          activities={props.activities}
         />;
       default:
         return <DashboardPage {...restProps} schedule={schedule} classes={classes} subjects={subjects} timeSlots={timeSlots} rooms={restProps.rooms} timetables={restProps.timetables} users={users} />;

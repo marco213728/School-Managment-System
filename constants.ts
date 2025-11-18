@@ -1,6 +1,6 @@
-import { User, Role, Student, Class, Activity, ActivityType, AttendanceRecord, AttendanceStatus, Notification, SupportContact, Intervention, InterventionType, OvpActivity, OvpAxis, HealthRecord, Institution, OcrSubmission, OcrSubmissionStatus, ScheduleEntry, MedicalVisit, Shift, TimeSlot, Subject, Room, Timetable, ViccIntervention, ViccInterventionType, ExitPass, Citacion, CitacionStatus, AcademicCalendarEvent, LeccionarioEntry, MicroPlan, CurricularPlanStatus, GradeLevel, GRADE_LEVELS, Dcd, EvaluationCriterion, EvaluationIndicator, Competency, COMPETENCIES } from './types';
+import { User, Role, Student, Class, Activity, ActivityType, AttendanceRecord, AttendanceStatus, Notification, SupportContact, Intervention, InterventionType, OvpActivity, OvpAxis, HealthRecord, Institution, OcrSubmission, OcrSubmissionStatus, ScheduleEntry, MedicalVisit, Shift, TimeSlot, Subject, Room, Timetable, ViccIntervention, ViccInterventionType, ExitPass, Citacion, CitacionStatus, AcademicCalendarEvent, LeccionarioEntry, MicroPlan, CurricularPlanStatus, GradeLevel, GRADE_LEVELS, Dcd, EvaluationCriterion, EvaluationIndicator, Competency, COMPETENCIES, CURRICULAR_INSERTIONS, AREAS_OF_KNOWLEDGE, SUBJECT_LEVELS, Gradebook, TrimesterRecord, StudentGradebook, GradeEntry, EVALUATION_CATEGORIES } from './types';
 
-export { GRADE_LEVELS, COMPETENCIES };
+export { GRADE_LEVELS, COMPETENCIES, CURRICULAR_INSERTIONS, AREAS_OF_KNOWLEDGE, SUBJECT_LEVELS, EVALUATION_CATEGORIES };
 
 export const ATTENDANCE_OBSERVATIONS: { [key: number]: string } = {
   1: 'Atraso a la hora clase',
@@ -200,6 +200,9 @@ export const MOCK_USERS: User[] = [
   { id: 'health1', name: 'Dr. López (Médico)', email: 'drlopez@health.school.com', password: 'password', role: Role.HealthProfessional, institutionId: 'uemol', phone: '655666777'},
   { id: 'vicerrector1', name: 'Lic. Ricardo Montes', email: 'rmontes@school.com', password: 'password', role: Role.Vicerrector, institutionId: 'uemol' },
   { id: 'inspector1', name: 'Abg. Sofia Delgado', email: 'sdelgado@school.com', password: 'password', role: Role.InspectorGeneral, institutionId: 'uemol' },
+  { id: 'inspector2', name: 'Mariela Allauca', email: 'mallauca@school.com', password: 'password', role: Role.InspectorGeneral, institutionId: 'uemol' },
+  { id: 'vicerrector2', name: 'Gabriela', email: 'gabriela@school.com', password: 'password', role: Role.Vicerrector, institutionId: 'uemol' },
+  { id: 'teacher4', name: 'Prof. Lorena', email: 'lorena@school.com', password: 'password', role: Role.Teacher, classIds: ['class1'], institutionId: 'uemol', maxMonthlyHours: 80 },
 
 
   // Colegio XYZ Users
@@ -222,9 +225,28 @@ export const MOCK_CLASSES: Class[] = [
 ];
 
 export const MOCK_SUBJECTS: Subject[] = [
-  { id: 'subj1', institutionId: 'uemol', name: 'Matemáticas', teacherId: 'teacher1', maxWeeklyHours: 5 },
-  { id: 'subj2', institutionId: 'uemol', name: 'Historia', teacherId: 'teacher2', maxWeeklyHours: 4 },
-  { id: 'subj3', institutionId: 'colegio-xyz', name: 'Ciencias', teacherId: 'teacher3', maxWeeklyHours: 6 },
+  // EGB & BGU Core
+  { id: 'subj1', institutionId: 'uemol', name: 'Matemáticas', teacherId: 'teacher1', maxWeeklyHours: 5, areaOfKnowledge: 'Matemática', level: 'Todos' },
+  { id: 'subj-math-lorena', institutionId: 'uemol', name: 'Matemáticas', teacherId: 'teacher4', maxWeeklyHours: 5, areaOfKnowledge: 'Matemática', level: 'Todos' },
+  { id: 'subj-ll', institutionId: 'uemol', name: 'Lengua y Literatura', teacherId: 'teacher2', maxWeeklyHours: 5, areaOfKnowledge: 'Lengua y Literatura', level: 'Todos' },
+  { id: 'subj-cn-egb', institutionId: 'uemol', name: 'Ciencias Naturales', teacherId: 'teacher4', maxWeeklyHours: 4, areaOfKnowledge: 'Ciencias Naturales', level: 'EGB' },
+  { id: 'subj-cs-egb', institutionId: 'uemol', name: 'Estudios Sociales', teacherId: 'teacher2', maxWeeklyHours: 3, areaOfKnowledge: 'Ciencias Sociales', level: 'EGB' },
+  { id: 'subj-en', institutionId: 'uemol', name: 'Lengua Extranjera (Inglés)', teacherId: 'teacher4', maxWeeklyHours: 3, areaOfKnowledge: 'Lengua Extranjera', level: 'Todos' },
+  { id: 'subj-ef', institutionId: 'uemol', name: 'Educación Física', teacherId: 'teacher1', maxWeeklyHours: 2, areaOfKnowledge: 'Educación Física', level: 'Todos' },
+  { id: 'subj-eca', institutionId: 'uemol', name: 'Educación Cultural y Artística', teacherId: 'teacher2', maxWeeklyHours: 2, areaOfKnowledge: 'Educación Cultural y Artística', level: 'Todos' },
+
+  // BGU Specialized
+  { id: 'subj2', institutionId: 'uemol', name: 'Historia', teacherId: 'teacher2', maxWeeklyHours: 4, areaOfKnowledge: 'Ciencias Sociales', level: 'BGU' },
+  { id: 'subj-hist-garcia', institutionId: 'uemol', name: 'Historia', teacherId: 'teacher1', maxWeeklyHours: 4, areaOfKnowledge: 'Ciencias Sociales', level: 'BGU' },
+  { id: 'subj-bio', institutionId: 'uemol', name: 'Biología', teacherId: 'teacher4', maxWeeklyHours: 2, areaOfKnowledge: 'Ciencias Naturales', level: 'BGU' },
+  { id: 'subj-fis', institutionId: 'uemol', name: 'Física', teacherId: 'teacher1', maxWeeklyHours: 2, areaOfKnowledge: 'Ciencias Naturales', level: 'BGU' },
+  { id: 'subj-qui', institutionId: 'uemol', name: 'Química', teacherId: 'teacher4', maxWeeklyHours: 2, areaOfKnowledge: 'Ciencias Naturales', level: 'BGU' },
+  { id: 'subj-fil', institutionId: 'uemol', name: 'Filosofía', teacherId: 'teacher2', maxWeeklyHours: 2, areaOfKnowledge: 'Ciencias Sociales', level: 'BGU' },
+  { id: 'subj-ciu', institutionId: 'uemol', name: 'Educación para la Ciudadanía', teacherId: 'teacher2', maxWeeklyHours: 2, areaOfKnowledge: 'Ciencias Sociales', level: 'BGU' },
+  { id: 'subj-eyg', institutionId: 'uemol', name: 'Emprendimiento y Gestión', teacherId: 'teacher1', maxWeeklyHours: 2, areaOfKnowledge: 'Interdisciplinar', level: 'BGU', isModule: true },
+
+  // Other institution for testing
+  { id: 'subj3', institutionId: 'colegio-xyz', name: 'Ciencias Naturales', teacherId: 'teacher3', maxWeeklyHours: 6, areaOfKnowledge: 'Ciencias Naturales', level: 'EGB' },
 ];
 
 export const MOCK_ROOMS: Room[] = [
@@ -294,10 +316,10 @@ export const MOCK_STUDENTS: Student[] = [
 ];
 
 export const MOCK_ACTIVITIES: Activity[] = [
-  { id: 'act1', institutionId: 'uemol', classId: 'class1', teacherId: 'teacher1', title: 'Álgebra: Ejercicios 1-5', description: 'Resolver los ejercicios de la página 45.', type: ActivityType.Homework, deliveryDate: '2024-08-15' },
-  { id: 'act2', institutionId: 'uemol', classId: 'class2', teacherId: 'teacher2', title: 'Examen: La Edad Media', description: 'Estudiar los capítulos 3 y 4 del libro.', type: ActivityType.Exam, deliveryDate: '2024-08-20' },
-  { id: 'act3', institutionId: 'uemol', classId: 'class1', teacherId: 'teacher1', title: 'Lectura: "El hombre que calculaba"', description: 'Leer los primeros dos capítulos.', type: ActivityType.Reading, deliveryDate: '2024-08-22' },
-  { id: 'act4', institutionId: 'colegio-xyz', classId: 'class3', teacherId: 'teacher3', title: 'Laboratorio: Célula', description: 'Completar el informe del laboratorio.', type: ActivityType.Homework, deliveryDate: '2024-08-18' },
+  { id: 'act1', institutionId: 'uemol', classId: 'class1', teacherId: 'teacher1', title: 'Álgebra: Ejercicios 1-5', description: 'Resolver los ejercicios de la página 45.', type: ActivityType.Homework, deliveryDate: '2024-08-15', subjectId: 'subj1', trimester: 1, evaluationCategory: 'ACTIVIDAD_INDIVIDUAL', gradebookIndex: 0 },
+  { id: 'act2', institutionId: 'uemol', classId: 'class2', teacherId: 'teacher2', title: 'Examen: La Edad Media', description: 'Estudiar los capítulos 3 y 4 del libro.', type: ActivityType.Exam, deliveryDate: '2024-08-20', subjectId: 'subj2', trimester: 1, evaluationCategory: 'EVALUACION_SUMATIVA' },
+  { id: 'act3', institutionId: 'uemol', classId: 'class1', teacherId: 'teacher1', title: 'Lectura: "El hombre que calculaba"', description: 'Leer los primeros dos capítulos.', type: ActivityType.Reading, deliveryDate: '2024-08-22', subjectId: 'subj1', trimester: 1, evaluationCategory: 'ACTIVIDAD_INDIVIDUAL', gradebookIndex: 1 },
+  { id: 'act4', institutionId: 'colegio-xyz', classId: 'class3', teacherId: 'teacher3', title: 'Laboratorio: Célula', description: 'Completar el informe del laboratorio.', type: ActivityType.Homework, deliveryDate: '2024-08-18', subjectId: 'subj3', trimester: 1, evaluationCategory: 'ACTIVIDAD_GRUPAL', gradebookIndex: 0 },
 ];
 
 export const MOCK_ATTENDANCE: AttendanceRecord[] = [
@@ -737,7 +759,8 @@ export const MOCK_DCDS: Dcd[] = [
     subjectId: 'subj1',
     gradeLevel: 'EGB Superior',
     criterionId: 'ce-m-4-1',
-    competencies: ['Matemática']
+    competencies: ['Lógico-Matemática'],
+    curricularInsertions: ['Educación Financiera'],
   },
   {
     id: 'dcd-ll-1',
@@ -747,7 +770,8 @@ export const MOCK_DCDS: Dcd[] = [
     subjectId: 'subj2',
     gradeLevel: 'EGB Superior',
     criterionId: 'ce-ll-4-1',
-    competencies: ['Comunicacional', 'Socioemocional']
+    competencies: ['Comunicacional', 'Socioemocional'],
+    curricularInsertions: ['Educación Cívica, Ética e Integridad', 'Socioemocional'],
   },
   {
     id: 'dcd-ll-2',
@@ -757,6 +781,92 @@ export const MOCK_DCDS: Dcd[] = [
     subjectId: 'subj2',
     gradeLevel: 'EGB Superior',
     criterionId: 'ce-ll-4-2',
-    competencies: ['Comunicacional']
+    competencies: ['Comunicacional'],
+    curricularInsertions: ['Educación para el Desarrollo Sostenible'],
+  }
+];
+
+// Helper to create empty trimester records
+const createEmptyTrimester = (): TrimesterRecord => ({
+  actividades: Array(5).fill(null).map(() => ({ promedio: 0, activityId: undefined })),
+  promedioFormativas: 0,
+  portafolio: { promedio: 0 },
+  evaluacionSumativa: { promedio: 0 },
+  proyectoIntegrador: { promedio: 0 },
+  sumaTrimestre: 0,
+});
+
+const createEmptyStudentGradebook = (studentId: string): StudentGradebook => ({
+  studentId,
+  trimester1: createEmptyTrimester(),
+  trimester2: createEmptyTrimester(),
+  trimester3: createEmptyTrimester(),
+  mejorasUtilizadas: 0,
+  promedioTrimestralFinal: 0,
+  notaAnual90: 0,
+  proyectoFinal10: { promedio: 0 },
+  notaFinal100: 0,
+  observacionFinal: 'Pendiente'
+});
+
+
+export const MOCK_GRADEBOOKS: Gradebook[] = [
+  {
+    id: 'gb1',
+    institutionId: 'uemol',
+    classId: 'class1',
+    subjectId: 'subj1', // Matemáticas - Prof. García
+    records: [
+      {
+        studentId: 'student1',
+        trimester1: {
+          actividades: [ 
+            { activityId: 'act1', nota: 8, mejora: 9, promedio: 9 }, 
+            { activityId: 'act3', nota: 7, promedio: 7 }, 
+            { promedio: 0 }, 
+            { nota: 6, refuerzo: 7, promedio: 7 }, 
+            { nota: 8, promedio: 8 } 
+          ],
+          promedioFormativas: 8.0, 
+          portafolio: { nota: 10, promedio: 10 }, 
+          evaluacionSumativa: { nota: 7.5, promedio: 7.5 }, 
+          proyectoIntegrador: { nota: 8, promedio: 8 }, 
+          sumaTrimestre: 8.08
+        },
+        trimester2: createEmptyTrimester(),
+        trimester3: createEmptyTrimester(),
+        mejorasUtilizadas: 1,
+        promedioTrimestralFinal: 0, 
+        notaAnual90: 0, 
+        proyectoFinal10: { promedio: 0 },
+        notaFinal100: 0, 
+        observacionFinal: 'Pendiente'
+      },
+      {
+        studentId: 'student3',
+        trimester1: {
+          actividades: [ 
+            { activityId: 'act1', nota: 5, promedio: 5 }, 
+            { activityId: 'act3', nota: 6, promedio: 6 }, 
+            { nota: 7, promedio: 7 }, 
+            { nota: 5, refuerzo: 6, promedio: 6 }, 
+            { nota: 7, promedio: 7 } ],
+          promedioFormativas: 6.2, 
+          portafolio: { nota: 8, promedio: 8 }, 
+          evaluacionSumativa: { nota: 6, promedio: 6 }, 
+          proyectoIntegrador: { nota: 7, promedio: 7 }, 
+          sumaTrimestre: 6.44
+        },
+        trimester2: createEmptyTrimester(),
+        trimester3: createEmptyTrimester(),
+        mejorasUtilizadas: 0,
+        promedioTrimestralFinal: 0, 
+        notaAnual90: 0, 
+        proyectoFinal10: { promedio: 0 },
+        notaFinal100: 0, 
+        observacionFinal: 'Pendiente'
+      },
+      createEmptyStudentGradebook('student5')
+    ]
   }
 ];
