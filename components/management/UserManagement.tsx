@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useContext } from 'react';
 import { UserContext } from '../../contexts/UserContext';
 import { User, Role, Class, Student } from '../../types';
-import { PlusIcon, EditIcon, TrashIcon, SearchIcon } from '../icons/Icons';
+import { PlusIcon, EditIcon, TrashIcon, SearchIcon, UsersIcon } from '../icons/Icons';
 import UserForm from './UserForm';
 
 interface UserManagementProps {
@@ -69,7 +69,7 @@ const UserManagement: React.FC<UserManagementProps> = ({ users, allClasses, allS
     };
 
     return (
-        <div className="bg-white p-6 rounded-xl shadow-md">
+        <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 gap-4">
                 <h3 className="text-lg font-semibold text-gray-700">Gestionar Usuarios</h3>
                 <div className="relative w-full md:w-auto">
@@ -93,40 +93,55 @@ const UserManagement: React.FC<UserManagementProps> = ({ users, allClasses, allS
                 </button>
             </div>
             <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
-                    <thead className="bg-gray-50">
-                        <tr>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nombre</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contacto</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Rol</th>
-                            <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
-                        </tr>
-                    </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
-                        {filteredUsers.length > 0 ? (
-                            filteredUsers.map(user => (
+                {filteredUsers.length > 0 ? (
+                    <table className="min-w-full divide-y divide-gray-200">
+                        <thead className="bg-slate-50">
+                            <tr>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Nombre</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Contacto</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Rol</th>
+                                <th className="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody className="bg-white divide-y divide-gray-200">
+                            {filteredUsers.map(user => (
                                 <tr key={user.id}>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{user.name}</td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900">{user.name}</td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">
                                         <a href={`mailto:${user.email}`} className="text-primary-600 hover:underline block">{user.email}</a>
-                                        {user.phone && <a href={`tel:${user.phone}`} className="text-gray-500 hover:underline block">{user.phone}</a>}
+                                        {user.phone && <a href={`tel:${user.phone}`} className="text-slate-500 hover:underline block">{user.phone}</a>}
                                     </td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{user.role}</td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">{user.role}</td>
                                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                        <button onClick={() => handleEdit(user)} className="p-2 text-gray-500 hover:text-blue-600 rounded-full hover:bg-blue-100"><EditIcon className="h-5 w-5" /></button>
-                                        <button onClick={() => handleDelete(user.id)} className="p-2 text-gray-500 hover:text-red-600 rounded-full hover:bg-red-100"><TrashIcon className="h-5 w-5" /></button>
+                                        <button onClick={() => handleEdit(user)} className="p-2 text-slate-500 hover:text-primary-600 rounded-full hover:bg-primary-100"><EditIcon className="h-5 w-5" /></button>
+                                        <button onClick={() => handleDelete(user.id)} className="p-2 text-slate-500 hover:text-rose-600 rounded-full hover:bg-rose-100"><TrashIcon className="h-5 w-5" /></button>
                                     </td>
                                 </tr>
-                            ))
-                        ) : (
-                            <tr>
-                                <td colSpan={4} className="px-6 py-4 text-center text-gray-500">
-                                    No se encontraron usuarios que coincidan con la búsqueda.
-                                </td>
-                            </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                ) : (
+                    <div className="text-center py-16 border-2 border-dashed border-slate-200 rounded-lg">
+                        <UsersIcon className="mx-auto h-12 w-12 text-slate-400" />
+                        <h3 className="mt-2 text-lg font-semibold text-slate-800">
+                            {searchTerm ? 'No se encontraron usuarios' : 'No hay usuarios registrados'}
+                        </h3>
+                        <p className="mt-1 text-sm text-slate-500">
+                            {searchTerm ? 'Intente con otro término de búsqueda.' : 'Comience añadiendo un nuevo usuario a la plataforma.'}
+                        </p>
+                        {!searchTerm && (
+                            <div className="mt-6">
+                                <button
+                                    onClick={handleAddNew}
+                                    className="flex items-center gap-2 mx-auto px-4 py-2 bg-primary-600 text-white font-semibold rounded-md hover:bg-primary-700"
+                                >
+                                    <PlusIcon className="h-5 w-5" />
+                                    Añadir Usuario
+                                </button>
+                            </div>
                         )}
-                    </tbody>
-                </table>
+                    </div>
+                )}
             </div>
 
             {isModalOpen && (

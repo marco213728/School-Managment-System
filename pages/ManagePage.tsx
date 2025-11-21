@@ -1,6 +1,8 @@
+
 import React, { useState, useContext, useMemo } from 'react';
 import { UserContext } from '../contexts/UserContext';
-import { Role, User, Class, Student, ScheduleEntry, SupportContact, Subject, TimeSlot, Room, Timetable, AcademicCalendarEvent } from '../types';
+import { Role, User, Class, Student, ScheduleEntry, SupportContact, Subject, TimeSlot, Room, Timetable, AcademicCalendarEvent, StaffAttendanceRecord } from '../types';
+import { MOCK_STAFF_ATTENDANCE } from '../constants';
 import UserManagement from '../components/management/UserManagement';
 import InstitutionManagement from '../components/management/InstitutionManagement';
 import ClassManagement from '../components/management/ClassManagement';
@@ -12,6 +14,10 @@ import SubjectManagement from '../components/management/SubjectManagement';
 import RoomManagement from '../components/management/RoomManagement';
 import TimetableManagementComponent from '../components/dece/StudentDeceFile';
 import AcademicCalendarManagement from '../components/management/AcademicCalendarManagement';
+import StaffAttendanceKiosk from '../components/staff/StaffAttendanceKiosk';
+import StaffAttendanceReport from '../components/staff/StaffAttendanceReport';
+import BiometricEnrollmentModal from '../components/staff/BiometricEnrollmentModal';
+import { FingerPrintIcon } from '../components/icons/Icons';
 
 interface ManagePageProps {
   allUsers: User[];
@@ -53,7 +59,12 @@ const ManagePage: React.FC<ManagePageProps> = ({
   onUpdateUsers, onUpdateClasses, onUpdateSchedule, onUpdateStudents, onUpdateSupportContacts, onUpdateSubjects, onUpdateTimeSlots, onUpdateRooms, onUpdateTimetables, onUpdateAcademicCalendarEvents,
 }) => {
     const { user: currentUser } = useContext(UserContext);
-    const [view, setView] = useState<'dashboard' | 'classes' | 'schedule' | 'students' | 'communication' | 'support' | 'subjects' | 'rooms' | 'timetables' | 'calendar'>('dashboard');
+    const [view, setView] = useState<'dashboard' | 'classes' | 'schedule' | 'students' | 'communication' | 'support' | 'subjects' | 'rooms' | 'timetables' | 'calendar' | 'staff_control'>('dashboard');
+    
+    // New states for Staff Control
+    const [staffAttendanceRecords, setStaffAttendanceRecords] = useState<StaffAttendanceRecord[]>(MOCK_STAFF_ATTENDANCE);
+    const [isEnrollmentOpen, setIsEnrollmentOpen] = useState(false);
+    const [userToEnroll, setUserToEnroll] = useState<User | null>(null);
 
     const institutionData = useMemo(() => {
         if (!currentUser?.institutionId) {
@@ -83,6 +94,34 @@ const ManagePage: React.FC<ManagePageProps> = ({
              </div>
         )
     }
+
+    // Helper functions for staff module
+    const handleRecordAttendance = (userId: string, method: 'Biometric' | 'Manual') => {
+        const newRecord: StaffAttendanceRecord = {
+            id: `sa-${Date.now()}`,
+            institutionId: currentUser.institutionId!,
+            userId,
+            date: new Date().toISOString().split('T')[0],
+            checkInTime: new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }),
+            method,
+            status: 'OnTime', // Simplified logic for prototype
+        };
+        setStaffAttendanceRecords(prev => [newRecord, ...prev]);
+    };
+
+    const handleEnrollBiometric = (success: boolean) => {
+        if (success && userToEnroll) {
+            const updatedUsers = allUsers.map(u => u.id === userToEnroll.id ? { ...u, biometricRegistered: true } : u);
+            onUpdateUsers(updatedUsers);
+        }
+        setIsEnrollmentOpen(false);
+    };
+
+    const startEnrollment = () => {
+        // In a real app, you'd select a user from a list. For demo, enrolling current user.
+        setUserToEnroll(currentUser);
+        setIsEnrollmentOpen(true);
+    };
 
     const handleUpdateInstitutionUsers = (updatedInstUsers: User[]) => {
         const otherUsers = allUsers.filter(u => u.institutionId !== currentUser.institutionId);
@@ -143,6 +182,12 @@ const ManagePage: React.FC<ManagePageProps> = ({
           onUpdateUsers={handleUpdateInstitutionUsers}
         />}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <ManageCard title="Control de Personal (Biometría)">
+                <p className="text-gray-600">Registro de asistencia docente mediante huella digital o PIN.</p>
+                <button onClick={() => setView('staff_control')} className="mt-4 flex items-center gap-2 px-4 py-2 bg-primary-600 text-white font-semibold rounded-md hover:bg-primary-700">
+                    <FingerPrintIcon className="h-5 w-5" /> Acceder al Módulo
+                </button>
+            </ManageCard>
             <ManageCard title="Gestionar Calendario Académico">
                 <p className="text-gray-600">Definir el año lectivo y los días no laborables (feriados).</p>
                 <button onClick={() => setView('calendar')} className="mt-4 px-4 py-2 bg-primary-600 text-white font-semibold rounded-md hover:bg-primary-700">
@@ -205,8 +250,42 @@ const ManagePage: React.FC<ManagePageProps> = ({
       </div>
     );
 
+    const renderStaffControl = () => (
+        <div className="space-y-8">
+            <div className="bg-white p-6 rounded-xl shadow-md">
+                <h3 className="text-lg font-bold text-slate-800 mb-4">Punto de Registro de Asistencia (Kiosco)</h3>
+                <StaffAttendanceKiosk 
+                    users={institutionData.users.filter(u => u.role === Role.Teacher || u.role === Role.InstitutionAdmin)}
+                    onRecordAttendance={handleRecordAttendance}
+                />
+                <div className="mt-4 text-center">
+                    <button onClick={startEnrollment} className="text-sm text-primary-600 hover:underline font-medium">
+                        Registrar mi huella (Enrollment)
+                    </button>
+                </div>
+            </div>
+
+            <div className="bg-white p-6 rounded-xl shadow-md">
+                <h3 className="text-lg font-bold text-slate-800 mb-4">Reporte Administrativo</h3>
+                <StaffAttendanceReport 
+                    records={staffAttendanceRecords}
+                    users={institutionData.users}
+                />
+            </div>
+        </div>
+    );
+
     const renderView = () => {
         switch (view) {
+            case 'staff_control':
+                return (
+                    <div>
+                        <button onClick={() => setView('dashboard')} className="flex items-center gap-2 text-sm font-semibold text-primary-600 hover:underline mb-4">
+                            &larr; Volver
+                        </button>
+                        {renderStaffControl()}
+                    </div>
+                );
             case 'calendar':
                 return <AcademicCalendarManagement
                     events={institutionData.academicCalendarEvents}
@@ -283,6 +362,12 @@ const ManagePage: React.FC<ManagePageProps> = ({
         <div>
             <h2 className="text-2xl font-bold text-gray-800 mb-6">Gestión del Centro</h2>
             {renderView()}
+            <BiometricEnrollmentModal 
+                isOpen={isEnrollmentOpen}
+                onClose={() => setIsEnrollmentOpen(false)}
+                onEnroll={handleEnrollBiometric}
+                userName={userToEnroll?.name || ''}
+            />
         </div>
     );
 };

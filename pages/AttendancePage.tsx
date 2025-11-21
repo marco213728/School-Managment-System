@@ -1,5 +1,3 @@
-
-
 import React, { useState, useContext, useMemo } from 'react';
 import { UserContext } from '../contexts/UserContext';
 import { MOCK_STUDENTS, MOCK_OCR_SUBMISSIONS, ATTENDANCE_OBSERVATIONS } from '../constants';
@@ -14,9 +12,9 @@ import OcrVerification from '../components/attendance/OcrVerification';
 
 
 const statusColors: Record<AttendanceStatus, string> = {
-    [AttendanceStatus.Present]: 'bg-green-100 text-green-800',
-    [AttendanceStatus.Tardy]: 'bg-yellow-100 text-yellow-800',
-    [AttendanceStatus.Unexcused]: 'bg-red-100 text-red-800',
+    [AttendanceStatus.Present]: 'bg-emerald-100 text-emerald-800',
+    [AttendanceStatus.Tardy]: 'bg-amber-100 text-amber-800',
+    [AttendanceStatus.Unexcused]: 'bg-rose-100 text-rose-800',
     [AttendanceStatus.Excused]: 'bg-blue-100 text-blue-800',
     [AttendanceStatus.Absent]: 'bg-orange-100 text-orange-800',
     [AttendanceStatus.JustificationPending]: 'bg-purple-100 text-purple-800',
@@ -201,7 +199,7 @@ const TakeAttendanceManual: React.FC<AttendancePageProps> = ({ classes, timeSlot
     };
 
     return (
-        <div className="bg-white p-6 rounded-xl shadow-md">
+        <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
             <h2 className="text-xl font-bold text-gray-800 mb-4">Pase de Lista Manual</h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
                 <select value={selectedClass} onChange={e => setSelectedClass(e.target.value)} className="w-full p-2 border rounded-md">
@@ -259,7 +257,7 @@ const TakeAttendanceManual: React.FC<AttendancePageProps> = ({ classes, timeSlot
                     <button onClick={handleSubmit} className="mt-6 w-full md:w-auto px-6 py-2 bg-primary-600 text-white font-semibold rounded-md hover:bg-primary-700">
                         Guardar Asistencia
                     </button>
-                    {isSubmitted && <p className="mt-4 text-green-600">Asistencia guardada con éxito.</p>}
+                    {isSubmitted && <p className="mt-4 text-emerald-600">Asistencia guardada con éxito.</p>}
                 </div>
             )}
             {editingStudentId && (
@@ -333,22 +331,22 @@ const TeacherAttendance: React.FC<AttendancePageProps> = ({ classes, timeSlots, 
 
     return (
         <div className="space-y-6">
-            <div className="bg-white p-2 rounded-xl shadow-sm inline-flex space-x-2">
-                <button onClick={() => setActiveTab('manual')} className={`px-4 py-2 text-sm font-semibold rounded-lg ${activeTab === 'manual' ? 'bg-primary-600 text-white' : 'text-gray-600 hover:bg-gray-100'}`}>
+            <div className="bg-white p-2 rounded-xl shadow-sm inline-flex space-x-2 border border-slate-200">
+                <button onClick={() => setActiveTab('manual')} className={`px-4 py-2 text-sm font-semibold rounded-lg ${activeTab === 'manual' ? 'bg-primary-600 text-white' : 'text-slate-600 hover:bg-slate-100'}`}>
                     Registro Manual
                 </button>
-                <button onClick={() => setActiveTab('ocr')} className={`px-4 py-2 text-sm font-semibold rounded-lg ${activeTab === 'ocr' ? 'bg-primary-600 text-white' : 'text-gray-600 hover:bg-gray-100'}`}>
+                <button onClick={() => setActiveTab('ocr')} className={`px-4 py-2 text-sm font-semibold rounded-lg ${activeTab === 'ocr' ? 'bg-primary-600 text-white' : 'text-slate-600 hover:bg-slate-100'}`}>
                     Registro por OCR
                 </button>
             </div>
             {activeTab === 'manual' && <TakeAttendanceManual classes={classes} timeSlots={timeSlots} timetables={timetables} attendanceRecords={attendanceRecords} onUpdateAttendance={onUpdateAttendance} />}
             {activeTab === 'ocr' && (
-                <div className="bg-white p-6 rounded-xl shadow-md">
+                <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
                     <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 gap-4">
                         <h2 className="text-xl font-bold text-gray-800">Envíos de Asistencia por OCR</h2>
                         <button 
                             onClick={() => setUploadModalOpen(true)} 
-                            className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white font-semibold rounded-md hover:bg-primary-700 disabled:bg-gray-400"
+                            className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white font-semibold rounded-md hover:bg-primary-700 disabled:bg-slate-400"
                             disabled={!selectedOcrClass}
                         >
                             <UploadIcon className="h-5 w-5" />
@@ -375,8 +373,10 @@ const TeacherAttendance: React.FC<AttendancePageProps> = ({ classes, timeSlots, 
                             onReviewClick={(sub) => setReviewingSubmission(sub)}
                         />
                     ) : (
-                        <div className="text-center py-10 text-gray-500 bg-gray-50 rounded-lg">
-                            <p>Por favor, seleccione una clase para ver los envíos.</p>
+                        <div className="text-center py-10 text-slate-500 bg-slate-50 rounded-lg border-2 border-dashed border-slate-200">
+                            <UploadIcon className="h-12 w-12 text-slate-300 mx-auto" />
+                            <p className="mt-2 font-semibold">Seleccione una clase</p>
+                            <p className="text-sm">Por favor, elija una clase para ver o cargar las hojas de asistencia.</p>
                         </div>
                     )}
                 </div>
@@ -425,7 +425,7 @@ const ViewAttendance: React.FC<Pick<AttendancePageProps, 'attendanceRecords' | '
 
     return (
          <>
-            <div className="bg-white p-6 rounded-xl shadow-md">
+            <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
                 <h2 className="text-xl font-bold text-gray-800 mb-4">Historial de Asistencia de {studentData?.name}</h2>
                 <div className="overflow-x-auto">
                     <table className="min-w-full divide-y divide-gray-200">

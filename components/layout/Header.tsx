@@ -54,7 +54,7 @@ const Header: React.FC<HeaderProps> = ({ toggleSidebar, notifications, onUpdateN
   };
 
   return (
-    <header className="flex items-center justify-between px-6 h-16 bg-white border-b border-slate-200">
+    <header className="sticky top-0 z-10 flex items-center justify-between px-6 h-16 bg-white/80 backdrop-blur-md border-b border-slate-200">
       <div className="flex items-center">
         <button onClick={toggleSidebar} className="text-slate-500 focus:outline-none lg:hidden">
           <MenuIcon className="h-6 w-6" />
@@ -72,7 +72,7 @@ const Header: React.FC<HeaderProps> = ({ toggleSidebar, notifications, onUpdateN
           >
             <BellIcon className="h-6 w-6" />
             {unreadCount > 0 && (
-              <span className="absolute top-0 right-0 block h-2.5 w-2.5 transform -translate-y-1/2 translate-x-1/2 rounded-full bg-red-500 ring-2 ring-white">
+              <span className="absolute top-0 right-0 block h-2.5 w-2.5 transform -translate-y-1/2 translate-x-1/2 rounded-full bg-rose-500 ring-2 ring-white">
                 <span className="sr-only">Hay notificaciones nuevas</span>
               </span>
             )}
@@ -93,7 +93,7 @@ const Header: React.FC<HeaderProps> = ({ toggleSidebar, notifications, onUpdateN
           <p className="font-semibold text-slate-800">{user?.name}</p>
           <p className="text-sm text-slate-500">{user?.role}</p>
         </div>
-        <button onClick={logout} className="p-2 rounded-full hover:bg-red-100 text-red-500 transition-colors duration-200" aria-label="Cerrar sesión">
+        <button onClick={logout} className="p-2 rounded-full hover:bg-rose-100 text-rose-500 transition-colors duration-200" aria-label="Cerrar sesión">
           <LogoutIcon className="h-6 w-6" />
         </button>
       </div>

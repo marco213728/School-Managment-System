@@ -1,12 +1,12 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { User, Institution, Role, Class, Student, ScheduleEntry, Notification, SupportContact, HealthRecord, MedicalVisit, Subject, TimeSlot, Room, Timetable, ViccIntervention, AttendanceRecord, ExitPass, Citacion, AcademicCalendarEvent, LeccionarioEntry, MicroPlan, Dcd, EvaluationCriterion, EvaluationIndicator, Gradebook, Activity } from './types';
-// FIX: Corrected typo from MOCK_VICC_INTERVENTions to MOCK_VICC_INTERVENTIONS.
-import { MOCK_USERS, MOCK_INSTITUTIONS, MOCK_CLASSES, MOCK_STUDENTS, MOCK_SCHEDULE_ENTRIES, MOCK_NOTIFICATIONS, MOCK_SUPPORT_CONTACTS, MOCK_HEALTH_RECORDS, MOCK_MEDICAL_VISITS, MOCK_SUBJECTS, MOCK_TIME_SLOTS, MOCK_ROOMS, MOCK_TIMETABLES, MOCK_VICC_INTERVENTIONS, MOCK_ATTENDANCE, MOCK_EXIT_PASSES, MOCK_CITACIONES, MOCK_ACADEMIC_CALENDAR_EVENTS, MOCK_LECCIONARIO_ENTRIES, MOCK_MICRO_PLANS, MOCK_DCDS, MOCK_EVALUATION_CRITERIA, MOCK_EVALUATION_INDICATORS, MOCK_GRADEBOOKS, MOCK_ACTIVITIES } from './constants';
+import { User, Institution, Role, Class, Student, ScheduleEntry, Notification, SupportContact, HealthRecord, MedicalVisit, Subject, TimeSlot, Room, Timetable, ViccIntervention, AttendanceRecord, ExitPass, Citacion, AcademicCalendarEvent, LeccionarioEntry, MicroPlan, Dcd, EvaluationCriterion, EvaluationIndicator, Gradebook, Activity, ReinforcementPlan } from './types';
+import { MOCK_USERS, MOCK_INSTITUTIONS, MOCK_CLASSES, MOCK_STUDENTS, MOCK_SCHEDULE_ENTRIES, MOCK_NOTIFICATIONS, MOCK_SUPPORT_CONTACTS, MOCK_HEALTH_RECORDS, MOCK_MEDICAL_VISITS, MOCK_SUBJECTS, MOCK_TIME_SLOTS, MOCK_ROOMS, MOCK_TIMETABLES, MOCK_VICC_INTERVENTIONS, MOCK_ATTENDANCE, MOCK_EXIT_PASSES, MOCK_CITACIONES, MOCK_ACADEMIC_CALENDAR_EVENTS, MOCK_LECCIONARIO_ENTRIES, MOCK_MICRO_PLANS, MOCK_DCDS, MOCK_EVALUATION_CRITERIA, MOCK_EVALUATION_INDICATORS, MOCK_GRADEBOOKS, MOCK_ACTIVITIES, MOCK_REINFORCEMENT_PLANS } from './constants';
 import LoginPage from './pages/LoginPage';
 import DashboardLayout from './components/layout/DashboardLayout';
 import { UserContext, InstitutionContext } from './contexts/UserContext';
 import SuperAdminPage from './pages/SuperAdminPage';
 import PlatformAdminLayout from './components/layout/PlatformAdminLayout';
+import { AMAUTA_LOGO } from './branding';
 
 export default function App() {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
@@ -26,7 +26,6 @@ export default function App() {
   const [timeSlots, setTimeSlots] = useState<TimeSlot[]>(MOCK_TIME_SLOTS);
   const [rooms, setRooms] = useState<Room[]>(MOCK_ROOMS);
   const [timetables, setTimetables] = useState<Timetable[]>(MOCK_TIMETABLES);
-  // FIX: Corrected typo from MOCK_VICC_INTERVENTions to MOCK_VICC_INTERVENTIONS.
   const [viccInterventions, setViccInterventions] = useState<ViccIntervention[]>(MOCK_VICC_INTERVENTIONS);
   const [attendanceRecords, setAttendanceRecords] = useState<AttendanceRecord[]>(MOCK_ATTENDANCE);
   const [exitPasses, setExitPasses] = useState<ExitPass[]>(MOCK_EXIT_PASSES);
@@ -39,6 +38,7 @@ export default function App() {
   const [evaluationIndicators, setEvaluationIndicators] = useState<EvaluationIndicator[]>(MOCK_EVALUATION_INDICATORS);
   const [gradebooks, setGradebooks] = useState<Gradebook[]>(MOCK_GRADEBOOKS);
   const [activities, setActivities] = useState<Activity[]>(MOCK_ACTIVITIES);
+  const [reinforcementPlans, setReinforcementPlans] = useState<ReinforcementPlan[]>(MOCK_REINFORCEMENT_PLANS);
 
 
   const handleLogin = (email: string, password: string): boolean => {
@@ -90,6 +90,7 @@ export default function App() {
   const handleUpdateEvaluationIndicators = (newIndicators: EvaluationIndicator[]) => setEvaluationIndicators(prev => [...prev, ...newIndicators]);
   const handleUpdateGradebooks = (updatedGradebooks: Gradebook[]) => setGradebooks(updatedGradebooks);
   const handleUpdateActivities = (updatedActivities: Activity[]) => setActivities(updatedActivities);
+  const handleUpdateReinforcementPlans = (updatedPlans: ReinforcementPlan[]) => setReinforcementPlans(updatedPlans);
 
 
   const userContextValue = useMemo(() => ({
@@ -104,8 +105,8 @@ export default function App() {
 
   if (!currentUser) {
     const platformBranding = {
-      name: "School Management Platform",
-      logoUrl: "https://placehold.co/150x150/4f46e5/white?text=SMP",
+      name: "Amauta",
+      logoUrl: AMAUTA_LOGO,
       contact: { phone: '', email: '', address: ''},
       id: 'platform'
     };
@@ -151,6 +152,7 @@ export default function App() {
             evaluationIndicators={evaluationIndicators}
             gradebooks={gradebooks}
             activities={activities}
+            reinforcementPlans={reinforcementPlans}
             onUpdateUsers={handleUpdateUsers}
             onUpdateClasses={handleUpdateClasses}
             onUpdateSchedule={handleUpdateSchedule}
@@ -175,6 +177,7 @@ export default function App() {
             onUpdateEvaluationIndicators={handleUpdateEvaluationIndicators}
             onUpdateGradebooks={handleUpdateGradebooks}
             onUpdateActivities={handleUpdateActivities}
+            onUpdateReinforcementPlans={handleUpdateReinforcementPlans}
           />
         )}
       </InstitutionContext.Provider>

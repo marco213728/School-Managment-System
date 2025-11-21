@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useContext } from 'react';
 import { Citacion, User, Student, Role, Notification, CitacionStatus } from '../types';
 import { UserContext } from '../contexts/UserContext';
-import { PlusIcon, PrinterIcon } from '../components/icons/Icons';
+import { PlusIcon, PrinterIcon, CitacionIcon } from '../components/icons/Icons';
 import CitacionForm from '../components/citaciones/CitacionForm';
 import PrintableCitacion from '../components/citaciones/PrintableCitacion';
 
@@ -70,36 +70,54 @@ const CitacionesPage: React.FC<CitacionesPageProps> = ({ users, students, citaci
     const sortedCitaciones = [...relevantCitaciones].sort((a,b) => new Date(b.creationDate).getTime() - new Date(a.date).getTime());
 
     const ListView: React.FC = () => (
-        <div className="bg-white p-6 rounded-xl shadow-md">
+        <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
             <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
-                    <thead className="bg-gray-50">
-                        <tr>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{isStaff ? 'Estudiante' : 'Enviado por'}</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Fecha de la Cita</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Motivo</th>
-                            <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Acciones</th>
-                        </tr>
-                    </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
-                        {sortedCitaciones.map(citacion => (
-                            <tr key={citacion.id}>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                                    {isStaff ? studentMap.get(citacion.studentId) : userMap.get(citacion.staffId)}
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{new Date(citacion.date).toLocaleString('es-ES')}</td>
-                                <td className="px-6 py-4 text-sm text-gray-600 max-w-sm truncate" title={citacion.reason}>{citacion.reason}</td>
-                                <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                    <button onClick={() => setPrintingCitacion(citacion)} className="p-2 text-gray-500 hover:text-blue-600 rounded-full hover:bg-blue-100" title="Imprimir Citación">
-                                        <PrinterIcon className="h-5 w-5" />
-                                    </button>
-                                </td>
+                {sortedCitaciones.length > 0 ? (
+                    <table className="min-w-full divide-y divide-gray-200">
+                        <thead className="bg-slate-50">
+                            <tr>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">{isStaff ? 'Estudiante' : 'Enviado por'}</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Fecha de la Cita</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Motivo</th>
+                                <th className="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase">Acciones</th>
                             </tr>
-                        ))}
-                    </tbody>
-                </table>
-                 {sortedCitaciones.length === 0 && (
-                    <p className="text-center py-8 text-gray-500">No hay citaciones para mostrar.</p>
+                        </thead>
+                        <tbody className="bg-white divide-y divide-gray-200">
+                            {sortedCitaciones.map(citacion => (
+                                <tr key={citacion.id}>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900">
+                                        {isStaff ? studentMap.get(citacion.studentId) : userMap.get(citacion.staffId)}
+                                    </td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">{new Date(citacion.date).toLocaleString('es-ES')}</td>
+                                    <td className="px-6 py-4 text-sm text-slate-600 max-w-sm truncate" title={citacion.reason}>{citacion.reason}</td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                        <button onClick={() => setPrintingCitacion(citacion)} className="p-2 text-slate-500 hover:text-primary-600 rounded-full hover:bg-primary-100" title="Imprimir Citación">
+                                            <PrinterIcon className="h-5 w-5" />
+                                        </button>
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                ) : (
+                    <div className="text-center py-16 border-2 border-dashed border-slate-200 rounded-lg">
+                        <CitacionIcon className="mx-auto h-12 w-12 text-slate-400" />
+                        <h3 className="mt-2 text-lg font-semibold text-slate-800">No hay citaciones</h3>
+                        <p className="mt-1 text-sm text-slate-500">
+                            {isStaff ? 'Actualmente no tiene citaciones enviadas.' : 'No ha recibido ninguna citación.'}
+                        </p>
+                        {isStaff && (
+                            <div className="mt-6">
+                                <button
+                                    onClick={() => setIsFormOpen(true)}
+                                    className="flex items-center gap-2 mx-auto px-4 py-2 bg-primary-600 text-white font-semibold rounded-md hover:bg-primary-700"
+                                >
+                                    <PlusIcon className="h-5 w-5" />
+                                    Crear Citación
+                                </button>
+                            </div>
+                        )}
+                    </div>
                 )}
             </div>
         </div>
@@ -108,7 +126,7 @@ const CitacionesPage: React.FC<CitacionesPageProps> = ({ users, students, citaci
     return (
         <div>
             <div className="flex justify-between items-center mb-6">
-                <h2 className="text-2xl font-bold text-gray-800">Módulo de Citaciones</h2>
+                <h2 className="text-2xl font-bold text-slate-800">Módulo de Citaciones</h2>
                 {isStaff && (
                     <button onClick={() => setIsFormOpen(true)} className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white font-semibold rounded-md hover:bg-primary-700">
                         <PlusIcon className="h-5 w-5" />

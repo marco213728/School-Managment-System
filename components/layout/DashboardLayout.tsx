@@ -1,4 +1,3 @@
-
 import React, { useState, useContext } from 'react';
 import Sidebar from './Sidebar';
 import Header from './Header';
@@ -9,7 +8,7 @@ import ReportsPage from '../../pages/ReportsPage';
 import ManagePage from '../../pages/ManagePage';
 import DecePage from '../../pages/DecePage';
 import HealthPage from '../../pages/HealthPage';
-import { User, Class, Student, ScheduleEntry, Notification, SupportContact, HealthRecord, MedicalVisit, Subject, TimeSlot, Room, Timetable, ViccIntervention, AttendanceRecord, ExitPass, Citacion, AcademicCalendarEvent, LeccionarioEntry, MicroPlan, Dcd, EvaluationCriterion, EvaluationIndicator, Gradebook, Activity } from '../../types';
+import { User, Class, Student, ScheduleEntry, Notification, SupportContact, HealthRecord, MedicalVisit, Subject, TimeSlot, Room, Timetable, ViccIntervention, AttendanceRecord, ExitPass, Citacion, AcademicCalendarEvent, LeccionarioEntry, MicroPlan, Dcd, EvaluationCriterion, EvaluationIndicator, Gradebook, Activity, ReinforcementPlan } from '../../types';
 import StudentManagementPage from '../../pages/StudentManagementPage';
 import CommunicationsPage from '../../pages/CommunicationsPage';
 import SchedulePage from '../../pages/SchedulePage';
@@ -20,9 +19,10 @@ import CurricularPlanningPage from '../../pages/CurricularPlanningPage';
 import CurriculumRepositoryPage from '../../pages/CurriculumRepositoryPage';
 import GradebookPage from '../../pages/GradebookPage';
 import VicerrectoradoPage from '../../pages/VicerrectoradoPage';
+import TeacherReinforcementPage from '../../pages/TeacherReinforcementPage';
 
 
-type Page = 'dashboard' | 'attendance' | 'activities' | 'reports' | 'manage' | 'dece' | 'health' | 'students' | 'communications' | 'schedule' | 'inspection' | 'citaciones' | 'leccionario' | 'curricular_planning' | 'curriculum_repository' | 'gradebook' | 'vicerrector_dashboard';
+type Page = 'dashboard' | 'attendance' | 'activities' | 'reports' | 'manage' | 'dece' | 'health' | 'students' | 'communications' | 'schedule' | 'inspection' | 'citaciones' | 'leccionario' | 'curricular_planning' | 'curriculum_repository' | 'gradebook' | 'vicerrector_dashboard' | 'reinforcement';
 
 interface DashboardLayoutProps {
   users: User[];
@@ -49,6 +49,7 @@ interface DashboardLayoutProps {
   evaluationIndicators: EvaluationIndicator[];
   gradebooks: Gradebook[];
   activities: Activity[];
+  reinforcementPlans: ReinforcementPlan[];
   onUpdateUsers: (users: User[]) => void;
   onUpdateClasses: (classes: Class[]) => void;
   onUpdateSchedule: (schedule: ScheduleEntry[]) => void;
@@ -73,6 +74,7 @@ interface DashboardLayoutProps {
   onUpdateEvaluationIndicators: (indicators: EvaluationIndicator[]) => void;
   onUpdateGradebooks: (gradebooks: Gradebook[]) => void;
   onUpdateActivities: (activities: Activity[]) => void;
+  onUpdateReinforcementPlans: (plans: ReinforcementPlan[]) => void;
 }
 
 const DashboardLayout: React.FC<DashboardLayoutProps> = (props) => {
@@ -87,6 +89,8 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = (props) => {
     onUpdateLeccionarioEntries,
     microPlans,
     dcds,
+    reinforcementPlans,
+    onUpdateReinforcementPlans,
     ...restProps
   } = props;
 
@@ -96,7 +100,17 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = (props) => {
   const renderContent = () => {
     switch (currentPage) {
       case 'dashboard':
-        return <DashboardPage {...restProps} schedule={schedule} classes={classes} subjects={subjects} timeSlots={timeSlots} rooms={restProps.rooms} timetables={restProps.timetables} users={users} />;
+        return <DashboardPage 
+            {...restProps} 
+            schedule={schedule} 
+            classes={classes} 
+            subjects={subjects} 
+            timeSlots={timeSlots} 
+            rooms={restProps.rooms} 
+            timetables={restProps.timetables} 
+            users={users} 
+            onNavigate={setCurrentPage} 
+        />;
       case 'attendance':
         return <AttendancePage classes={classes} timeSlots={timeSlots} timetables={restProps.timetables} attendanceRecords={restProps.attendanceRecords} onUpdateAttendance={restProps.onUpdateAttendance} />;
       case 'activities':
@@ -153,7 +167,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = (props) => {
       case 'health':
         return <HealthPage {...restProps} users={users} classes={classes} schedule={schedule} subjects={subjects} timeSlots={timeSlots} />;
       case 'students':
-        return <StudentManagementPage {...restProps} users={users} classes={classes} schedule={schedule} subjects={subjects} timeSlots={timeSlots} />;
+        return <StudentManagementPage {...restProps} users={users} classes={classes} schedule={schedule} subjects={subjects} timeSlots={timeSlots} rooms={restProps.rooms} timetables={restProps.timetables} />;
       case 'communications':
         return <CommunicationsPage {...restProps} users={users} classes={classes} allNotifications={props.notifications} />;
       case 'schedule':
@@ -206,6 +220,15 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = (props) => {
           schedule={props.schedule}
           activities={props.activities}
         />;
+      case 'reinforcement':
+          return <TeacherReinforcementPage
+              students={props.students}
+              classes={props.classes}
+              subjects={props.subjects}
+              users={props.users}
+              reinforcementPlans={reinforcementPlans}
+              onUpdateReinforcementPlans={onUpdateReinforcementPlans}
+          />;
       case 'vicerrector_dashboard':
           return <VicerrectoradoPage
               microPlans={props.microPlans}
@@ -218,9 +241,11 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = (props) => {
               onNavigate={setCurrentPage}
               notifications={props.notifications}
               onUpdateNotifications={props.onUpdateNotifications}
+              reinforcementPlans={reinforcementPlans}
+              onUpdateReinforcementPlans={onUpdateReinforcementPlans}
           />;
       default:
-        return <DashboardPage {...restProps} schedule={schedule} classes={classes} subjects={subjects} timeSlots={timeSlots} rooms={restProps.rooms} timetables={restProps.timetables} users={users} />;
+        return <DashboardPage {...restProps} schedule={schedule} classes={classes} subjects={subjects} timeSlots={timeSlots} rooms={restProps.rooms} timetables={restProps.timetables} users={users} onNavigate={setCurrentPage} />;
     }
   };
 

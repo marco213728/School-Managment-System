@@ -25,6 +25,9 @@ export interface User {
   phone?: string;
   address?: string;
   maxMonthlyHours?: number;
+  // Staff Attendance Fields
+  biometricRegistered?: boolean;
+  accessPin?: string;
 }
 
 export interface Timetable {
@@ -741,4 +744,85 @@ export interface Gradebook {
   classId: string;
   subjectId: string;
   records: StudentGradebook[];
+}
+
+// Reinforcement Module Types (Based on PDF)
+export type ReinforcementModalidad = 'inside_class' | 'extra_class';
+export type ReinforcementGroupType = 'individual' | 'small_group' | 'large_group';
+
+export interface ReinforcementTopic {
+    dcd: string; // Destreza
+    strategies: string; // Estrategias Metodológicas
+    resources: string; // Recursos
+    evaluationCriteria: string; // Criterios de Evaluación
+}
+
+export interface ReinforcementSession {
+    id: string;
+    date: string;
+    attendance: boolean;
+    skillsReinforced: string; // Destrezas Reforzadas
+    achievements: string; // Logros de Aprendizaje
+    observations: string; // Recomendaciones/Observaciones
+}
+
+export interface ReinforcementPlan {
+    id: string;
+    institutionId: string;
+    studentId: string;
+    subjectId: string;
+    teacherId: string; // Docente responsable de la asignatura
+    tutorId: string; // Tutor del grado
+    reinforcementTeacherId?: string; // Profesor de refuerzo (puede ser el mismo)
+    
+    // Context
+    academicYear: string;
+    status: 'Nominated' | 'Planned' | 'ParentNotified' | 'In_Progress' | 'Completed';
+    
+    // Phase 1: Nomination & Planning (Page 1 & 2)
+    nominationDate: string;
+    nominationObservations: string; // Justification
+    
+    modalidad?: ReinforcementModalidad;
+    groupType?: ReinforcementGroupType;
+    schedule?: string; // Horario (Días/Horas)
+    duration?: string; // Duración prevista
+    startDate?: string;
+    generalObjective?: string;
+    topics: ReinforcementTopic[];
+    
+    // Phase 2: Parent Communication (Page 4 & 5)
+    notificationDate?: string;
+    parentConsented: boolean;
+    parentConsentDate?: string;
+    
+    // Phase 3: Execution & Tracking (Page 3)
+    sessions: ReinforcementSession[];
+    
+    // Final Report (Page 5 & 6)
+    finalReport?: {
+        achievements: string; // Logros
+        difficulties: string; // Dificultades
+        suggestions: string; // Sugerencias
+        completionDate: string;
+    };
+}
+
+// Staff Attendance & Biometrics
+export interface BiometricProfile {
+    userId: string;
+    consentGiven: boolean;
+    consentDate: string;
+    templateId: string; // Simulating a biometric template reference
+}
+
+export interface StaffAttendanceRecord {
+    id: string;
+    institutionId: string;
+    userId: string;
+    date: string;
+    checkInTime: string;
+    checkOutTime?: string;
+    method: 'Biometric' | 'Manual';
+    status: 'OnTime' | 'Late' | 'Absent';
 }

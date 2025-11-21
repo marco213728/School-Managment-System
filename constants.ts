@@ -1,5 +1,5 @@
 
-import { User, Role, Student, Class, Activity, ActivityType, AttendanceRecord, AttendanceStatus, Notification, SupportContact, Intervention, InterventionType, OvpActivity, OvpAxis, HealthRecord, Institution, OcrSubmission, OcrSubmissionStatus, ScheduleEntry, MedicalVisit, Shift, TimeSlot, Subject, Room, Timetable, ViccIntervention, ViccInterventionType, ExitPass, Citacion, CitacionStatus, AcademicCalendarEvent, LeccionarioEntry, MicroPlan, CurricularPlanStatus, GradeLevel, GRADE_LEVELS, Dcd, EvaluationCriterion, EvaluationIndicator, Competency, COMPETENCIES, CURRICULAR_INSERTIONS, AREAS_OF_KNOWLEDGE, SUBJECT_LEVELS, Gradebook, TrimesterRecord, StudentGradebook, GradeEntry, EVALUATION_CATEGORIES, ClassroomObservation, TrainingSession, InstitutionalDocument, MeetingRecord, DisciplinaryAction, DisciplinarySeverity, InspectionVisit, ConflictMediation, QualityMetric, ClassroomVisit, RubricCriterion } from './types';
+import { User, Role, Student, Class, Activity, ActivityType, AttendanceRecord, AttendanceStatus, Notification, SupportContact, Intervention, InterventionType, OvpActivity, OvpAxis, HealthRecord, Institution, OcrSubmission, OcrSubmissionStatus, ScheduleEntry, MedicalVisit, Shift, TimeSlot, Subject, Room, Timetable, ViccIntervention, ViccInterventionType, ExitPass, Citacion, CitacionStatus, AcademicCalendarEvent, LeccionarioEntry, MicroPlan, CurricularPlanStatus, GradeLevel, GRADE_LEVELS, Dcd, EvaluationCriterion, EvaluationIndicator, Competency, COMPETENCIES, CURRICULAR_INSERTIONS, AREAS_OF_KNOWLEDGE, SUBJECT_LEVELS, Gradebook, TrimesterRecord, StudentGradebook, GradeEntry, EVALUATION_CATEGORIES, ClassroomObservation, TrainingSession, InstitutionalDocument, MeetingRecord, DisciplinaryAction, DisciplinarySeverity, InspectionVisit, ConflictMediation, QualityMetric, ClassroomVisit, RubricCriterion, ReinforcementPlan, StaffAttendanceRecord } from './types';
 
 export { GRADE_LEVELS, COMPETENCIES, CURRICULAR_INSERTIONS, AREAS_OF_KNOWLEDGE, SUBJECT_LEVELS, EVALUATION_CATEGORIES };
 
@@ -235,8 +235,8 @@ export const MOCK_USERS: User[] = [
 
   // UEMOL Users
   { id: 'admin1', name: 'Admin Director (UEMOL)', email: 'marco213728@gmail.com', password: 'password', role: Role.InstitutionAdmin, institutionId: 'uemol', phone: '600111222', address: 'Calle Principal 1, 28001 Madrid' },
-  { id: 'teacher1', name: 'Prof. García', email: 'garcia@school.com', password: 'password', role: Role.Teacher, classIds: ['class1'], institutionId: 'uemol', phone: '611222333', maxMonthlyHours: 80 },
-  { id: 'teacher2', name: 'Prof. López', email: 'lopez@school.com', password: 'password', role: Role.Teacher, classIds: ['class2'], institutionId: 'uemol', maxMonthlyHours: 75 },
+  { id: 'teacher1', name: 'Prof. García', email: 'garcia@school.com', password: 'password', role: Role.Teacher, classIds: ['class1'], institutionId: 'uemol', phone: '611222333', maxMonthlyHours: 80, biometricRegistered: true, accessPin: '1234' },
+  { id: 'teacher2', name: 'Prof. López', email: 'lopez@school.com', password: 'password', role: Role.Teacher, classIds: ['class2'], institutionId: 'uemol', maxMonthlyHours: 75, biometricRegistered: false, accessPin: '5678' },
   { id: 'parent1', name: 'Sr. Martinez', email: 'martinez@family.com', password: 'password', role: Role.Parent, childId: 'student1', institutionId: 'uemol', phone: '622333444', address: 'Avenida del Sol 4, 28002 Madrid' },
   { id: 'parent2', name: 'Sra. Diaz', email: 'diaz@family.com', password: 'password', role: Role.Parent, childId: 'student2', institutionId: 'uemol' },
   { id: 'parent3', name: 'Sr. Sanchez', email: 'sanchez@family.com', password: 'password', role: Role.Parent, childId: 'student3', institutionId: 'uemol' },
@@ -1037,4 +1037,55 @@ export const MOCK_QUALITY_METRICS: QualityMetric[] = [
         value: 7.8,
         target: 8.0,
     }
+];
+
+export const MOCK_REINFORCEMENT_PLANS: ReinforcementPlan[] = [
+    {
+        id: 'rp1',
+        institutionId: 'uemol',
+        studentId: 'student1', // Adele
+        subjectId: 'subj1', // Matemáticas
+        teacherId: 'teacher1',
+        tutorId: 'teacher2',
+        academicYear: '2025-2026',
+        status: 'In_Progress',
+        nominationDate: '2024-09-10',
+        nominationObservations: 'Dificultades persistentes en operaciones con números enteros y resolución de problemas lógicos.',
+        modalidad: 'extra_class',
+        groupType: 'small_group',
+        schedule: 'Martes y Jueves 14:00 - 15:00',
+        duration: '6 semanas',
+        startDate: '2024-09-15',
+        generalObjective: 'Fortalecer la comprensión y aplicación de algoritmos de operaciones básicas con números enteros.',
+        topics: [
+            { dcd: 'M.4.1.1. Reconocer elementos del conjunto Z.', strategies: 'Uso de material concreto (fichas de colores), Recta numérica interactiva.', resources: 'Fichas, Pizarra, Software GeoGebra.', evaluationCriteria: 'Resuelve operaciones combinadas con precisión.' }
+        ],
+        notificationDate: '2024-09-12',
+        parentConsented: true,
+        parentConsentDate: '2024-09-13',
+        sessions: [
+            { id: 'sess1', date: '2024-09-15', attendance: true, skillsReinforced: 'Suma y resta Z', achievements: 'Logra sumar con recta numérica.', observations: 'Requiere más práctica sin apoyo visual.' }
+        ]
+    },
+    {
+        id: 'rp2',
+        institutionId: 'uemol',
+        studentId: 'student3', // Pedro
+        subjectId: 'subj-ll', // Lengua
+        teacherId: 'teacher2',
+        tutorId: 'teacher2',
+        academicYear: '2025-2026',
+        status: 'Nominated',
+        nominationDate: '2024-10-01',
+        nominationObservations: 'Bajo rendimiento en comprensión lectora y ortografía.',
+        topics: [],
+        sessions: [],
+        parentConsented: false
+    }
+];
+
+export const MOCK_STAFF_ATTENDANCE: StaffAttendanceRecord[] = [
+    { id: 'sa1', institutionId: 'uemol', userId: 'teacher1', date: '2024-10-20', checkInTime: '07:55', method: 'Biometric', status: 'OnTime' },
+    { id: 'sa2', institutionId: 'uemol', userId: 'teacher1', date: '2024-10-21', checkInTime: '08:05', method: 'Biometric', status: 'Late' },
+    { id: 'sa3', institutionId: 'uemol', userId: 'teacher2', date: '2024-10-20', checkInTime: '08:00', method: 'Manual', status: 'OnTime' },
 ];

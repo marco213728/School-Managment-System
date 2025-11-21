@@ -1,12 +1,12 @@
-
 import React, { useContext } from 'react';
 import { Role } from '../../types';
 import { UserContext, InstitutionContext } from '../../contexts/UserContext';
-import { DashboardIcon, AttendanceIcon, ActivityIcon, ReportIcon, ManageIcon, CloseIcon, DeceIcon, HealthIcon, UsersIcon, ChatBubbleIcon, CalendarIcon, VicerrectoradoIcon, InspectionIcon, CitacionIcon, LeccionarioIcon, ClipboardDocumentCheckIcon, ArchiveBoxIcon, ClipboardListIcon } from '../icons/Icons';
+import { DashboardIcon, AttendanceIcon, ActivityIcon, ReportIcon, ManageIcon, CloseIcon, DeceIcon, HealthIcon, UsersIcon, ChatBubbleIcon, CalendarIcon, VicerrectoradoIcon, InspectionIcon, CitacionIcon, LeccionarioIcon, ClipboardDocumentCheckIcon, ArchiveBoxIcon, ClipboardListIcon, GraduationCapIcon } from '../icons/Icons';
+import { AMAUTA_LOGO } from '../../branding';
 
 interface SidebarProps {
   currentPage: string;
-  setCurrentPage: (page: 'dashboard' | 'attendance' | 'activities' | 'reports' | 'manage' | 'dece' | 'health' | 'students' | 'communications' | 'schedule' | 'inspection' | 'citaciones' | 'leccionario' | 'curricular_planning' | 'curriculum_repository' | 'gradebook' | 'vicerrector_dashboard') => void;
+  setCurrentPage: (page: 'dashboard' | 'attendance' | 'activities' | 'reports' | 'manage' | 'dece' | 'health' | 'students' | 'communications' | 'schedule' | 'inspection' | 'citaciones' | 'leccionario' | 'curricular_planning' | 'curriculum_repository' | 'gradebook' | 'vicerrector_dashboard' | 'reinforcement') => void;
   isSidebarOpen: boolean;
   setSidebarOpen: (isOpen: boolean) => void;
 }
@@ -17,8 +17,8 @@ const Sidebar: React.FC<SidebarProps> = ({ currentPage, setCurrentPage, isSideba
 
   const NavLink = ({ page, icon, text }: { page: any, icon: React.ReactNode, text: string }) => {
     const isActive = currentPage === page;
-    const baseClasses = "flex items-center px-3 py-2.5 text-slate-600 hover:bg-slate-100 rounded-lg transition-colors duration-200";
-    const activeClasses = "bg-primary-100 text-primary-700 font-semibold";
+    const baseClasses = "flex items-center px-3 py-2.5 text-slate-300 hover:bg-slate-700 hover:text-white rounded-lg transition-colors duration-200";
+    const activeClasses = "bg-primary-600/20 text-primary-400 font-semibold";
 
     return (
       <a href="#" className={`${baseClasses} ${isActive ? activeClasses : ''}`} onClick={(e) => {
@@ -59,6 +59,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentPage, setCurrentPage, isSideba
       { page: 'curricular_planning', icon: <ClipboardDocumentCheckIcon className="h-6 w-6" />, text: 'Planificación' },
       { page: 'attendance', icon: <AttendanceIcon className="h-6 w-6" />, text: 'Pase de Lista' },
       { page: 'activities', icon: <ActivityIcon className="h-6 w-6" />, text: 'Actividades' },
+      { page: 'reinforcement', icon: <GraduationCapIcon className="h-6 w-6" />, text: 'Refuerzo Académico' },
       { page: 'reports', icon: <ReportIcon className="h-6 w-6" />, text: 'Informes de Clase' },
       { page: 'citaciones', icon: <CitacionIcon className="h-6 w-6" />, text: 'Citaciones' },
     ],
@@ -114,16 +115,17 @@ const Sidebar: React.FC<SidebarProps> = ({ currentPage, setCurrentPage, isSideba
   // SuperAdmin has no links in this sidebar
   const links = user && user.role !== Role.SuperAdmin ? roleLinks[user.role] || [] : [];
   
+  const logo = institution?.logoUrl && !institution.logoUrl.includes('placehold') ? institution.logoUrl : AMAUTA_LOGO;
+
   return (
     <>
       <div className={`fixed inset-0 bg-black bg-opacity-50 z-20 lg:hidden ${isSidebarOpen ? 'block' : 'hidden'}`} onClick={() => setSidebarOpen(false)}></div>
-      <aside className={`flex flex-col w-64 h-full px-4 py-5 bg-white border-r border-slate-200 transform transition-transform duration-300 ease-in-out fixed lg:static lg:translate-x-0 z-30 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+      <aside className={`flex flex-col w-64 h-full px-4 py-5 bg-slate-900 transform transition-transform duration-300 ease-in-out fixed lg:static lg:translate-x-0 z-30 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
         <div className="flex items-center justify-between px-2">
-            <a href="#" className="flex items-center gap-3">
-              {institution && <img src={institution.logoUrl} alt="Logo" className="h-9 w-9 rounded-lg" />}
-              <span className="text-base font-semibold text-slate-700">{institution?.name.split(' ').slice(0, 3).join(' ')}</span>
+            <a href="#" onClick={(e) => { e.preventDefault(); setCurrentPage('dashboard'); }} className="flex items-center gap-3">
+              <img src={logo} alt="Logo" className="h-10 w-auto" />
             </a>
-            <button onClick={() => setSidebarOpen(false)} className="text-gray-600 lg:hidden">
+            <button onClick={() => setSidebarOpen(false)} className="text-slate-400 lg:hidden">
               <CloseIcon className="h-6 w-6" />
             </button>
         </div>

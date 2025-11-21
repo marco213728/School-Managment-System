@@ -1,5 +1,5 @@
 {
-  "name": "School Management Platform",
+  "name": "Amauta",
   "description": "A comprehensive school management platform to streamline attendance, communication, and academic management, built with React and designed for integration with Firebase services.",
   "requestFramePermissions": [
     "camera"
