@@ -1,4 +1,3 @@
-
 export enum Role {
   SuperAdmin = 'Super Administrador',
   InstitutionAdmin = 'Administrador de Institución',
@@ -816,13 +815,19 @@ export interface BiometricProfile {
     templateId: string; // Simulating a biometric template reference
 }
 
+export type PunchType = 'in' | 'out_break' | 'in_break' | 'out';
+
+export interface AttendancePunch {
+  time: string; // HH:mm:ss format
+  type: PunchType;
+  method: 'Biometric' | 'Manual';
+  location?: { latitude: number; longitude: number; };
+}
+
 export interface StaffAttendanceRecord {
     id: string;
     institutionId: string;
     userId: string;
-    date: string;
-    checkInTime: string;
-    checkOutTime?: string;
-    method: 'Biometric' | 'Manual';
-    status: 'OnTime' | 'Late' | 'Absent';
+    date: string; // YYYY-MM-DD
+    punches: AttendancePunch[];
 }

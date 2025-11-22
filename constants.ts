@@ -1,4 +1,5 @@
 
+
 import { User, Role, Student, Class, Activity, ActivityType, AttendanceRecord, AttendanceStatus, Notification, SupportContact, Intervention, InterventionType, OvpActivity, OvpAxis, HealthRecord, Institution, OcrSubmission, OcrSubmissionStatus, ScheduleEntry, MedicalVisit, Shift, TimeSlot, Subject, Room, Timetable, ViccIntervention, ViccInterventionType, ExitPass, Citacion, CitacionStatus, AcademicCalendarEvent, LeccionarioEntry, MicroPlan, CurricularPlanStatus, GradeLevel, GRADE_LEVELS, Dcd, EvaluationCriterion, EvaluationIndicator, Competency, COMPETENCIES, CURRICULAR_INSERTIONS, AREAS_OF_KNOWLEDGE, SUBJECT_LEVELS, Gradebook, TrimesterRecord, StudentGradebook, GradeEntry, EVALUATION_CATEGORIES, ClassroomObservation, TrainingSession, InstitutionalDocument, MeetingRecord, DisciplinaryAction, DisciplinarySeverity, InspectionVisit, ConflictMediation, QualityMetric, ClassroomVisit, RubricCriterion, ReinforcementPlan, StaffAttendanceRecord } from './types';
 
 export { GRADE_LEVELS, COMPETENCIES, CURRICULAR_INSERTIONS, AREAS_OF_KNOWLEDGE, SUBJECT_LEVELS, EVALUATION_CATEGORIES };
@@ -1084,8 +1085,9 @@ export const MOCK_REINFORCEMENT_PLANS: ReinforcementPlan[] = [
     }
 ];
 
+// FIX: Correct the structure of MOCK_STAFF_ATTENDANCE to match the StaffAttendanceRecord type.
 export const MOCK_STAFF_ATTENDANCE: StaffAttendanceRecord[] = [
-    { id: 'sa1', institutionId: 'uemol', userId: 'teacher1', date: '2024-10-20', checkInTime: '07:55', method: 'Biometric', status: 'OnTime' },
-    { id: 'sa2', institutionId: 'uemol', userId: 'teacher1', date: '2024-10-21', checkInTime: '08:05', method: 'Biometric', status: 'Late' },
-    { id: 'sa3', institutionId: 'uemol', userId: 'teacher2', date: '2024-10-20', checkInTime: '08:00', method: 'Manual', status: 'OnTime' },
+    { id: 'sa1', institutionId: 'uemol', userId: 'teacher1', date: '2024-10-20', punches: [{ time: '07:55:00', type: 'in', method: 'Biometric' }] },
+    { id: 'sa2', institutionId: 'uemol', userId: 'teacher1', date: '2024-10-21', punches: [{ time: '08:05:00', type: 'in', method: 'Biometric' }] },
+    { id: 'sa3', institutionId: 'uemol', userId: 'teacher2', date: '2024-10-20', punches: [{ time: '08:00:00', type: 'in', method: 'Manual' }] },
 ];

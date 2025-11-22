@@ -1,3 +1,4 @@
+
 import React, { useState, useContext, useMemo } from 'react';
 import { UserContext } from '../contexts/UserContext';
 import { StaffAttendanceRecord, User } from '../types';
@@ -5,9 +6,10 @@ import StaffAttendanceKiosk from '../components/staff/StaffAttendanceKiosk';
 import StaffAttendanceReport from '../components/staff/StaffAttendanceReport';
 import { FingerPrintIcon } from '../components/icons/Icons';
 
+// FIX: Update props to match the expected types for handlers.
 interface StaffSelfServicePageProps {
     staffAttendanceRecords: StaffAttendanceRecord[];
-    onUpdateStaffAttendance: (records: StaffAttendanceRecord[]) => void;
+    onUpdateStaffAttendance: (userId: string, method: 'Biometric' | 'Manual', location?: { latitude: number; longitude: number; }) => void;
     users: User[];
 }
 
@@ -19,6 +21,7 @@ const StaffSelfServicePage: React.FC<StaffSelfServicePageProps> = ({ staffAttend
         return staffAttendanceRecords.filter(r => r.userId === user.id);
     }, [staffAttendanceRecords, user]);
 
+    // FIX: Ensure the handler passes the correct arguments.
     const handleRecordAttendance = (userId: string, method: 'Biometric' | 'Manual', location?: { latitude: number; longitude: number; }) => {
         // This function now just calls the prop passed down from App.tsx
         // The complex logic is centralized there.
@@ -42,10 +45,10 @@ const StaffSelfServicePage: React.FC<StaffSelfServicePageProps> = ({ staffAttend
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                 <div className="space-y-6">
                     <h3 className="text-lg font-bold text-slate-700">Registrar Entrada / Salida / Descanso</h3>
+                    {/* FIX: Remove the 'records' prop as it's not supported by StaffAttendanceKiosk. */}
                     <StaffAttendanceKiosk 
                         users={[user]} // Only pass the current user to lock the kiosk to them
                         onRecordAttendance={handleRecordAttendance}
-                        records={myRecords} // Pass user's records to make the kiosk state-aware
                     />
                 </div>
 

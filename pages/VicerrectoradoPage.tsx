@@ -1,8 +1,9 @@
 
+
 import React, { useState, useContext, useMemo } from 'react';
 import { UserContext } from '../contexts/UserContext';
 import { MicroPlan, ViccIntervention, Gradebook, User, Subject, Class, Student, ClassroomVisit, TrainingSession, InstitutionalDocument, MeetingRecord, Role, Notification, ReinforcementPlan } from '../types';
-import { MOCK_CLASSROOM_VISITS, MOCK_TRAINING_SESSIONS, MOCK_INSTITUTIONAL_DOCUMENTS, MOCK_MEETING_RECORDS, MOCK_REINFORCEMENT_PLANS } from '../constants';
+import { MOCK_CLASSROOM_VISITS, MOCK_TRAINING_SESSIONS, MOCK_INSTITUTIONAL_DOCUMENTS, MOCK_MEETING_RECORDS } from '../constants';
 import { VicerrectoradoIcon, UsersIcon, ReportIcon, ClipboardListIcon, PlusIcon, SearchIcon, ArchiveBoxIcon, ClipboardDocumentCheckIcon, CheckCircleIcon, CalendarIcon, EditIcon, GraduationCapIcon } from '../components/icons/Icons';
 import ClassroomVisitForm from '../components/vicerrectorado/ClassroomVisitForm';
 import ReinforcementList from '../components/vicerrectorado/ReinforcementList';
@@ -19,9 +20,12 @@ interface VicerrectoradoPageProps {
     onNavigate: (page: any) => void;
     notifications?: Notification[];
     onUpdateNotifications?: (notifications: Notification[]) => void;
+    // FIX: Add reinforcementPlans and its updater to the component's props.
+    reinforcementPlans: ReinforcementPlan[];
+    onUpdateReinforcementPlans: (plans: ReinforcementPlan[]) => void;
 }
 
-const VicerrectoradoPage: React.FC<VicerrectoradoPageProps> = ({ microPlans, viccInterventions, gradebooks, users, subjects, classes, students, onNavigate, notifications, onUpdateNotifications }) => {
+const VicerrectoradoPage: React.FC<VicerrectoradoPageProps> = ({ microPlans, viccInterventions, gradebooks, users, subjects, classes, students, onNavigate, notifications, onUpdateNotifications, reinforcementPlans, onUpdateReinforcementPlans }) => {
     const { user } = useContext(UserContext);
     const [activeTab, setActiveTab] = useState<'pedagogical' | 'student_support' | 'institutional'>('pedagogical');
 
@@ -30,8 +34,7 @@ const VicerrectoradoPage: React.FC<VicerrectoradoPageProps> = ({ microPlans, vic
     const [trainings, setTrainings] = useState<TrainingSession[]>(MOCK_TRAINING_SESSIONS);
     const [documents, setDocuments] = useState<InstitutionalDocument[]>(MOCK_INSTITUTIONAL_DOCUMENTS);
     const [meetings, setMeetings] = useState<MeetingRecord[]>(MOCK_MEETING_RECORDS);
-    const [reinforcementPlans, setReinforcementPlans] = useState<ReinforcementPlan[]>(MOCK_REINFORCEMENT_PLANS);
-
+    
     // Form States
     const [isVisitFormOpen, setIsVisitFormOpen] = useState(false);
     const [editingVisit, setEditingVisit] = useState<ClassroomVisit | null>(null);
@@ -81,9 +84,9 @@ const VicerrectoradoPage: React.FC<VicerrectoradoPageProps> = ({ microPlans, vic
 
     const handleSaveReinforcement = (plan: ReinforcementPlan) => {
         if (reinforcementPlans.some(p => p.id === plan.id)) {
-            setReinforcementPlans(prev => prev.map(p => p.id === plan.id ? plan : p));
+            onUpdateReinforcementPlans(reinforcementPlans.map(p => p.id === plan.id ? plan : p));
         } else {
-            setReinforcementPlans(prev => [...prev, plan]);
+            onUpdateReinforcementPlans([...reinforcementPlans, plan]);
         }
         setIsReinforcementFormOpen(false);
     };

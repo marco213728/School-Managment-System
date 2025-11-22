@@ -1,3 +1,4 @@
+
 import React, { useContext } from 'react';
 import { User, StaffAttendanceRecord } from '../../types';
 import { UserContext } from '../../contexts/UserContext';
@@ -29,10 +30,10 @@ const StaffAttendanceModal: React.FC<StaffAttendanceModalProps> = ({ isOpen, onC
                     </button>
                 </header>
                 <div className="p-2 sm:p-4 overflow-y-auto">
+                    {/* FIX: Removed the 'records' prop as it's not supported by StaffAttendanceKiosk. */}
                     <StaffAttendanceKiosk
                         users={[user]} // Only pass the current user
                         onRecordAttendance={onRecordAttendance}
-                        records={userRecords}
                     />
                 </div>
             </div>

@@ -1,11 +1,13 @@
 
+
 import React, { useState, useEffect } from 'react';
 import { User } from '../../types';
 import { FingerPrintIcon, CheckCircleIcon, AlertTriangleIcon } from '../icons/Icons';
 
+// FIX: Update the signature of onRecordAttendance to allow for an optional location object.
 interface StaffAttendanceKioskProps {
     users: User[];
-    onRecordAttendance: (userId: string, method: 'Biometric' | 'Manual') => void;
+    onRecordAttendance: (userId: string, method: 'Biometric' | 'Manual', location?: { latitude: number; longitude: number; }) => void;
 }
 
 const StaffAttendanceKiosk: React.FC<StaffAttendanceKioskProps> = ({ users, onRecordAttendance }) => {

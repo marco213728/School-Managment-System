@@ -1,6 +1,8 @@
+
 import React, { useState, useMemo, useEffect } from 'react';
-import { User, Institution, Role, Class, Student, ScheduleEntry, Notification, SupportContact, HealthRecord, MedicalVisit, Subject, TimeSlot, Room, Timetable, ViccIntervention, AttendanceRecord, ExitPass, Citacion, AcademicCalendarEvent, LeccionarioEntry, MicroPlan, Dcd, EvaluationCriterion, EvaluationIndicator, Gradebook, Activity, ReinforcementPlan } from './types';
-import { MOCK_USERS, MOCK_INSTITUTIONS, MOCK_CLASSES, MOCK_STUDENTS, MOCK_SCHEDULE_ENTRIES, MOCK_NOTIFICATIONS, MOCK_SUPPORT_CONTACTS, MOCK_HEALTH_RECORDS, MOCK_MEDICAL_VISITS, MOCK_SUBJECTS, MOCK_TIME_SLOTS, MOCK_ROOMS, MOCK_TIMETABLES, MOCK_VICC_INTERVENTIONS, MOCK_ATTENDANCE, MOCK_EXIT_PASSES, MOCK_CITACIONES, MOCK_ACADEMIC_CALENDAR_EVENTS, MOCK_LECCIONARIO_ENTRIES, MOCK_MICRO_PLANS, MOCK_DCDS, MOCK_EVALUATION_CRITERIA, MOCK_EVALUATION_INDICATORS, MOCK_GRADEBOOKS, MOCK_ACTIVITIES, MOCK_REINFORCEMENT_PLANS } from './constants';
+// FIX: Add PunchType and StaffAttendanceRecord to imports
+import { User, Institution, Role, Class, Student, ScheduleEntry, Notification, SupportContact, HealthRecord, MedicalVisit, Subject, TimeSlot, Room, Timetable, ViccIntervention, AttendanceRecord, ExitPass, Citacion, AcademicCalendarEvent, LeccionarioEntry, MicroPlan, Dcd, EvaluationCriterion, EvaluationIndicator, Gradebook, Activity, ReinforcementPlan, StaffAttendanceRecord, PunchType } from './types';
+import { MOCK_USERS, MOCK_INSTITUTIONS, MOCK_CLASSES, MOCK_STUDENTS, MOCK_SCHEDULE_ENTRIES, MOCK_NOTIFICATIONS, MOCK_SUPPORT_CONTACTS, MOCK_HEALTH_RECORDS, MOCK_MEDICAL_VISITS, MOCK_SUBJECTS, MOCK_TIME_SLOTS, MOCK_ROOMS, MOCK_TIMETABLES, MOCK_VICC_INTERVENTIONS, MOCK_ATTENDANCE, MOCK_EXIT_PASSES, MOCK_CITACIONES, MOCK_ACADEMIC_CALENDAR_EVENTS, MOCK_LECCIONARIO_ENTRIES, MOCK_MICRO_PLANS, MOCK_DCDS, MOCK_EVALUATION_CRITERIA, MOCK_EVALUATION_INDICATORS, MOCK_GRADEBOOKS, MOCK_ACTIVITIES, MOCK_REINFORCEMENT_PLANS, MOCK_STAFF_ATTENDANCE } from './constants';
 import LoginPage from './pages/LoginPage';
 import DashboardLayout from './components/layout/DashboardLayout';
 import { UserContext, InstitutionContext } from './contexts/UserContext';
@@ -39,6 +41,8 @@ export default function App() {
   const [gradebooks, setGradebooks] = useState<Gradebook[]>(MOCK_GRADEBOOKS);
   const [activities, setActivities] = useState<Activity[]>(MOCK_ACTIVITIES);
   const [reinforcementPlans, setReinforcementPlans] = useState<ReinforcementPlan[]>(MOCK_REINFORCEMENT_PLANS);
+  // FIX: Add state for staff attendance records
+  const [staffAttendanceRecords, setStaffAttendanceRecords] = useState<StaffAttendanceRecord[]>(MOCK_STAFF_ATTENDANCE);
 
 
   const handleLogin = (email: string, password: string): boolean => {
@@ -91,6 +95,49 @@ export default function App() {
   const handleUpdateGradebooks = (updatedGradebooks: Gradebook[]) => setGradebooks(updatedGradebooks);
   const handleUpdateActivities = (updatedActivities: Activity[]) => setActivities(updatedActivities);
   const handleUpdateReinforcementPlans = (updatedPlans: ReinforcementPlan[]) => setReinforcementPlans(updatedPlans);
+  // FIX: Add handler for updating staff attendance
+  const handleUpdateStaffAttendance = (userId: string, method: 'Biometric' | 'Manual', location?: { latitude: number; longitude: number; }) => {
+    setStaffAttendanceRecords(prev => {
+        const now = new Date();
+        const today = now.toISOString().split('T')[0];
+        const currentTime = now.toTimeString().split(' ')[0];
+        const user = users.find(u => u.id === userId);
+        if (!user) return prev;
+
+        const existingRecordIndex = prev.findIndex(r => r.userId === userId && r.date === today);
+
+        if (existingRecordIndex > -1) {
+            const updatedRecords = [...prev];
+            const recordToUpdate = { ...updatedRecords[existingRecordIndex] };
+            const lastPunch = recordToUpdate.punches[recordToUpdate.punches.length - 1];
+            let newPunchType: PunchType = 'in';
+            if (lastPunch) {
+                switch (lastPunch.type) {
+                    case 'in': newPunchType = 'out_break'; break;
+                    case 'out_break': newPunchType = 'in_break'; break;
+                    case 'in_break': newPunchType = 'out'; break;
+                    case 'out': newPunchType = 'in'; break;
+                }
+            }
+
+            recordToUpdate.punches = [
+                ...recordToUpdate.punches,
+                { time: currentTime, type: newPunchType, method, location },
+            ];
+            updatedRecords[existingRecordIndex] = recordToUpdate;
+            return updatedRecords;
+        } else {
+            const newRecord: StaffAttendanceRecord = {
+                id: `sa-${userId}-${today}`,
+                institutionId: user.institutionId!,
+                userId: userId,
+                date: today,
+                punches: [{ time: currentTime, type: 'in', method, location }],
+            };
+            return [...prev, newRecord];
+        }
+    });
+};
 
 
   const userContextValue = useMemo(() => ({
@@ -153,6 +200,8 @@ export default function App() {
             gradebooks={gradebooks}
             activities={activities}
             reinforcementPlans={reinforcementPlans}
+            // FIX: Pass staff attendance records and handler
+            staffAttendanceRecords={staffAttendanceRecords}
             onUpdateUsers={handleUpdateUsers}
             onUpdateClasses={handleUpdateClasses}
             onUpdateSchedule={handleUpdateSchedule}
@@ -178,6 +227,7 @@ export default function App() {
             onUpdateGradebooks={handleUpdateGradebooks}
             onUpdateActivities={handleUpdateActivities}
             onUpdateReinforcementPlans={handleUpdateReinforcementPlans}
+            onUpdateStaffAttendance={handleUpdateStaffAttendance}
           />
         )}
       </InstitutionContext.Provider>

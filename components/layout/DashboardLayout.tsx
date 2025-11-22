@@ -1,3 +1,4 @@
+
 import React, { useState, useContext } from 'react';
 import Sidebar from './Sidebar';
 import Header from './Header';
@@ -164,6 +165,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = (props) => {
                 onNavigate={setCurrentPage}
                 notifications={props.notifications}
                 onUpdateNotifications={props.onUpdateNotifications}
+                // FIX: Pass reinforcementPlans and its updater to VicerrectoradoPage
                 reinforcementPlans={reinforcementPlans}
                 onUpdateReinforcementPlans={onUpdateReinforcementPlans}
             />;

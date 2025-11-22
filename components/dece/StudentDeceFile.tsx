@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Timetable, TimeSlot, Shift } from '../../types';
 import { ArrowLeftIcon, PlusIcon, EditIcon, TrashIcon, ManageIcon, CloseIcon } from '../icons/Icons';
@@ -48,24 +49,24 @@ const TimetableForm: React.FC<TimetableFormProps> = ({ isOpen, onClose, onSave, 
     return (
         <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-center items-center p-4" onClick={onClose}>
             <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-lg relative" onClick={e => e.stopPropagation()}>
-                <button onClick={onClose} className="absolute top-4 right-4 text-gray-500 hover:text-gray-800">
+                <button onClick={onClose} className="absolute top-4 right-4 text-slate-500 hover:text-slate-800">
                     <CloseIcon className="h-6 w-6" />
                 </button>
                 <h2 className="text-xl font-bold mb-4">{timetableToEdit ? 'Editar Plantilla' : 'Añadir Plantilla'}</h2>
                 <form onSubmit={handleSubmit} className="space-y-4">
                     <div>
-                        <label className="block text-sm font-medium text-gray-700">Nombre de la Plantilla</label>
-                        <input type="text" name="name" value={formData.name} onChange={handleChange} required className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm" placeholder="Ej: Horario Primaria Mañana" />
+                        <label className="block text-sm font-medium text-slate-700">Nombre de la Plantilla</label>
+                        <input type="text" name="name" value={formData.name} onChange={handleChange} required className="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm" placeholder="Ej: Horario Primaria Mañana" />
                     </div>
                     <div>
-                        <label className="block text-sm font-medium text-gray-700">Jornada</label>
-                        <select name="shift" value={formData.shift} onChange={handleChange} required className="mt-1 block w-full px-3 py-2 border border-gray-300 bg-white rounded-md shadow-sm">
+                        <label className="block text-sm font-medium text-slate-700">Jornada</label>
+                        <select name="shift" value={formData.shift} onChange={handleChange} required className="mt-1 block w-full px-3 py-2 border border-slate-300 bg-white rounded-md shadow-sm">
                             {MOCK_SHIFTS.map(shift => <option key={shift} value={shift}>{shift}</option>)}
                         </select>
                     </div>
                     <div className="flex justify-end gap-4 pt-4">
-                        <button type="button" onClick={onClose} className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300">Cancelar</button>
-                        <button type="submit" className="px-4 py-2 bg-primary-600 text-white font-semibold rounded-md hover:bg-primary-700">Guardar</button>
+                        <button type="button" onClick={onClose} className="px-4 py-2 bg-slate-200 text-slate-800 rounded-md hover:bg-slate-300">Cancelar</button>
+                        <button type="submit" className="px-6 py-2 bg-primary-600 text-white font-semibold rounded-md hover:bg-primary-700">Guardar</button>
                     </div>
                 </form>
             </div>
@@ -133,30 +134,30 @@ const TimetableManagement: React.FC<TimetableManagementProps> = ({ timetables, t
                     Volver a Gestión del Centro
                 </button>
                 <div className="flex justify-between items-center mb-4">
-                    <h3 className="text-lg font-semibold text-gray-700">Gestionar Plantillas de Horario</h3>
+                    <h3 className="text-lg font-semibold text-slate-700">Gestionar Plantillas de Horario</h3>
                     <button onClick={handleAddNew} className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white font-semibold rounded-md hover:bg-primary-700">
                         <PlusIcon className="h-5 w-5" />
                         Añadir Plantilla
                     </button>
                 </div>
                 <div className="overflow-x-auto">
-                    <table className="min-w-full divide-y divide-gray-200">
-                        <thead className="bg-gray-50">
+                    <table className="min-w-full divide-y divide-slate-200">
+                        <thead className="bg-slate-50">
                             <tr>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Nombre de la Plantilla</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Jornada</th>
-                                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Acciones</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Nombre de la Plantilla</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Jornada</th>
+                                <th className="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase">Acciones</th>
                             </tr>
                         </thead>
-                        <tbody className="bg-white divide-y divide-gray-200">
+                        <tbody className="bg-white divide-y divide-slate-200">
                             {timetables.map(tt => (
                                 <tr key={tt.id}>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{tt.name}</td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{tt.shift}</td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900">{tt.name}</td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">{tt.shift}</td>
                                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                        <button onClick={() => handleManageTimeSlots(tt)} className="p-2 text-gray-500 hover:text-indigo-600 rounded-full hover:bg-indigo-100" title="Gestionar Franjas Horarias"><ManageIcon className="h-5 w-5" /></button>
-                                        <button onClick={() => handleEdit(tt)} className="p-2 text-gray-500 hover:text-blue-600 rounded-full hover:bg-blue-100" title="Editar"><EditIcon className="h-5 w-5" /></button>
-                                        <button onClick={() => handleDelete(tt.id)} className="p-2 text-gray-500 hover:text-red-600 rounded-full hover:bg-red-100" title="Eliminar"><TrashIcon className="h-5 w-5" /></button>
+                                        <button onClick={() => handleManageTimeSlots(tt)} className="p-2 text-slate-500 hover:text-indigo-600 rounded-full hover:bg-indigo-100" title="Gestionar Franjas Horarias"><ManageIcon className="h-5 w-5" /></button>
+                                        <button onClick={() => handleEdit(tt)} className="p-2 text-slate-500 hover:text-blue-600 rounded-full hover:bg-blue-100" title="Editar"><EditIcon className="h-5 w-5" /></button>
+                                        <button onClick={() => handleDelete(tt.id)} className="p-2 text-slate-500 hover:text-rose-600 rounded-full hover:bg-rose-100" title="Eliminar"><TrashIcon className="h-5 w-5" /></button>
                                     </td>
                                 </tr>
                             ))}
