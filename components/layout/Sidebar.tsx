@@ -1,17 +1,18 @@
 import React, { useContext } from 'react';
 import { Role } from '../../types';
 import { UserContext, InstitutionContext } from '../../contexts/UserContext';
-import { DashboardIcon, AttendanceIcon, ActivityIcon, ReportIcon, ManageIcon, CloseIcon, DeceIcon, HealthIcon, UsersIcon, ChatBubbleIcon, CalendarIcon, VicerrectoradoIcon, InspectionIcon, CitacionIcon, LeccionarioIcon, ClipboardDocumentCheckIcon, ArchiveBoxIcon, ClipboardListIcon, GraduationCapIcon } from '../icons/Icons';
+import { DashboardIcon, AttendanceIcon, ActivityIcon, ReportIcon, ManageIcon, CloseIcon, DeceIcon, HealthIcon, UsersIcon, ChatBubbleIcon, CalendarIcon, VicerrectoradoIcon, InspectionIcon, CitacionIcon, LeccionarioIcon, ClipboardDocumentCheckIcon, ArchiveBoxIcon, ClipboardListIcon, GraduationCapIcon, FingerPrintIcon } from '../icons/Icons';
 import { AMAUTA_LOGO } from '../../branding';
 
 interface SidebarProps {
   currentPage: string;
-  setCurrentPage: (page: 'dashboard' | 'attendance' | 'activities' | 'reports' | 'manage' | 'dece' | 'health' | 'students' | 'communications' | 'schedule' | 'inspection' | 'citaciones' | 'leccionario' | 'curricular_planning' | 'curriculum_repository' | 'gradebook' | 'vicerrector_dashboard' | 'reinforcement') => void;
+  setCurrentPage: (page: any) => void;
   isSidebarOpen: boolean;
   setSidebarOpen: (isOpen: boolean) => void;
+  onOpenAttendanceModal: () => void; // Added prop to open modal
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ currentPage, setCurrentPage, isSidebarOpen, setSidebarOpen }) => {
+const Sidebar: React.FC<SidebarProps> = ({ currentPage, setCurrentPage, isSidebarOpen, setSidebarOpen, onOpenAttendanceModal }) => {
   const { user } = useContext(UserContext);
   const { institution } = useContext(InstitutionContext);
 
@@ -75,47 +76,19 @@ const Sidebar: React.FC<SidebarProps> = ({ currentPage, setCurrentPage, isSideba
       { page: 'attendance', icon: <AttendanceIcon className="h-6 w-6" />, text: 'Mi Asistencia' },
       { page: 'activities', icon: <ActivityIcon className="h-6 w-6" />, text: 'Mis Actividades' },
     ],
-    [Role.JefeDECE]: [
-      ...commonLinks,
-       { page: 'dece', icon: <DeceIcon className="h-6 w-6" />, text: 'Módulo DECE' },
-       { page: 'reports', icon: <ReportIcon className="h-6 w-6" />, text: 'Informes DECE' },
-       { page: 'citaciones', icon: <CitacionIcon className="h-6 w-6" />, text: 'Citaciones' },
-    ],
-    [Role.PsicologoEducativo]: [
-      ...commonLinks,
-       { page: 'dece', icon: <DeceIcon className="h-6 w-6" />, text: 'Módulo DECE' },
-       { page: 'citaciones', icon: <CitacionIcon className="h-6 w-6" />, text: 'Citaciones' },
-    ],
-    [Role.TrabajadorSocial]: [
-      ...commonLinks,
-       { page: 'dece', icon: <DeceIcon className="h-6 w-6" />, text: 'Módulo DECE' },
-       { page: 'citaciones', icon: <CitacionIcon className="h-6 w-6" />, text: 'Citaciones' },
-    ],
-    [Role.HealthProfessional]: [
-      ...commonLinks,
-      { page: 'health', icon: <HealthIcon className="h-6 w-6" />, text: 'Módulo de Salud' },
-      { page: 'reports', icon: <ReportIcon className="h-6 w-6" />, text: 'Informes de Salud' },
-    ],
-    [Role.Vicerrector]: [
-        { page: 'vicerrector_dashboard', icon: <VicerrectoradoIcon className="h-6 w-6" />, text: 'Dashboard Vicerrectorado' },
-        { page: 'curricular_planning', icon: <ClipboardDocumentCheckIcon className="h-6 w-6" />, text: 'Planificación Curricular' },
-        { page: 'curriculum_repository', icon: <ArchiveBoxIcon className="h-6 w-6" />, text: 'Repositorio Curricular' },
-        { page: 'citaciones', icon: <CitacionIcon className="h-6 w-6" />, text: 'Citaciones' },
-    ],
-    [Role.InspectorGeneral]: [
-        ...commonLinks,
-        { page: 'inspection', icon: <InspectionIcon className="h-6 w-6" />, text: 'Inspección' },
-        { page: 'students', icon: <UsersIcon className="h-6 w-6" />, text: 'Alumnos' },
-        { page: 'attendance', icon: <AttendanceIcon className="h-6 w-6" />, text: 'Asistencia General' },
-        { page: 'manage', icon: <ManageIcon className="h-6 w-6" />, text: 'Gestión Centro' },
-        { page: 'citaciones', icon: <CitacionIcon className="h-6 w-6" />, text: 'Citaciones' },
-    ]
+    [Role.JefeDECE]: [ ...commonLinks, { page: 'dece', icon: <DeceIcon className="h-6 w-6" />, text: 'Módulo DECE' }, { page: 'reports', icon: <ReportIcon className="h-6 w-6" />, text: 'Informes DECE' }, { page: 'citaciones', icon: <CitacionIcon className="h-6 w-6" />, text: 'Citaciones' }, ],
+    [Role.PsicologoEducativo]: [ ...commonLinks, { page: 'dece', icon: <DeceIcon className="h-6 w-6" />, text: 'Módulo DECE' }, { page: 'citaciones', icon: <CitacionIcon className="h-6 w-6" />, text: 'Citaciones' }, ],
+    [Role.TrabajadorSocial]: [ ...commonLinks, { page: 'dece', icon: <DeceIcon className="h-6 w-6" />, text: 'Módulo DECE' }, { page: 'citaciones', icon: <CitacionIcon className="h-6 w-6" />, text: 'Citaciones' }, ],
+    [Role.HealthProfessional]: [ ...commonLinks, { page: 'health', icon: <HealthIcon className="h-6 w-6" />, text: 'Módulo de Salud' }, { page: 'reports', icon: <ReportIcon className="h-6 w-6" />, text: 'Informes de Salud' }, ],
+    [Role.Vicerrector]: [ { page: 'vicerrector_dashboard', icon: <VicerrectoradoIcon className="h-6 w-6" />, text: 'Dashboard Vicerrectorado' }, { page: 'curricular_planning', icon: <ClipboardDocumentCheckIcon className="h-6 w-6" />, text: 'Planificación Curricular' }, { page: 'curriculum_repository', icon: <ArchiveBoxIcon className="h-6 w-6" />, text: 'Repositorio Curricular' }, { page: 'citaciones', icon: <CitacionIcon className="h-6 w-6" />, text: 'Citaciones' }, ],
+    [Role.InspectorGeneral]: [ ...commonLinks, { page: 'inspection', icon: <InspectionIcon className="h-6 w-6" />, text: 'Inspección' }, { page: 'students', icon: <UsersIcon className="h-6 w-6" />, text: 'Alumnos' }, { page: 'attendance', icon: <AttendanceIcon className="h-6 w-6" />, text: 'Asistencia General' }, { page: 'manage', icon: <ManageIcon className="h-6 w-6" />, text: 'Gestión Centro' }, { page: 'citaciones', icon: <CitacionIcon className="h-6 w-6" />, text: 'Citaciones' }, ]
   };
 
-  // SuperAdmin has no links in this sidebar
   const links = user && user.role !== Role.SuperAdmin ? roleLinks[user.role] || [] : [];
   
   const logo = institution?.logoUrl && !institution.logoUrl.includes('placehold') ? institution.logoUrl : AMAUTA_LOGO;
+  
+  const isStaff = user && user.role !== Role.Parent && user.role !== Role.Student && user.role !== Role.SuperAdmin;
 
   return (
     <>
@@ -135,6 +108,18 @@ const Sidebar: React.FC<SidebarProps> = ({ currentPage, setCurrentPage, isSideba
               <NavLink key={link.page} {...link} />
             ))}
           </nav>
+
+          {isStaff && (
+            <div className="mt-auto pt-4 border-t border-slate-700">
+              <button 
+                onClick={onOpenAttendanceModal}
+                className="w-full flex items-center justify-center gap-2 px-3 py-2.5 text-slate-200 bg-slate-800 hover:bg-primary-600 rounded-lg transition-colors duration-200"
+              >
+                <FingerPrintIcon className="h-6 w-6" />
+                <span className="font-semibold">Registrar Asistencia</span>
+              </button>
+            </div>
+          )}
         </div>
       </aside>
     </>
