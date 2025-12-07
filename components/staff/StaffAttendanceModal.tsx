@@ -1,7 +1,5 @@
-
-import React, { useContext } from 'react';
+import React from 'react';
 import { User, StaffAttendanceRecord } from '../../types';
-import { UserContext } from '../../contexts/UserContext';
 import { CloseIcon } from '../icons/Icons';
 import StaffAttendanceKiosk from './StaffAttendanceKiosk';
 
@@ -9,16 +7,14 @@ interface StaffAttendanceModalProps {
     isOpen: boolean;
     onClose: () => void;
     users: User[];
-    onRecordAttendance: (userId: string, method: 'Biometric' | 'Manual', location?: { latitude: number; longitude: number; }) => void;
+    onRecordAttendance: (userId: string, method: 'Biometric' | 'Manual' | 'Facial', location?: { latitude: number; longitude: number; }) => void;
     records: StaffAttendanceRecord[];
+    currentUser: User | null; // Allow null for safety
 }
 
-const StaffAttendanceModal: React.FC<StaffAttendanceModalProps> = ({ isOpen, onClose, users, onRecordAttendance, records }) => {
-    const { user } = useContext(UserContext);
+const StaffAttendanceModal: React.FC<StaffAttendanceModalProps> = ({ isOpen, onClose, users, onRecordAttendance, records, currentUser }) => {
     
-    if (!isOpen || !user) return null;
-
-    const userRecords = records.filter(r => r.userId === user.id);
+    if (!isOpen || !currentUser) return null;
 
     return (
         <div className="fixed inset-0 bg-black bg-opacity-60 z-[100] flex justify-center items-center p-4" onClick={onClose}>
@@ -30,9 +26,9 @@ const StaffAttendanceModal: React.FC<StaffAttendanceModalProps> = ({ isOpen, onC
                     </button>
                 </header>
                 <div className="p-2 sm:p-4 overflow-y-auto">
-                    {/* FIX: Removed the 'records' prop as it's not supported by StaffAttendanceKiosk. */}
+                    {/* Pass the current user to lock the kiosk for self-service */}
                     <StaffAttendanceKiosk
-                        users={[user]} // Only pass the current user
+                        users={[currentUser]} 
                         onRecordAttendance={onRecordAttendance}
                     />
                 </div>

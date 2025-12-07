@@ -1,4 +1,3 @@
-
 import React, { useState, useContext, useMemo } from 'react';
 import { UserContext } from '../contexts/UserContext';
 import { StaffAttendanceRecord, User } from '../types';

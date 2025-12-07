@@ -63,6 +63,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentPage, setCurrentPage, isSideba
       { page: 'reinforcement', icon: <GraduationCapIcon className="h-6 w-6" />, text: 'Refuerzo Académico' },
       { page: 'reports', icon: <ReportIcon className="h-6 w-6" />, text: 'Informes de Clase' },
       { page: 'citaciones', icon: <CitacionIcon className="h-6 w-6" />, text: 'Citaciones' },
+      { page: 'teacher_training', icon: <ArchiveBoxIcon className="h-6 w-6" />, text: 'Capacitación' },
     ],
     [Role.Parent]: [
       ...commonLinks,

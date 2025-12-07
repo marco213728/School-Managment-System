@@ -1,8 +1,6 @@
-
-
 import React, { useState, useMemo } from 'react';
 import { StaffAttendanceRecord, User } from '../../types';
-import { FingerPrintIcon, ClipboardListIcon, SearchIcon } from '../icons/Icons';
+import { FingerPrintIcon, ClipboardListIcon, SearchIcon, LocationMarkerIcon } from '../icons/Icons';
 
 interface StaffAttendanceReportProps {
     records: StaffAttendanceRecord[];
@@ -13,33 +11,58 @@ const StaffAttendanceReport: React.FC<StaffAttendanceReportProps> = ({ records, 
     const [filterDate, setFilterDate] = useState('');
     const [searchTerm, setSearchTerm] = useState('');
 
-    const userMap = useMemo(() => new Map(users.map(u => [u.id, u])), [users]);
+    // Safety check: ensure users is an array
+    const safeUsers = users || [];
+    const userMap = useMemo(() => new Map(safeUsers.map(u => [u.id, u])), [safeUsers]);
 
-    // FIX: Process records to derive properties needed for the report.
+    // FIX: Process raw attendance records to derive 'checkInTime', 'status', and 'method' properties.
     const processedRecords = useMemo(() => {
+        // CRITICAL FIX: Return empty array if records is undefined/null
+        if (!records || !Array.isArray(records)) return [];
+
         return records.map(record => {
-            const firstInPunch = record.punches.find(p => p.type === 'in');
+            // Safety check for punches array
+            const punches = record.punches || [];
+            const firstInPunch = punches.find(p => p.type === 'in');
             const checkInTime = firstInPunch?.time || 'N/A';
-            const status = (firstInPunch && checkInTime > '08:00:00') ? 'Late' : 'OnTime';
+            
+            // Get user's specific work schedule for the day
+            const user = userMap.get(record.userId);
+            const dayOfWeek = new Date(record.date).toLocaleDateString('es-ES', { weekday: 'long' });
+            // Safe access to nested properties
+            const daySchedule = user?.workSchedule?.[dayOfWeek as keyof typeof user.workSchedule];
+            const expectedStart = daySchedule?.startTime || '08:00'; // Default if not set
+            
+            const status = (firstInPunch && checkInTime > expectedStart) ? 'Late' : 'OnTime';
             const method = firstInPunch?.method || 'N/A';
+            const location = firstInPunch?.location;
+
+            // Generate daily summary string
+            const punchSummary = punches.map(p => {
+                const typeMap: Record<string, string> = { 'in': 'Entrada', 'out_break': 'Descanso (Inicio)', 'in_break': 'Descanso (Fin)', 'out': 'Salida' };
+                return `${typeMap[p.type] || p.type}: ${p.time}`;
+            }).join(' | ');
 
             return {
                 ...record,
                 checkInTime,
                 status,
                 method,
+                punchSummary,
+                location
             };
         });
-    }, [records]);
+    }, [records, userMap]);
 
     const filteredRecords = useMemo(() => {
-        // FIX: Use processedRecords which have the derived properties.
+        // Safety check again, though processedRecords should be safe now
+        if (!processedRecords) return [];
+
         return processedRecords.filter(record => {
             const user = userMap.get(record.userId);
             const nameMatch = user?.name.toLowerCase().includes(searchTerm.toLowerCase()) || false;
             const dateMatch = filterDate ? record.date === filterDate : true;
             return nameMatch && dateMatch;
-            // FIX: Correctly sort based on the derived checkInTime.
         }).sort((a, b) => {
             const timeA = a.checkInTime === 'N/A' ? 0 : new Date(a.date + 'T' + a.checkInTime).getTime();
             const timeB = b.checkInTime === 'N/A' ? 0 : new Date(b.date + 'T' + b.checkInTime).getTime();
@@ -49,7 +72,6 @@ const StaffAttendanceReport: React.FC<StaffAttendanceReportProps> = ({ records, 
 
     const stats = useMemo(() => {
         const total = filteredRecords.length;
-        // FIX: Use 'status' and 'method' from filtered records.
         const late = filteredRecords.filter(r => r.status === 'Late').length;
         const biometric = filteredRecords.filter(r => r.method === 'Biometric').length;
         const manual = filteredRecords.filter(r => r.method === 'Manual').length;
@@ -107,7 +129,8 @@ const StaffAttendanceReport: React.FC<StaffAttendanceReportProps> = ({ records, 
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Fecha</th>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Nombre</th>
                                 <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Hora Entrada</th>
-                                <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Método</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Registros del Día</th>
+                                <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Ubicación</th>
                                 <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Estado</th>
                             </tr>
                         </thead>
@@ -116,17 +139,24 @@ const StaffAttendanceReport: React.FC<StaffAttendanceReportProps> = ({ records, 
                                 <tr key={record.id} className="hover:bg-gray-50">
                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{new Date(record.date).toLocaleDateString()}</td>
                                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{userMap.get(record.userId)?.name || 'Desconocido'}</td>
-                                    {/* FIX: Use derived checkInTime */}
                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-center text-gray-500">{record.checkInTime}</td>
+                                    <td className="px-6 py-4 text-xs text-gray-500 max-w-xs truncate" title={record.punchSummary}>{record.punchSummary}</td>
                                     <td className="px-6 py-4 whitespace-nowrap text-center">
-                                        {/* FIX: Use derived method */}
-                                        <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${record.method === 'Biometric' ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'}`}>
-                                            {record.method === 'Biometric' ? <FingerPrintIcon className="h-3 w-3" /> : <ClipboardListIcon className="h-3 w-3" />}
-                                            {record.method === 'Biometric' ? 'Huella' : 'PIN'}
-                                        </span>
+                                        {record.location ? (
+                                            <a 
+                                                href={`https://www.google.com/maps?q=${record.location.latitude},${record.location.longitude}`} 
+                                                target="_blank" 
+                                                rel="noopener noreferrer"
+                                                className="text-blue-600 hover:text-blue-800"
+                                                title="Ver en Mapa"
+                                            >
+                                                <LocationMarkerIcon className="h-5 w-5 mx-auto" />
+                                            </a>
+                                        ) : (
+                                            <span className="text-gray-400">-</span>
+                                        )}
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap text-center">
-                                        {/* FIX: Use derived status */}
                                         <span className={`px-2 py-1 rounded-full text-xs font-bold ${record.status === 'OnTime' ? 'bg-green-100 text-green-800' : record.status === 'Late' ? 'bg-amber-100 text-amber-800' : 'bg-red-100 text-red-800'}`}>
                                             {record.status === 'OnTime' ? 'Puntual' : record.status === 'Late' ? 'Atraso' : 'Ausente'}
                                         </span>
@@ -135,7 +165,7 @@ const StaffAttendanceReport: React.FC<StaffAttendanceReportProps> = ({ records, 
                             ))}
                             {filteredRecords.length === 0 && (
                                 <tr>
-                                    <td colSpan={5} className="px-6 py-8 text-center text-gray-500 text-sm">No se encontraron registros.</td>
+                                    <td colSpan={6} className="px-6 py-8 text-center text-gray-500 text-sm">No se encontraron registros.</td>
                                 </tr>
                             )}
                         </tbody>

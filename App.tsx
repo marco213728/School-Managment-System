@@ -1,20 +1,23 @@
-
 import React, { useState, useMemo, useEffect } from 'react';
-// FIX: Add PunchType and StaffAttendanceRecord to imports
-import { User, Institution, Role, Class, Student, ScheduleEntry, Notification, SupportContact, HealthRecord, MedicalVisit, Subject, TimeSlot, Room, Timetable, ViccIntervention, AttendanceRecord, ExitPass, Citacion, AcademicCalendarEvent, LeccionarioEntry, MicroPlan, Dcd, EvaluationCriterion, EvaluationIndicator, Gradebook, Activity, ReinforcementPlan, StaffAttendanceRecord, PunchType } from './types';
-import { MOCK_USERS, MOCK_INSTITUTIONS, MOCK_CLASSES, MOCK_STUDENTS, MOCK_SCHEDULE_ENTRIES, MOCK_NOTIFICATIONS, MOCK_SUPPORT_CONTACTS, MOCK_HEALTH_RECORDS, MOCK_MEDICAL_VISITS, MOCK_SUBJECTS, MOCK_TIME_SLOTS, MOCK_ROOMS, MOCK_TIMETABLES, MOCK_VICC_INTERVENTIONS, MOCK_ATTENDANCE, MOCK_EXIT_PASSES, MOCK_CITACIONES, MOCK_ACADEMIC_CALENDAR_EVENTS, MOCK_LECCIONARIO_ENTRIES, MOCK_MICRO_PLANS, MOCK_DCDS, MOCK_EVALUATION_CRITERIA, MOCK_EVALUATION_INDICATORS, MOCK_GRADEBOOKS, MOCK_ACTIVITIES, MOCK_REINFORCEMENT_PLANS, MOCK_STAFF_ATTENDANCE } from './constants';
+// FIX: Import PunchType and StaffAttendanceRecord
+import { User, Institution, Role, Class, Student, ScheduleEntry, Notification, SupportContact, HealthRecord, MedicalVisit, Subject, TimeSlot, Room, Timetable, ViccIntervention, AttendanceRecord, ExitPass, Citacion, AcademicCalendarEvent, LeccionarioEntry, MicroPlan, Dcd, EvaluationCriterion, EvaluationIndicator, Gradebook, Activity, ReinforcementPlan, StaffAttendanceRecord, PunchType, FormalRequest, TrainingPlan } from './types';
+import { MOCK_USERS, MOCK_INSTITUTIONS, MOCK_CLASSES, MOCK_STUDENTS, MOCK_SCHEDULE_ENTRIES, MOCK_NOTIFICATIONS, MOCK_SUPPORT_CONTACTS, MOCK_HEALTH_RECORDS, MOCK_MEDICAL_VISITS, MOCK_SUBJECTS, MOCK_TIME_SLOTS, MOCK_ROOMS, MOCK_TIMETABLES, MOCK_VICC_INTERVENTIONS, MOCK_ATTENDANCE, MOCK_EXIT_PASSES, MOCK_CITACIONES, MOCK_ACADEMIC_CALENDAR_EVENTS, MOCK_LECCIONARIO_ENTRIES, MOCK_MICRO_PLANS, MOCK_DCDS, MOCK_EVALUATION_CRITERIA, MOCK_EVALUATION_INDICATORS, MOCK_GRADEBOOKS, MOCK_ACTIVITIES, MOCK_REINFORCEMENT_PLANS, MOCK_STAFF_ATTENDANCE, MOCK_FORMAL_REQUESTS, MOCK_TRAINING_PLANS } from './constants';
 import LoginPage from './pages/LoginPage';
 import DashboardLayout from './components/layout/DashboardLayout';
 import { UserContext, InstitutionContext } from './contexts/UserContext';
 import SuperAdminPage from './pages/SuperAdminPage';
 import PlatformAdminLayout from './components/layout/PlatformAdminLayout';
 import { AMAUTA_LOGO } from './branding';
+import { MOCK_INSTITUTIONAL_DOCUMENTS, MOCK_MEETING_RECORDS } from './constants';
+import { InstitutionalDocument, MeetingRecord } from './types';
 
 export default function App() {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [currentInstitution, setCurrentInstitution] = useState<Institution | null>(null);
 
   // In a real app, this would be fetched, but for the prototype, we manage it in state.
+  const [institutionalDocuments, setInstitutionalDocuments] = useState<InstitutionalDocument[]>(MOCK_INSTITUTIONAL_DOCUMENTS);
+  const [meetingRecords, setMeetingRecords] = useState<MeetingRecord[]>(MOCK_MEETING_RECORDS);
   const [users, setUsers] = useState<User[]>(MOCK_USERS);
   const [institutions, setInstitutions] = useState<Institution[]>(MOCK_INSTITUTIONS);
   const [classes, setClasses] = useState<Class[]>(MOCK_CLASSES);
@@ -40,10 +43,12 @@ export default function App() {
   const [evaluationIndicators, setEvaluationIndicators] = useState<EvaluationIndicator[]>(MOCK_EVALUATION_INDICATORS);
   const [gradebooks, setGradebooks] = useState<Gradebook[]>(MOCK_GRADEBOOKS);
   const [activities, setActivities] = useState<Activity[]>(MOCK_ACTIVITIES);
-  const [reinforcementPlans, setReinforcementPlans] = useState<ReinforcementPlan[]>(MOCK_REINFORCEMENT_PLANS);
-  // FIX: Add state for staff attendance records
-  const [staffAttendanceRecords, setStaffAttendanceRecords] = useState<StaffAttendanceRecord[]>(MOCK_STAFF_ATTENDANCE);
-
+  
+  const [reinforcementPlans, setReinforcementPlans] = useState<ReinforcementPlan[]>(MOCK_REINFORCEMENT_PLANS || []);
+  const [staffAttendanceRecords, setStaffAttendanceRecords] = useState<StaffAttendanceRecord[]>(MOCK_STAFF_ATTENDANCE || []);
+  const [formalRequests, setFormalRequests] = useState<FormalRequest[]>(MOCK_FORMAL_REQUESTS || []); 
+  // FIX: Centralize Training Plans State
+  const [trainingPlans, setTrainingPlans] = useState<TrainingPlan[]>(MOCK_TRAINING_PLANS || []);
 
   const handleLogin = (email: string, password: string): boolean => {
     const user = users.find(u => u.email.toLowerCase() === email.toLowerCase());
@@ -69,6 +74,9 @@ export default function App() {
     setInstitutions(prev => prev.map(i => i.id === updatedInstitution.id ? updatedInstitution : i));
     setCurrentInstitution(updatedInstitution);
   };
+
+  const handleUpdateDocuments = (docs: InstitutionalDocument[]) => setInstitutionalDocuments(docs);
+  const handleUpdateMeetings = (meetings: MeetingRecord[]) => setMeetingRecords(meetings);
   
   const handleUpdateUsers = (updatedUsers: User[]) => setUsers(updatedUsers);
   const handleUpdateClasses = (updatedClasses: Class[]) => setClasses(updatedClasses);
@@ -95,12 +103,15 @@ export default function App() {
   const handleUpdateGradebooks = (updatedGradebooks: Gradebook[]) => setGradebooks(updatedGradebooks);
   const handleUpdateActivities = (updatedActivities: Activity[]) => setActivities(updatedActivities);
   const handleUpdateReinforcementPlans = (updatedPlans: ReinforcementPlan[]) => setReinforcementPlans(updatedPlans);
-  // FIX: Add handler for updating staff attendance
-  const handleUpdateStaffAttendance = (userId: string, method: 'Biometric' | 'Manual', location?: { latitude: number; longitude: number; }) => {
+  const handleUpdateFormalRequests = (updatedRequests: FormalRequest[]) => setFormalRequests(updatedRequests);
+  // FIX: Add handler for Training Plans
+  const handleUpdateTrainingPlans = (updatedPlans: TrainingPlan[]) => setTrainingPlans(updatedPlans);
+  
+  const handleUpdateStaffAttendance = (userId: string, method: 'Biometric' | 'Manual' | 'Facial', location?: { latitude: number; longitude: number; }) => {
     setStaffAttendanceRecords(prev => {
         const now = new Date();
         const today = now.toISOString().split('T')[0];
-        const currentTime = now.toTimeString().split(' ')[0];
+        const currentTime = now.toTimeString().split(' ')[0].substring(0, 8);
         const user = users.find(u => u.id === userId);
         if (!user) return prev;
 
@@ -110,13 +121,15 @@ export default function App() {
             const updatedRecords = [...prev];
             const recordToUpdate = { ...updatedRecords[existingRecordIndex] };
             const lastPunch = recordToUpdate.punches[recordToUpdate.punches.length - 1];
-            let newPunchType: PunchType = 'in';
+            let newPunchType: PunchType = 'in'; // Default
             if (lastPunch) {
                 switch (lastPunch.type) {
                     case 'in': newPunchType = 'out_break'; break;
                     case 'out_break': newPunchType = 'in_break'; break;
                     case 'in_break': newPunchType = 'out'; break;
-                    case 'out': newPunchType = 'in'; break;
+                    case 'out': 
+                        alert("Ya ha registrado su salida por hoy.");
+                        return prev; // Do nothing if already clocked out
                 }
             }
 
@@ -134,7 +147,7 @@ export default function App() {
                 date: today,
                 punches: [{ time: currentTime, type: 'in', method, location }],
             };
-            return [...prev, newRecord];
+            return [newRecord, ...prev];
         }
     });
 };
@@ -200,8 +213,15 @@ export default function App() {
             gradebooks={gradebooks}
             activities={activities}
             reinforcementPlans={reinforcementPlans}
-            // FIX: Pass staff attendance records and handler
             staffAttendanceRecords={staffAttendanceRecords}
+            formalRequests={formalRequests}
+            // FIX: Pass new props
+            trainingPlans={trainingPlans} 
+            institutionalDocuments={institutionalDocuments}
+            onUpdateDocuments={handleUpdateDocuments}
+            meetingRecords={meetingRecords}
+            onUpdateMeetings={handleUpdateMeetings}
+
             onUpdateUsers={handleUpdateUsers}
             onUpdateClasses={handleUpdateClasses}
             onUpdateSchedule={handleUpdateSchedule}
@@ -228,6 +248,9 @@ export default function App() {
             onUpdateActivities={handleUpdateActivities}
             onUpdateReinforcementPlans={handleUpdateReinforcementPlans}
             onUpdateStaffAttendance={handleUpdateStaffAttendance}
+            onUpdateFormalRequests={handleUpdateFormalRequests}
+            // FIX: Pass new handler
+            onUpdateTrainingPlans={handleUpdateTrainingPlans}
           />
         )}
       </InstitutionContext.Provider>

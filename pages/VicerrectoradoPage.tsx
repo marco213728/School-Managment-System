@@ -1,13 +1,15 @@
-
-
 import React, { useState, useContext, useMemo } from 'react';
 import { UserContext } from '../contexts/UserContext';
-import { MicroPlan, ViccIntervention, Gradebook, User, Subject, Class, Student, ClassroomVisit, TrainingSession, InstitutionalDocument, MeetingRecord, Role, Notification, ReinforcementPlan } from '../types';
-import { MOCK_CLASSROOM_VISITS, MOCK_TRAINING_SESSIONS, MOCK_INSTITUTIONAL_DOCUMENTS, MOCK_MEETING_RECORDS } from '../constants';
-import { VicerrectoradoIcon, UsersIcon, ReportIcon, ClipboardListIcon, PlusIcon, SearchIcon, ArchiveBoxIcon, ClipboardDocumentCheckIcon, CheckCircleIcon, CalendarIcon, EditIcon, GraduationCapIcon } from '../components/icons/Icons';
+import { MicroPlan, ViccIntervention, Gradebook, User, Subject, Class, Student, ClassroomVisit, TrainingSession, InstitutionalDocument, MeetingRecord, Role, Notification, ReinforcementPlan, TrainingPlan } from '../types';
+import { MOCK_CLASSROOM_VISITS, MOCK_TRAINING_SESSIONS, MOCK_INSTITUTIONAL_DOCUMENTS, MOCK_MEETING_RECORDS, MOCK_TRAINING_PLANS } from '../constants';
+import { VicerrectoradoIcon, UsersIcon, ReportIcon, ClipboardListIcon, PlusIcon, SearchIcon, ArchiveBoxIcon, ClipboardDocumentCheckIcon, CheckCircleIcon, CalendarIcon, EditIcon, GraduationCapIcon, PlayIcon, PrinterIcon } from '../components/icons/Icons';
 import ClassroomVisitForm from '../components/vicerrectorado/ClassroomVisitForm';
 import ReinforcementList from '../components/vicerrectorado/ReinforcementList';
 import ReinforcementForm from '../components/vicerrectorado/ReinforcementForm';
+import ClassroomVisitPrintable from '../components/vicerrectorado/ClassroomVisitPrintable';
+import TrainingPlanManager from '../components/vicerrectorado/TrainingPlanManager';
+import InstitutionalDocumentManager from '../components/vicerrectorado/InstitutionalDocumentManager'; // Import
+import MeetingManager from '../components/vicerrectorado/MeetingManager'; // Import
 
 interface VicerrectoradoPageProps {
     microPlans: MicroPlan[];
@@ -20,26 +22,33 @@ interface VicerrectoradoPageProps {
     onNavigate: (page: any) => void;
     notifications?: Notification[];
     onUpdateNotifications?: (notifications: Notification[]) => void;
-    // FIX: Add reinforcementPlans and its updater to the component's props.
     reinforcementPlans: ReinforcementPlan[];
     onUpdateReinforcementPlans: (plans: ReinforcementPlan[]) => void;
+    trainingPlans: TrainingPlan[];
+    onUpdateTrainingPlans: (plans: TrainingPlan[]) => void;
+    institutionalDocuments: InstitutionalDocument[]; // NEW
+    onUpdateDocuments: (docs: InstitutionalDocument[]) => void; // NEW
+    meetingRecords: MeetingRecord[]; // NEW
+    onUpdateMeetings: (meetings: MeetingRecord[]) => void; // NEW
 }
 
-const VicerrectoradoPage: React.FC<VicerrectoradoPageProps> = ({ microPlans, viccInterventions, gradebooks, users, subjects, classes, students, onNavigate, notifications, onUpdateNotifications, reinforcementPlans, onUpdateReinforcementPlans }) => {
+const VicerrectoradoPage: React.FC<VicerrectoradoPageProps> = ({ microPlans, viccInterventions, gradebooks, users, subjects, classes, students, onNavigate, notifications, onUpdateNotifications, reinforcementPlans = [], onUpdateReinforcementPlans, trainingPlans = [], onUpdateTrainingPlans, institutionalDocuments, onUpdateDocuments, meetingRecords, onUpdateMeetings }) => {
     const { user } = useContext(UserContext);
     const [activeTab, setActiveTab] = useState<'pedagogical' | 'student_support' | 'institutional'>('pedagogical');
 
-    // Mock Data States
+    // Mock Data States (only visits is local now, others via props)
     const [visits, setVisits] = useState<ClassroomVisit[]>(MOCK_CLASSROOM_VISITS);
     const [trainings, setTrainings] = useState<TrainingSession[]>(MOCK_TRAINING_SESSIONS);
-    const [documents, setDocuments] = useState<InstitutionalDocument[]>(MOCK_INSTITUTIONAL_DOCUMENTS);
-    const [meetings, setMeetings] = useState<MeetingRecord[]>(MOCK_MEETING_RECORDS);
     
     // Form States
     const [isVisitFormOpen, setIsVisitFormOpen] = useState(false);
     const [editingVisit, setEditingVisit] = useState<ClassroomVisit | null>(null);
     const [isReinforcementFormOpen, setIsReinforcementFormOpen] = useState(false);
     const [editingReinforcementPlan, setEditingReinforcementPlan] = useState<ReinforcementPlan | null>(null);
+    const [isTrainingManagerOpen, setIsTrainingManagerOpen] = useState(false);
+    
+    // Printing State
+    const [printingVisit, setPrintingVisit] = useState<ClassroomVisit | null>(null);
 
     // Derived Data for GDAA
     const completedVisits = useMemo(() => visits.filter(v => v.status === 'Completed'), [visits]);
@@ -152,31 +161,102 @@ const VicerrectoradoPage: React.FC<VicerrectoradoPageProps> = ({ microPlans, vic
                         </div>
                      </div>
                      <div className="space-y-2 max-h-40 overflow-y-auto">
-                        {scheduledVisits.length === 0 && <p className="text-sm text-gray-400">No hay visitas programadas.</p>}
+                        <h4 className="text-sm font-bold text-gray-600 mb-2 uppercase flex items-center gap-2"><CalendarIcon className="h-4 w-4"/> Próximas Visitas (Agenda)</h4>
+                        {scheduledVisits.length === 0 && <p className="text-sm text-gray-400 italic">No hay visitas programadas.</p>}
                         {scheduledVisits.map(v => (
-                             <div key={v.id} className="flex justify-between p-2 border rounded text-sm">
-                                <span>{users.find(u=>u.id===v.teacherId)?.name}</span>
-                                <span className="text-gray-500">{new Date(v.date).toLocaleDateString()}</span>
+                             <div key={v.id} className="flex justify-between items-center p-3 border rounded-lg hover:bg-gray-50 transition-colors">
+                                <div>
+                                    <p className="font-bold text-sm text-gray-800">{users.find(u => u.id === v.teacherId)?.name} <span className="font-normal text-gray-500 text-xs">({v.className})</span></p>
+                                    <p className="text-xs text-gray-500">{new Date(v.date).toLocaleDateString()} - {v.startTime} • {v.focus}</p>
+                                </div>
+                                <div className="flex gap-2">
+                                    <button 
+                                        onClick={() => { setEditingVisit(v); setIsVisitFormOpen(true); }} 
+                                        className="flex items-center gap-1 text-xs bg-green-600 text-white px-3 py-1.5 rounded hover:bg-green-700 font-semibold shadow-sm"
+                                        title="Iniciar evaluación de la clase"
+                                    >
+                                        <PlayIcon className="h-3 w-3" /> Iniciar
+                                    </button>
+                                    <button onClick={() => { setEditingVisit(v); setIsVisitFormOpen(true); }} className="text-xs bg-white border border-gray-300 text-gray-600 px-3 py-1.5 rounded hover:bg-gray-50">
+                                        Editar
+                                    </button>
+                                </div>
                             </div>
                         ))}
                      </div>
+                     
+                     <div className="mt-6">
+                        <h4 className="text-sm font-bold text-gray-600 mb-2 uppercase flex items-center gap-2"><CheckCircleIcon className="h-4 w-4"/> Historial Reciente</h4>
+                         {completedVisits.length > 0 ? (
+                             <div className="overflow-x-auto">
+                                <table className="w-full text-sm text-left border rounded-lg overflow-hidden">
+                                    <thead className="bg-gray-50 text-gray-600 font-semibold">
+                                        <tr>
+                                            <th className="p-2">Fecha</th>
+                                            <th className="p-2">Docente</th>
+                                            <th className="p-2 text-center">Calif.</th>
+                                            <th className="p-2 text-right">Acción</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y bg-white">
+                                        {completedVisits.slice(0, 4).map(visit => (
+                                            <tr key={visit.id} className="hover:bg-gray-50">
+                                                <td className="p-2">{new Date(visit.date).toLocaleDateString()}</td>
+                                                <td className="p-2">{users.find(u => u.id === visit.teacherId)?.name.split(' ')[1]}</td>
+                                                <td className="p-2 text-center">
+                                                    <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-bold ${visit.rating! >= 3.5 ? 'bg-green-100 text-green-800' : visit.rating! >= 2.5 ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'}`}>
+                                                        {visit.rating}
+                                                    </span>
+                                                </td>
+                                                <td className="p-2 text-right flex justify-end gap-2">
+                                                    <button 
+                                                        onClick={() => setPrintingVisit(visit)} 
+                                                        className="p-1 text-gray-500 hover:text-blue-600 rounded-full hover:bg-blue-100" 
+                                                        title="Imprimir Acta"
+                                                    >
+                                                        <PrinterIcon className="h-5 w-5" />
+                                                    </button>
+                                                    <button onClick={() => { setEditingVisit(visit); setIsVisitFormOpen(true); }} className="text-blue-600 hover:underline text-xs">Ver/Editar</button>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        ) : (
+                             <p className="text-sm text-gray-400 italic">No se han realizado visitas aún.</p>
+                        )}
+                    </div>
                  </div>
             </div>
+             {/* TRAINING PLAN MANAGER */}
              <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-                <h3 className="font-bold text-gray-800 mb-4 flex items-center gap-2">
-                    <ArchiveBoxIcon className="h-5 w-5 text-purple-600" />
-                    Plan de Capacitación Docente
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {trainings.map(train => (
-                        <div key={train.id} className="border rounded-lg p-4 hover:shadow-md transition-shadow">
-                            <div className="flex justify-between items-start">
-                                <h4 className="font-bold text-gray-800">{train.title}</h4>
-                                <span className="text-xs bg-gray-100 px-2 py-1 rounded">{new Date(train.date).toLocaleDateString()}</span>
+                <div className="flex justify-between items-center mb-4">
+                    <h3 className="font-bold text-gray-800 flex items-center gap-2">
+                        <ArchiveBoxIcon className="h-5 w-5 text-purple-600" />
+                        Plan de Capacitación Docente
+                    </h3>
+                    <button 
+                        onClick={() => setIsTrainingManagerOpen(true)}
+                        className="text-xs bg-purple-600 text-white px-3 py-1.5 rounded hover:bg-purple-700"
+                    >
+                        Gestionar Plan
+                    </button>
+                </div>
+                
+                <div className="space-y-3">
+                    {trainingPlans[0] ? (
+                        <div className="p-3 bg-purple-50 rounded border border-purple-100">
+                            <p className="font-bold text-sm text-purple-900">{trainingPlans[0].title}</p>
+                            <p className="text-xs text-purple-700 mt-1">{trainingPlans[0].courses.length} Cursos Activos</p>
+                            <div className="mt-2 w-full bg-purple-200 rounded-full h-1.5">
+                                <div className="bg-purple-600 h-1.5 rounded-full" style={{ width: '45%' }}></div>
                             </div>
-                            <p className="text-sm text-gray-600 mt-2">{train.topic}</p>
+                            <p className="text-[10px] text-right mt-1 text-purple-600">45% Ejecución</p>
                         </div>
-                    ))}
+                    ) : (
+                        <p className="text-sm text-gray-500 italic">No hay un plan anual activo.</p>
+                    )}
                 </div>
             </div>
         </div>
@@ -227,41 +307,18 @@ const VicerrectoradoPage: React.FC<VicerrectoradoPageProps> = ({ microPlans, vic
     const renderInstitutionalModule = () => (
          <div className="space-y-6 animate-fade-in">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-                    <h3 className="font-bold text-gray-800 mb-4 flex items-center gap-2">
-                        <ClipboardListIcon className="h-5 w-5 text-teal-600" />
-                        Instrumentos de Gestión
-                    </h3>
-                    <div className="space-y-4">
-                        {documents.map(doc => (
-                            <div key={doc.id} className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50">
-                                <div className="flex items-center gap-3">
-                                    <div className={`h-10 w-10 rounded-full flex items-center justify-center text-white font-bold text-xs ${doc.status === 'Vigente' ? 'bg-green-500' : 'bg-yellow-500'}`}>
-                                        {doc.type}
-                                    </div>
-                                    <div>
-                                        <p className="font-semibold text-gray-800">{doc.title}</p>
-                                        <p className="text-xs text-gray-500">Ver: {doc.version}</p>
-                                    </div>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-                 <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-                    <h3 className="font-bold text-gray-800 mb-4 flex items-center gap-2">
-                        <UsersIcon className="h-5 w-5 text-orange-600" />
-                        Juntas y Comités
-                    </h3>
-                    <div className="space-y-4">
-                        {meetings.map(meet => (
-                            <div key={meet.id} className="border-l-4 border-orange-500 pl-4 py-1">
-                                <h4 className="font-bold text-gray-800">{meet.title}</h4>
-                                <p className="text-sm text-gray-600 mt-1">{meet.summary}</p>
-                            </div>
-                        ))}
-                    </div>
-                </div>
+                {/* Document Manager Component */}
+                <InstitutionalDocumentManager 
+                    documents={institutionalDocuments} 
+                    onUpdateDocuments={onUpdateDocuments} 
+                />
+
+                {/* Meeting Manager Component */}
+                <MeetingManager 
+                    meetings={meetingRecords} 
+                    onUpdateMeetings={onUpdateMeetings}
+                    users={users}
+                />
             </div>
         </div>
     );
@@ -311,6 +368,38 @@ const VicerrectoradoPage: React.FC<VicerrectoradoPageProps> = ({ microPlans, vic
                     subjects={subjects}
                     classes={classes}
                     currentUser={user}
+                />
+            )}
+
+            {printingVisit && (
+                <div className="fixed inset-0 bg-black bg-opacity-60 z-[70] flex justify-center items-center p-4">
+                    <div className="bg-white rounded-lg shadow-xl w-full max-w-5xl max-h-[90vh] flex flex-col">
+                        <header className="p-4 flex justify-between items-center bg-gray-50 border-b no-print sticky top-0 z-10">
+                            <h3 className="text-lg font-semibold text-gray-700">Vista Previa del Acta</h3>
+                            <div className="flex items-center gap-2">
+                                <button onClick={() => setPrintingVisit(null)} className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 text-sm font-semibold">Cerrar</button>
+                                <button onClick={() => window.print()} className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white font-semibold rounded-md hover:bg-primary-700 text-sm">
+                                    <PrinterIcon className="h-5 w-5" /> Imprimir / PDF
+                                </button>
+                            </div>
+                        </header>
+                        <div className="overflow-y-auto bg-gray-100 p-4">
+                            <ClassroomVisitPrintable 
+                                visit={printingVisit}
+                                teacher={users.find(u => u.id === printingVisit.teacherId)!}
+                                observer={users.find(u => u.id === printingVisit.observerId)!}
+                            />
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {isTrainingManagerOpen && (
+                <TrainingPlanManager
+                    plans={trainingPlans}
+                    users={users}
+                    onUpdatePlans={onUpdateTrainingPlans} // FIX: Correct prop
+                    onClose={() => setIsTrainingManagerOpen(false)}
                 />
             )}
         </div>

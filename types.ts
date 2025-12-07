@@ -10,6 +10,7 @@ export enum Role {
   HealthProfessional = 'Profesional de Salud',
   Vicerrector = 'Vicerrector',
   InspectorGeneral = 'Inspector General',
+  Rector = 'Rector', // Added for formal requests
 }
 
 export interface User {
@@ -27,6 +28,14 @@ export interface User {
   // Staff Attendance Fields
   biometricRegistered?: boolean;
   accessPin?: string;
+  // Added workSchedule for staff attendance calculations
+  workSchedule?: {
+    Lunes?: { startTime: string; endTime: string; };
+    Martes?: { startTime: string; endTime: string; };
+    Miércoles?: { startTime: string; endTime: string; };
+    Jueves?: { startTime: string; endTime: string; };
+    Viernes?: { startTime: string; endTime: string; };
+  };
 }
 
 export interface Timetable {
@@ -820,7 +829,7 @@ export type PunchType = 'in' | 'out_break' | 'in_break' | 'out';
 export interface AttendancePunch {
   time: string; // HH:mm:ss format
   type: PunchType;
-  method: 'Biometric' | 'Manual';
+  method: 'Biometric' | 'Manual' | 'Facial';
   location?: { latitude: number; longitude: number; };
 }
 
@@ -831,3 +840,67 @@ export interface StaffAttendanceRecord {
     date: string; // YYYY-MM-DD
     punches: AttendancePunch[];
 }
+
+// Communications Module - Formal Requests
+export type FormalRequestStatus = 'Pending' | 'Approved' | 'Rejected';
+export type FormalRequestType = 'Time Off' | 'Supply Request' | 'Complaint' | 'Other';
+export type FormalRequestRecipient = Role.Vicerrector | Role.Rector | Role.InstitutionAdmin | Role.InspectorGeneral;
+
+export interface FormalRequest {
+    id: string;
+    institutionId: string;
+    requesterId: string; // Teacher/Staff ID
+    recipientRole: FormalRequestRecipient;
+    type: FormalRequestType;
+    subject: string;
+    details: string;
+    attachmentUrl?: string; // Link to the attached file (simulated)
+    status: FormalRequestStatus;
+    submissionDate: string; // ISO Date string
+    resolutionDate?: string; // ISO Date string
+    resolverId?: string; // Admin ID who resolved it
+    resolutionComments?: string;
+}
+
+// Training & Professional Development (Plan de Capacitación)
+export type TrainingStatus = 'Planned' | 'In_Progress' | 'Completed' | 'Evaluated';
+export type TrainingModality = 'Presencial' | 'Virtual' | 'Híbrida';
+export type TrainingType = 'Interna' | 'Externa' | 'Inducción' | 'Directiva';
+
+export interface TeacherTrainingRecord {
+    teacherId: string;
+    attendancePercentage: number; // Min requirement usually 75% or 80%
+    finalGrade: number; // /10
+    evidenceUrl?: string; // URL to uploaded evidence of application
+    status: 'En Curso' | 'Aprobado' | 'Reprobado';
+    certificateUrl?: string;
+}
+
+export interface TrainingCourse {
+    id: string;
+    planId: string; // Link to parent plan
+    title: string;
+    instructor: string;
+    startDate: string;
+    endDate: string;
+    durationHours: number;
+    modality: TrainingModality;
+    type: TrainingType;
+    enrolledTeachers: TeacherTrainingRecord[];
+}
+
+export interface TrainingPlan {
+    id: string;
+    institutionId: string;
+    academicYear: string;
+    title: string; // e.g. "Plan de Desarrollo Profesional 2025"
+    objectives: string; // Qué se quiere lograr
+    justification: string; // Detección de necesidades (Diagnóstico/DECE/PCA)
+    transversalThemes: string[]; // e.g. ["Inclusión", "Género", "TICs"]
+    methodology: string; // Cómo se hará
+    status: TrainingStatus;
+    courses: TrainingCourse[];
+}
+
+// Ensure Role enum includes Rector if not already present
+// export enum Role { ... , Rector = 'Rector', ... }

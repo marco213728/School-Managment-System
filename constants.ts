@@ -1,6 +1,4 @@
-
-
-import { User, Role, Student, Class, Activity, ActivityType, AttendanceRecord, AttendanceStatus, Notification, SupportContact, Intervention, InterventionType, OvpActivity, OvpAxis, HealthRecord, Institution, OcrSubmission, OcrSubmissionStatus, ScheduleEntry, MedicalVisit, Shift, TimeSlot, Subject, Room, Timetable, ViccIntervention, ViccInterventionType, ExitPass, Citacion, CitacionStatus, AcademicCalendarEvent, LeccionarioEntry, MicroPlan, CurricularPlanStatus, GradeLevel, GRADE_LEVELS, Dcd, EvaluationCriterion, EvaluationIndicator, Competency, COMPETENCIES, CURRICULAR_INSERTIONS, AREAS_OF_KNOWLEDGE, SUBJECT_LEVELS, Gradebook, TrimesterRecord, StudentGradebook, GradeEntry, EVALUATION_CATEGORIES, ClassroomObservation, TrainingSession, InstitutionalDocument, MeetingRecord, DisciplinaryAction, DisciplinarySeverity, InspectionVisit, ConflictMediation, QualityMetric, ClassroomVisit, RubricCriterion, ReinforcementPlan, StaffAttendanceRecord } from './types';
+import { User, Role, Student, Class, Activity, ActivityType, AttendanceRecord, AttendanceStatus, Notification, SupportContact, Intervention, InterventionType, OvpActivity, OvpAxis, HealthRecord, Institution, OcrSubmission, OcrSubmissionStatus, ScheduleEntry, MedicalVisit, Shift, TimeSlot, Subject, Room, Timetable, ViccIntervention, ViccInterventionType, ExitPass, Citacion, CitacionStatus, AcademicCalendarEvent, LeccionarioEntry, MicroPlan, CurricularPlanStatus, GradeLevel, GRADE_LEVELS, Dcd, EvaluationCriterion, EvaluationIndicator, Competency, COMPETENCIES, CURRICULAR_INSERTIONS, AREAS_OF_KNOWLEDGE, SUBJECT_LEVELS, Gradebook, TrimesterRecord, StudentGradebook, GradeEntry, EVALUATION_CATEGORIES, ClassroomObservation, TrainingSession, InstitutionalDocument, MeetingRecord, DisciplinaryAction, DisciplinarySeverity, InspectionVisit, ConflictMediation, QualityMetric, ClassroomVisit, RubricCriterion, ReinforcementPlan, StaffAttendanceRecord, FormalRequestStatus, FormalRequestType, FormalRequestRecipient, TrainingPlan } from './types';
 
 export { GRADE_LEVELS, COMPETENCIES, CURRICULAR_INSERTIONS, AREAS_OF_KNOWLEDGE, SUBJECT_LEVELS, EVALUATION_CATEGORIES };
 
@@ -90,7 +88,6 @@ export const MOCK_CLASSROOM_VISITS: ClassroomVisit[] = [
     }
 ];
 
-
 export const MOCK_ACADEMIC_CALENDAR_EVENTS: AcademicCalendarEvent[] = [
   {
     id: 'ace1',
@@ -142,102 +139,32 @@ export const MOCK_INSTITUTIONS: Institution[] = [
       circulars: { enabled: true },
     },
     automatedNotifications: {
-      absences: {
-        enabled: true,
-        channel: 'email',
-        template: 'Estimado/a [PARENT_NAME],\n\nLe informamos que su hijo/a [STUDENT_NAME] ha sido registrado/a con una ausencia o retraso el día [DATE].\n\nAtentamente,\n[INSTITUTION_NAME]',
-      },
-      discipline: {
-        enabled: true,
-        channel: 'internalMessaging',
-        template: 'Notificación de Disciplina: Se ha registrado una nueva incidencia para el/la estudiante [STUDENT_NAME]. Por favor, revise el portal para más detalles.',
-      },
-      healthEmergencies: {
-        enabled: true,
-        channel: 'sms',
-        template: 'EMERGENCIA DE SALUD: Por favor, contacte a la institución inmediatamente con respecto a [STUDENT_NAME]. Teléfono: [INSTITUTION_PHONE]',
-      },
-      events: {
-        enabled: false,
-        channel: 'internalMessaging',
-        template: 'Recordatorio de Evento: [EVENT_NAME] se llevará a cabo el [EVENT_DATE]. ¡No falte!',
-      },
-      grades: {
-        enabled: false,
-        channel: 'internalMessaging',
-        template: 'Nuevas Calificaciones: Se han publicado nuevas calificaciones para [STUDENT_NAME] en la asignatura de [SUBJECT_NAME].',
-      },
-      checkInOut: {
-        enabled: true,
-        channel: 'sms',
-        template: 'Salida Registrada: Su hijo/a [STUDENT_NAME] ha salido de la institución a las [TIME] acompañado/a por [RESPONSIBLE_NAME].',
-      },
+      absences: { enabled: true, channel: 'email', template: '...' },
+      discipline: { enabled: true, channel: 'internalMessaging', template: '...' },
+      healthEmergencies: { enabled: true, channel: 'sms', template: '...' },
+      events: { enabled: false, channel: 'internalMessaging', template: '...' },
+      grades: { enabled: false, channel: 'internalMessaging', template: '...' },
+      checkInOut: { enabled: true, channel: 'sms', template: '...' },
     }
   },
   {
     id: 'colegio-xyz',
     name: "Colegio Experimental XYZ",
     logoUrl: "https://placehold.co/150x150/16a34a/white?text=XYZ",
-    contact: {
-      phone: "04-333-4444",
-      email: "info@colegioxyz.edu.ec",
-      address: "Calle Secundaria 456, Guayaquil, Ecuador",
-    },
+    contact: { phone: "04-333-4444", email: "info@colegioxyz.edu.ec", address: "Calle Secundaria 456, Guayaquil, Ecuador" },
     activeModules: { dece: false, health: true },
     adminIds: ['admin2'],
     methodologyFocus: 'Tradicional',
-    communicationChannels: {
-      email: { enabled: true },
-      sms: { enabled: false },
-      internalMessaging: { enabled: true },
-      pushNotifications: { enabled: true },
-      phoneCalls: { enabled: true },
-      socialMedia: { enabled: false },
-      circulars: { enabled: false },
-    },
-     automatedNotifications: {
-      absences: {
-        enabled: true,
-        channel: 'sms',
-        template: 'Info Colegio XYZ: Se ha registrado una ausencia/retraso para [STUDENT_NAME] el [DATE].',
-      },
-      discipline: {
-        enabled: false,
-        channel: 'internalMessaging',
-        template: 'Notificación de Disciplina: Se ha registrado una nueva incidencia para el/la estudiante [STUDENT_NAME]. Por favor, revise el portal para más detalles.',
-      },
-      healthEmergencies: {
-        enabled: true,
-        channel: 'phoneCalls',
-        template: 'EMERGENCIA DE SALUD: Por favor, contacte a la institución inmediatamente con respecto a [STUDENT_NAME]. Teléfono: [INSTITUTION_PHONE]',
-      },
-      events: {
-        enabled: true,
-        channel: 'email',
-        template: 'Recordatorio de Evento: [EVENT_NAME] se llevará a cabo el [EVENT_DATE]. ¡No falte!',
-      },
-      grades: {
-        enabled: true,
-        channel: 'internalMessaging',
-        template: 'Nuevas Calificaciones: Se han publicado nuevas calificaciones para [STUDENT_NAME] en la asignatura de [SUBJECT_NAME].',
-      },
-      checkInOut: {
-        enabled: false,
-        channel: 'sms',
-        template: '[STUDENT_NAME] ha [ENTRADO/SALIDO] de la institución a las [TIME].',
-      },
-    }
+    communicationChannels: { email: { enabled: true }, sms: { enabled: false }, internalMessaging: { enabled: true }, pushNotifications: { enabled: true }, phoneCalls: { enabled: true }, socialMedia: { enabled: false }, circulars: { enabled: false } },
+    automatedNotifications: { absences: { enabled: true, channel: 'sms', template: '...' }, discipline: { enabled: false, channel: 'internalMessaging', template: '...' }, healthEmergencies: { enabled: true, channel: 'phoneCalls', template: '...' }, events: { enabled: true, channel: 'email', template: '...' }, grades: { enabled: true, channel: 'internalMessaging', template: '...' }, checkInOut: { enabled: false, channel: 'sms', template: '...' } }
   }
 ];
 
 export const MOCK_USERS: User[] = [
-  // Platform SuperAdmin
   { id: 'superadmin', name: 'Super Admin', email: 'super@platform.com', password: 'password', role: Role.SuperAdmin },
-
-  // UEMOL Users
   { id: 'admin1', name: 'Admin Director (UEMOL)', email: 'marco213728@gmail.com', password: 'password', role: Role.InstitutionAdmin, institutionId: 'uemol', phone: '600111222', address: 'Calle Principal 1, 28001 Madrid' },
-  { id: 'teacher1', name: 'Prof. García', email: 'garcia@school.com', password: 'password', role: Role.Teacher, classIds: ['class1'], institutionId: 'uemol', phone: '611222333', maxMonthlyHours: 80, biometricRegistered: true, accessPin: '1234' },
-  { id: 'teacher2', name: 'Prof. López', email: 'lopez@school.com', password: 'password', role: Role.Teacher, classIds: ['class2'], institutionId: 'uemol', maxMonthlyHours: 75, biometricRegistered: false, accessPin: '5678' },
+  { id: 'teacher1', name: 'Prof. García', email: 'garcia@school.com', password: 'password', role: Role.Teacher, classIds: ['class1'], institutionId: 'uemol', phone: '611222333', maxMonthlyHours: 80, biometricRegistered: true, accessPin: '1234', workSchedule: { Lunes: { startTime: '08:00', endTime: '16:00' }, Martes: { startTime: '08:00', endTime: '16:00' }, Miércoles: { startTime: '08:00', endTime: '16:00' }, Jueves: { startTime: '08:00', endTime: '16:00' }, Viernes: { startTime: '08:00', endTime: '16:00' } } },
+  { id: 'teacher2', name: 'Prof. López', email: 'lopez@school.com', password: 'password', role: Role.Teacher, classIds: ['class2'], institutionId: 'uemol', maxMonthlyHours: 75, biometricRegistered: false, accessPin: '5678', workSchedule: { Lunes: { startTime: '08:30', endTime: '16:30' }, Martes: { startTime: '08:30', endTime: '16:30' }, Miércoles: { startTime: '08:30', endTime: '16:30' }, Jueves: { startTime: '08:30', endTime: '16:30' }, Viernes: { startTime: '08:30', endTime: '16:30' } } },
   { id: 'parent1', name: 'Sr. Martinez', email: 'martinez@family.com', password: 'password', role: Role.Parent, childId: 'student1', institutionId: 'uemol', phone: '622333444', address: 'Avenida del Sol 4, 28002 Madrid' },
   { id: 'parent2', name: 'Sra. Diaz', email: 'diaz@family.com', password: 'password', role: Role.Parent, childId: 'student2', institutionId: 'uemol' },
   { id: 'parent3', name: 'Sr. Sanchez', email: 'sanchez@family.com', password: 'password', role: Role.Parent, childId: 'student3', institutionId: 'uemol' },
@@ -248,6 +175,8 @@ export const MOCK_USERS: User[] = [
   { id: 'student2', name: 'Ana Diaz', email: 'ana@student.com', password: 'password', role: Role.Student, classIds: ['class2'], institutionId: 'uemol' },
   { id: 'student3', name: 'Pedro Sanchez', email: 'pedro@student.com', password: 'password', role: Role.Student, classIds: ['class1'], institutionId: 'uemol'},
   { id: 'student4', name: 'Lucia Fernandez', email: 'lucia@student.com', password: 'password', role: Role.Student, classIds: ['class2'], institutionId: 'uemol'},
+  { id: 'student5', name: 'Carlos Gomez', email: 'carlos@student.com', password: 'password', role: Role.Student, classIds: ['class1'], institutionId: 'uemol'},
+  { id: 'student6', name: 'Sofia Rodriguez', email: 'sofia@student.com', password: 'password', role: Role.Student, classIds: ['class2'], institutionId: 'uemol'},
   { id: 'dece1', name: 'Lic. Ana Torres', email: 'atorres@dece.school.com', password: 'password', role: Role.JefeDECE, institutionId: 'uemol', phone: '633444555' },
   { id: 'dece2', name: 'Psic. Carlos Vera', email: 'cvera@dece.school.com', password: 'password', role: Role.PsicologoEducativo, institutionId: 'uemol', phone: '644555666' },
   { id: 'health1', name: 'Dr. López (Médico)', email: 'drlopez@health.school.com', password: 'password', role: Role.HealthProfessional, institutionId: 'uemol', phone: '655666777'},
@@ -255,10 +184,8 @@ export const MOCK_USERS: User[] = [
   { id: 'inspector1', name: 'Abg. Sofia Delgado', email: 'sdelgado@school.com', password: 'password', role: Role.InspectorGeneral, institutionId: 'uemol' },
   { id: 'inspector2', name: 'Mariela Allauca', email: 'mallauca@school.com', password: 'password', role: Role.InspectorGeneral, institutionId: 'uemol' },
   { id: 'vicerrector2', name: 'Gabriela', email: 'gabriela@school.com', password: 'password', role: Role.Vicerrector, institutionId: 'uemol' },
-  { id: 'teacher4', name: 'Prof. Lorena', email: 'lorena@school.com', password: 'password', role: Role.Teacher, classIds: ['class1'], institutionId: 'uemol', maxMonthlyHours: 80 },
-
-
-  // Colegio XYZ Users
+  { id: 'teacher4', name: 'Prof. Lorena', email: 'lorena@school.com', password: 'password', role: Role.Teacher, classIds: ['class1'], institutionId: 'uemol', maxMonthlyHours: 80, workSchedule: { Lunes: { startTime: '07:30', endTime: '15:30' }, Martes: { startTime: '07:30', endTime: '15:30' }, Miércoles: { startTime: '07:30', endTime: '15:30' }, Jueves: { startTime: '07:30', endTime: '15:30' }, Viernes: { startTime: '07:30', endTime: '15:30' } } },
+  { id: 'rector1', name: 'Dr. Fausto Rueda', email: 'rector@school.com', password: 'password', role: Role.Rector, institutionId: 'uemol', phone: '600000000' },
   { id: 'admin2', name: 'Directora Pérez (XYZ)', email: 'perez@xyz.com', password: 'password', role: Role.InstitutionAdmin, institutionId: 'colegio-xyz' },
   { id: 'teacher3', name: 'Prof. Vera', email: 'vera@xyz.com', password: 'password', role: Role.Teacher, classIds: ['class3'], institutionId: 'colegio-xyz', maxMonthlyHours: 90 },
   { id: 'student7', name: 'Maria Solis', email: 'maria@xyz.com', password: 'password', role: Role.Student, classIds: ['class3'], institutionId: 'colegio-xyz'},
@@ -278,7 +205,6 @@ export const MOCK_CLASSES: Class[] = [
 ];
 
 export const MOCK_SUBJECTS: Subject[] = [
-  // EGB & BGU Core
   { id: 'subj1', institutionId: 'uemol', name: 'Matemáticas', teacherId: 'teacher1', maxWeeklyHours: 5, areaOfKnowledge: 'Matemática', level: 'Todos' },
   { id: 'subj-math-lorena', institutionId: 'uemol', name: 'Matemáticas', teacherId: 'teacher4', maxWeeklyHours: 5, areaOfKnowledge: 'Matemática', level: 'Todos' },
   { id: 'subj-ll', institutionId: 'uemol', name: 'Lengua y Literatura', teacherId: 'teacher2', maxWeeklyHours: 5, areaOfKnowledge: 'Lengua y Literatura', level: 'Todos' },
@@ -287,8 +213,6 @@ export const MOCK_SUBJECTS: Subject[] = [
   { id: 'subj-en', institutionId: 'uemol', name: 'Lengua Extranjera (Inglés)', teacherId: 'teacher4', maxWeeklyHours: 3, areaOfKnowledge: 'Lengua Extranjera', level: 'Todos' },
   { id: 'subj-ef', institutionId: 'uemol', name: 'Educación Física', teacherId: 'teacher1', maxWeeklyHours: 2, areaOfKnowledge: 'Educación Física', level: 'Todos' },
   { id: 'subj-eca', institutionId: 'uemol', name: 'Educación Cultural y Artística', teacherId: 'teacher2', maxWeeklyHours: 2, areaOfKnowledge: 'Educación Cultural y Artística', level: 'Todos' },
-
-  // BGU Specialized
   { id: 'subj2', institutionId: 'uemol', name: 'Historia', teacherId: 'teacher2', maxWeeklyHours: 4, areaOfKnowledge: 'Ciencias Sociales', level: 'BGU' },
   { id: 'subj-hist-garcia', institutionId: 'uemol', name: 'Historia', teacherId: 'teacher1', maxWeeklyHours: 4, areaOfKnowledge: 'Ciencias Sociales', level: 'BGU' },
   { id: 'subj-bio', institutionId: 'uemol', name: 'Biología', teacherId: 'teacher4', maxWeeklyHours: 2, areaOfKnowledge: 'Ciencias Naturales', level: 'BGU' },
@@ -297,8 +221,6 @@ export const MOCK_SUBJECTS: Subject[] = [
   { id: 'subj-fil', institutionId: 'uemol', name: 'Filosofía', teacherId: 'teacher2', maxWeeklyHours: 2, areaOfKnowledge: 'Ciencias Sociales', level: 'BGU' },
   { id: 'subj-ciu', institutionId: 'uemol', name: 'Educación para la Ciudadanía', teacherId: 'teacher2', maxWeeklyHours: 2, areaOfKnowledge: 'Ciencias Sociales', level: 'BGU' },
   { id: 'subj-eyg', institutionId: 'uemol', name: 'Emprendimiento y Gestión', teacherId: 'teacher1', maxWeeklyHours: 2, areaOfKnowledge: 'Interdisciplinar', level: 'BGU', isModule: true },
-
-  // Other institution for testing
   { id: 'subj3', institutionId: 'colegio-xyz', name: 'Ciencias Naturales', teacherId: 'teacher3', maxWeeklyHours: 6, areaOfKnowledge: 'Ciencias Naturales', level: 'EGB' },
 ];
 
@@ -326,38 +248,10 @@ export const MOCK_STUDENTS: Student[] = [
     gender: 'FEMENINO',
     homeLocationLink: 'https://maps.app.goo.gl/sFw5eJ8g8T3',
     relatedContacts: [
-      {
-        id: 'contact1',
-        relation: 'Padre',
-        name: 'Desconozco',
-        occupation: 'Desconozco',
-        phone: '111-111-1111',
-        email: 'padre@example.com',
-      },
-      {
-        id: 'contact2',
-        relation: 'Madre',
-        name: 'Evelyn Tatiana Sangucho Guan...',
-        occupation: 'Empleada',
-        phone: '222-222-2222',
-        email: 'madre@example.com',
-      },
-      {
-        id: 'contact3',
-        relation: 'Tía',
-        name: 'Jessica Maribel Sangucho Gua...',
-        occupation: 'Ama de casa',
-        phone: '333-333-3333',
-        email: 'tia1@example.com',
-      },
-      {
-        id: 'contact4',
-        relation: 'Tía',
-        name: 'Norma Isabel Sanguacho Guanot...',
-        occupation: 'Estudiante',
-        phone: '444-444-4444',
-        email: 'tia2@example.com',
-      },
+      { id: 'contact1', relation: 'Padre', name: 'Desconozco', occupation: 'Desconozco', phone: '111-111-1111', email: 'padre@example.com' },
+      { id: 'contact2', relation: 'Madre', name: 'Evelyn Tatiana Sangucho Guan...', occupation: 'Empleada', phone: '222-222-2222', email: 'madre@example.com' },
+      { id: 'contact3', relation: 'Tía', name: 'Jessica Maribel Sangucho Gua...', occupation: 'Ama de casa', phone: '333-333-3333', email: 'tia1@example.com' },
+      { id: 'contact4', relation: 'Tía', name: 'Norma Isabel Sanguacho Guanot...', occupation: 'Estudiante', phone: '444-444-4444', email: 'tia2@example.com' },
     ]
   },
   { id: 'student2', institutionId: 'uemol', name: 'Ana Diaz', classId: 'class2', parentId: 'parent2', phone: '687654321', address: 'Avenida Siempre Viva 742, Madrid', photoUrl: 'https://placehold.co/200x200/ec4899/white?text=AD' },
@@ -377,7 +271,6 @@ export const MOCK_ACTIVITIES: Activity[] = [
 
 export const MOCK_ATTENDANCE: AttendanceRecord[] = [
     { id: 'att1', institutionId: 'uemol', studentId: 'student1', date: '2024-08-01', timeSlot: '8:30-10:15', status: AttendanceStatus.Present },
-    // Added to allow parent 'martinez@family.com' to test the justification feature for their child.
     { id: 'att6', institutionId: 'uemol', studentId: 'student1', date: '2024-08-05', timeSlot: '10:35-12:20', status: AttendanceStatus.Unexcused },
     { id: 'att2', institutionId: 'uemol', studentId: 'student3', date: '2024-08-01', timeSlot: '8:30-10:15', status: AttendanceStatus.Tardy, notes: 'Llegó 10 minutos tarde.' },
     { id: 'att3', institutionId: 'uemol', studentId: 'student5', date: '2024-08-01', timeSlot: '8:30-10:15', status: AttendanceStatus.Unexcused, observations: [5, 8] },
@@ -386,15 +279,10 @@ export const MOCK_ATTENDANCE: AttendanceRecord[] = [
 ];
 
 export const MOCK_NOTIFICATIONS: Notification[] = [
-  // Teacher notifications
   { id: 'notif1', institutionId: 'uemol', userId: 'teacher1', title: 'Tarea Entregada', message: 'Juan Martinez ha entregado la tarea de Álgebra.', date: '2024-08-14', read: false },
   { id: 'notif2', institutionId: 'uemol', userId: 'teacher1', title: 'Mensaje de un Familiar', message: 'El Sr. Martinez ha enviado un mensaje.', date: '2024-08-13', read: true },
-
-  // Parent notifications
   { id: 'notif3', institutionId: 'uemol', userId: 'parent1', title: 'Falta de Asistencia', message: 'Juan tiene una falta registrada en la primera hora.', date: '2024-08-15', read: false },
   { id: 'notif4', institutionId: 'uemol', userId: 'parent1', title: 'Próximo Examen', message: 'Recordatorio: Examen de Álgebra el 20 de Agosto.', date: '2024-08-12', read: false },
-
-  // Student notifications
   { id: 'notif5', institutionId: 'uemol', userId: 'student1', title: 'Nueva Actividad', message: 'El Prof. García ha publicado una nueva lectura recomendada.', date: '2024-08-14', read: false },
   { id: 'notif6', institutionId: 'uemol', userId: 'student1', title: 'Examen Próximo', message: 'Tu examen de Álgebra es en 5 días.', date: '2024-08-15', read: true },
 ];
@@ -402,17 +290,12 @@ export const MOCK_NOTIFICATIONS: Notification[] = [
 export const MOCK_SHIFTS: Shift[] = [Shift.Morning, Shift.Afternoon, Shift.Night];
 
 export const MOCK_TIME_SLOTS: TimeSlot[] = [
-  // Timetable 1: Horario General Mañana (UEMOL)
   { id: 'ts1', institutionId: 'uemol', timetableId: 'tt1', shift: Shift.Morning, startTime: '08:30', endTime: '10:15', isBreak: false },
   { id: 'ts2', institutionId: 'uemol', timetableId: 'tt1', shift: Shift.Morning, startTime: '10:15', endTime: '10:35', isBreak: true },
   { id: 'ts3', institutionId: 'uemol', timetableId: 'tt1', shift: Shift.Morning, startTime: '10:35', endTime: '12:20', isBreak: false },
   { id: 'ts4', institutionId: 'uemol', timetableId: 'tt1', shift: Shift.Morning, startTime: '12:20', endTime: '12:40', isBreak: true },
   { id: 'ts5', institutionId: 'uemol', timetableId: 'tt1', shift: Shift.Morning, startTime: '12:40', endTime: '14:25', isBreak: false },
-
-  // Timetable 2: Horario Tarde (UEMOL)
   { id: 'ts6', institutionId: 'uemol', timetableId: 'tt2', shift: Shift.Afternoon, startTime: '15:00', endTime: '16:45', isBreak: false },
-  
-  // Timetable 3: Horario XYZ Mañana
   { id: 'ts7', institutionId: 'colegio-xyz', timetableId: 'tt3', shift: Shift.Morning, startTime: '09:00', endTime: '10:30', isBreak: false },
   { id: 'ts8', institutionId: 'colegio-xyz', timetableId: 'tt3', shift: Shift.Morning, startTime: '10:30', endTime: '10:45', isBreak: true },
   { id: 'ts9', institutionId: 'colegio-xyz', timetableId: 'tt3', shift: Shift.Morning, startTime: '10:45', endTime: '12:15', isBreak: false },
@@ -421,84 +304,29 @@ export const MOCK_TIME_SLOTS: TimeSlot[] = [
 export const DAYS_OF_WEEK: ScheduleEntry['day'][] = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes'];
 
 export const MOCK_SCHEDULE_ENTRIES: ScheduleEntry[] = [
-    { day: 'Lunes', timeSlotId: 'ts1', classId: 'class1', subjectId: 'subj1', roomId: 'room1' }, // Lunes 8:30, 1A, Maths, Room 1 (García)
-    { day: 'Lunes', timeSlotId: 'ts1', classId: 'class2', subjectId: 'subj2', roomId: 'room2' }, // Lunes 8:30, 1B, History, Room 2 (López) -> NO CONFLICT
-    
-    { day: 'Martes', timeSlotId: 'ts3', classId: 'class2', subjectId: 'subj2', roomId: 'room2' }, // Martes 10:35, 1B, History, Room 2
-    
+    { day: 'Lunes', timeSlotId: 'ts1', classId: 'class1', subjectId: 'subj1', roomId: 'room1' },
+    { day: 'Lunes', timeSlotId: 'ts1', classId: 'class2', subjectId: 'subj2', roomId: 'room2' },
+    { day: 'Martes', timeSlotId: 'ts3', classId: 'class2', subjectId: 'subj2', roomId: 'room2' },
     { day: 'Miércoles', timeSlotId: 'ts1', classId: 'class1', subjectId: 'subj1', roomId: 'room1' },
-    
     { day: 'Jueves', timeSlotId: 'ts3', classId: 'class2', subjectId: 'subj2', roomId: 'room2' },
-    
     { day: 'Viernes', timeSlotId: 'ts5', classId: 'class1', subjectId: 'subj1', roomId: 'room1' },
 ];
 
-
 export const MOCK_SUPPORT_CONTACTS: SupportContact[] = [
-  {
-    id: 'sup1',
-    institutionId: 'uemol',
-    name: 'Centro de Salud Mental Joven',
-    type: 'Salud Mental',
-    phone: '912345678',
-    email: 'info@saludmentaljoven.org',
-    address: 'Calle de la Esperanza 5, 28012 Madrid',
-  },
-  {
-    id: 'sup2',
-    institutionId: 'uemol',
-    name: 'Apoyo Legal para Familias',
-    type: 'Apoyo Legal',
-    phone: '918765432',
-    email: 'contacto@apoyolegalfam.es',
-    address: 'Plaza Mayor 10, 28013 Madrid',
-  },
-  {
-    id: 'sup3',
-    institutionId: 'uemol',
-    name: 'Centro de Salud Primaria Sol',
-    type: 'Centro de Salud',
-    phone: '061',
-    address: 'Calle Montera 22, 28013 Madrid',
-  },
+  { id: 'sup1', institutionId: 'uemol', name: 'Centro de Salud Mental Joven', type: 'Salud Mental', phone: '912345678', email: 'info@saludmentaljoven.org', address: 'Calle de la Esperanza 5, 28012 Madrid' },
+  { id: 'sup2', institutionId: 'uemol', name: 'Apoyo Legal para Familias', type: 'Apoyo Legal', phone: '918765432', email: 'contacto@apoyolegalfam.es', address: 'Plaza Mayor 10, 28013 Madrid' },
+  { id: 'sup3', institutionId: 'uemol', name: 'Centro de Salud Primaria Sol', type: 'Centro de Salud', phone: '061', address: 'Calle Montera 22, 28013 Madrid' },
 ];
 
 export const MOCK_INTERVENTIONS: Intervention[] = [
     { id: 'int1', institutionId: 'uemol', studentId: 'student1', deceProfessionalId: 'dece2', date: '2024-08-02', type: InterventionType.TeacherReport, summary: 'Prof. García reporta baja participación en clase.' },
     { id: 'int2', institutionId: 'uemol', studentId: 'student1', deceProfessionalId: 'dece2', date: '2024-08-05', type: InterventionType.IndividualSession, summary: 'Primera sesión con el alumno. Se discuten posibles causas de la apatía.' },
-    { 
-      id: 'int3', 
-      institutionId: 'uemol', 
-      studentId: 'student1', 
-      deceProfessionalId: 'dece1', 
-      date: '2024-08-10', 
-      type: InterventionType.ParentMeeting, 
-      summary: 'Reunión con Sr. Martinez para discutir el progreso y establecer pautas en casa.',
-      participants: ['Lic. Ana Torres (Jefe DECE)', 'Sr. Martinez (Padre)', 'Juan Martinez (Alumno)'],
-      agreements: `**Acuerdos Alcanzados:**
-1.  **Alumno (Juan Martinez):** Se compromete a dedicar 1 hora diaria al estudio sin distracciones (móvil, TV).
-2.  **Familiar (Sr. Martinez):** Se compromete a supervisar el tiempo de estudio y a proporcionar un ambiente adecuado.
-3.  **DECE (Lic. Ana Torres):** Se realizará un seguimiento semanal con el alumno y una reunión de seguimiento con el familiar en 15 días.`
-    },
+    { id: 'int3', institutionId: 'uemol', studentId: 'student1', deceProfessionalId: 'dece1', date: '2024-08-10', type: InterventionType.ParentMeeting, summary: 'Reunión con Sr. Martinez.', participants: ['Lic. Ana Torres', 'Sr. Martinez', 'Juan Martinez'], agreements: 'Compromiso de estudio.' },
     { id: 'int4', institutionId: 'uemol', studentId: 'student2', deceProfessionalId: 'dece2', date: '2024-08-03', type: InterventionType.IndividualSession, summary: 'Sesión de seguimiento sobre técnicas de estudio.'},
 ];
 
 export const MOCK_VICC_INTERVENTIONS: ViccIntervention[] = [
-    {
-        id: 'vicc1',
-        institutionId: 'uemol',
-        studentId: 'student1',
-        vicerrectorId: 'vicerrector1',
-        date: '2024-09-01',
-        type: ViccInterventionType.AcademicMeeting,
-        summary: 'Reunión con el estudiante y su padre para revisar el bajo rendimiento en Matemáticas y establecer un plan de refuerzo.',
-        participants: ['Lic. Ricardo Montes (Vicerrector)', 'Sr. Martinez (Padre)', 'Juan Martinez (Alumno)', 'Prof. García (Prof. Matemáticas)'],
-        agreements: `**Acuerdos Alcanzados:**
-1.  **Refuerzo Académico:** El estudiante asistirá a 2 horas de tutorías semanales de Matemáticas.
-2.  **Seguimiento Familiar:** El Sr. Martinez revisará y firmará la agenda del estudiante diariamente.
-3.  **Evaluación Continua:** El Prof. García proporcionará un informe de progreso semanal al Vicerrectorado.
-4.  **Próxima Reunión:** Se agendará una reunión de seguimiento para el 1 de octubre de 2024.`
-    }
+    { id: 'vicc1', institutionId: 'uemol', studentId: 'student1', vicerrectorId: 'vicerrector1', date: '2024-09-01', type: ViccInterventionType.AcademicMeeting, summary: 'Reunión académica.', participants: ['Lic. Montes', 'Sr. Martinez'], agreements: 'Refuerzo académico.' }
 ];
 
 export const MOCK_OVP_ACTIVITIES: OvpActivity[] = [
@@ -508,428 +336,129 @@ export const MOCK_OVP_ACTIVITIES: OvpActivity[] = [
 ];
 
 export const MOCK_HEALTH_RECORDS: HealthRecord[] = [
-    {
-      id: 'hr1',
-      institutionId: 'uemol',
-      studentId: 'student1',
-      allergies: ['Penicilina', 'Nueces'],
-      conditions: ['Asma Leve'],
-      emergencyContact: { name: 'Sr. Martinez', phone: '622333444', relation: 'Padre' },
-      medications: [{ name: 'Ventolin Inhalador', dosage: 'Según necesidad', notes: 'Llevar siempre consigo.' }],
-      lastCheckup: '2024-03-15',
-    },
-    {
-      id: 'hr2',
-      institutionId: 'uemol',
-      studentId: 'student2',
-      allergies: [],
-      conditions: [],
-      emergencyContact: { name: 'Sra. Diaz', phone: '699888777', relation: 'Madre' },
-      medications: [],
-      lastCheckup: '2024-01-20',
-    },
+    { id: 'hr1', institutionId: 'uemol', studentId: 'student1', allergies: ['Penicilina', 'Nueces'], conditions: ['Asma Leve'], emergencyContact: { name: 'Sr. Martinez', phone: '622333444', relation: 'Padre' }, medications: [{ name: 'Ventolin', dosage: 'S.O.S', notes: '' }], lastCheckup: '2024-03-15' },
+    { id: 'hr2', institutionId: 'uemol', studentId: 'student2', allergies: [], conditions: [], emergencyContact: { name: 'Sra. Diaz', phone: '699888777', relation: 'Madre' }, medications: [], lastCheckup: '2024-01-20' },
 ];
 
 export const MOCK_MEDICAL_VISITS: MedicalVisit[] = [
-  {
-    id: 'visit1',
-    institutionId: 'uemol',
-    studentId: 'student1',
-    healthProfessionalId: 'health1',
-    date: '2024-08-10',
-    motive: 'Dolor de cabeza y fiebre leve.',
-    vitalSigns: {
-      temperature: '37.8 °C',
-      pulse: '90 bpm',
-      respiratoryRate: '20 rpm',
-      bloodPressure: '110/70 mmHg',
-    },
-    anthropometry: {
-      weight: '25 kg',
-      height: '120 cm',
-      imc: '17.4',
-    },
-    diagnoses: [
-      { code: 'R51', description: 'Cefalea', type: 'PRE' },
-      { code: 'R50.9', description: 'Fiebre, no especificada', type: 'PRE' },
-    ],
-    treatmentPlan: {
-      diagnostic: 'Observación y seguimiento de temperatura.',
-      therapeutic: 'Administrar paracetamol si la fiebre supera los 38.5°C. Reposo.',
-      educational: 'Informar a los padres sobre signos de alarma.',
-    },
-    isReferred: false,
-  },
-    {
-    id: 'visit2',
-    institutionId: 'uemol',
-    studentId: 'student1',
-    healthProfessionalId: 'health1',
-    date: '2024-05-20',
-    motive: 'Revisión por caída en el patio.',
-    vitalSigns: {
-      temperature: '36.5 °C',
-      pulse: '85 bpm',
-      respiratoryRate: '18 rpm',
-      bloodPressure: '105/65 mmHg',
-    },
-    anthropometry: {
-      weight: '24.5 kg',
-      height: '119 cm',
-      imc: '17.3',
-    },
-    diagnoses: [
-      { code: 'S50.0', description: 'Contusión del codo', type: 'DEF' },
-    ],
-    treatmentPlan: {
-      diagnostic: 'No se requieren pruebas adicionales.',
-      therapeutic: 'Limpieza de la herida y aplicación de antiséptico. Hielo local.',
-      educational: 'Recomendaciones sobre cuidado de la herida.',
-    },
-    isReferred: true,
-    referralDetails: 'Referido al Centro de Salud Primaria Sol para posible radiografía si el dolor persiste.',
-  },
+  { id: 'visit1', institutionId: 'uemol', studentId: 'student1', healthProfessionalId: 'health1', date: '2024-08-10', motive: 'Dolor de cabeza', vitalSigns: { temperature: '37.8', pulse: '90', respiratoryRate: '20', bloodPressure: '110/70' }, anthropometry: { weight: '25', height: '120', imc: '17.4' }, diagnoses: [{ code: 'R51', description: 'Cefalea', type: 'PRE' }], treatmentPlan: { diagnostic: 'Obs', therapeutic: 'Paracetamol', educational: 'Signos alarma' }, isReferred: false },
+  { id: 'visit2', institutionId: 'uemol', studentId: 'student1', healthProfessionalId: 'health1', date: '2024-05-20', motive: 'Caída', vitalSigns: { temperature: '36.5', pulse: '85', respiratoryRate: '18', bloodPressure: '105/65' }, anthropometry: { weight: '24.5', height: '119', imc: '17.3' }, diagnoses: [{ code: 'S50.0', description: 'Contusión', type: 'DEF' }], treatmentPlan: { diagnostic: 'N/A', therapeutic: 'Hielo', educational: 'Cuidado herida' }, isReferred: true, referralDetails: 'Radiografía' },
 ];
 
-
 export const MOCK_OCR_SUBMISSIONS: OcrSubmission[] = [
-    {
-        id: 'ocr1',
-        institutionId: 'uemol',
-        classId: 'class1',
-        uploaderId: 'teacher1',
-        uploadDate: '2024-08-10T10:00:00Z',
-        fileName: 'lista_eso1a_10-08.jpg',
-        imageUrl: 'https://placehold.co/800x1100/eee/333?text=Attendance+Sheet+Image',
-        status: OcrSubmissionStatus.PendingVerification,
-        extractedData: [
-            { studentName: 'Juan Martinez', detectedStatus: 'Presente', confidence: 0.98, correctedStatus: AttendanceStatus.Present },
-            { studentName: 'Pedro Sanchez', detectedStatus: 'Present', confidence: 0.85, correctedStatus: AttendanceStatus.Present },
-            { studentName: 'Carlos Gomez', detectedStatus: 'Ausente', confidence: 0.99, correctedStatus: AttendanceStatus.Unexcused },
-        ]
-    },
-    {
-        id: 'ocr2',
-        institutionId: 'uemol',
-        classId: 'class1',
-        uploaderId: 'teacher1',
-        uploadDate: '2024-08-09T09:30:00Z',
-        fileName: 'asistencia_09-08.png',
-        imageUrl: 'https://placehold.co/800x1100/ddd/444?text=Attendance+Sheet+2',
-        status: OcrSubmissionStatus.Completed,
-        extractedData: [
-             { studentName: 'Juan Martinez', detectedStatus: 'Presente', confidence: 0.99, correctedStatus: AttendanceStatus.Present },
-             { studentName: 'Pedro Sanchez', detectedStatus: 'Presente', confidence: 0.99, correctedStatus: AttendanceStatus.Present },
-             { studentName: 'Carlos Gomez', detectedStatus: 'Presente', confidence: 0.97, correctedStatus: AttendanceStatus.Present },
-        ]
-    },
-    {
-        id: 'ocr3',
-        institutionId: 'uemol',
-        classId: 'class2',
-        uploaderId: 'teacher2',
-        uploadDate: '2024-08-11T11:00:00Z',
-        fileName: 'historia_1b.pdf',
-        imageUrl: 'https://placehold.co/800x1100/ccc/555?text=Attendance+Sheet+3',
-        status: OcrSubmissionStatus.Processing,
-        extractedData: []
-    }
+    { id: 'ocr1', institutionId: 'uemol', classId: 'class1', uploaderId: 'teacher1', uploadDate: '2024-08-10T10:00:00Z', fileName: 'lista_eso1a.jpg', imageUrl: 'https://placehold.co/800x1100', status: OcrSubmissionStatus.PendingVerification, extractedData: [] },
+    { id: 'ocr2', institutionId: 'uemol', classId: 'class1', uploaderId: 'teacher1', uploadDate: '2024-08-09T09:30:00Z', fileName: 'asistencia.png', imageUrl: 'https://placehold.co/800x1100', status: OcrSubmissionStatus.Completed, extractedData: [] },
+    { id: 'ocr3', institutionId: 'uemol', classId: 'class2', uploaderId: 'teacher2', uploadDate: '2024-08-11T11:00:00Z', fileName: 'historia.pdf', imageUrl: 'https://placehold.co/800x1100', status: OcrSubmissionStatus.Processing, extractedData: [] }
 ];
 
 export const MOCK_EXIT_PASSES: ExitPass[] = [
-  {
-    id: 'ep1',
-    institutionId: 'uemol',
-    studentId: 'student2',
-    inspectorId: 'inspector1',
-    date: '2024-08-12T11:30:00Z',
-    reason: 'Cita médica dental.',
-    responsibleName: 'Sra. Diaz',
-    responsibleId: '123456789-0',
-  }
+  { id: 'ep1', institutionId: 'uemol', studentId: 'student2', inspectorId: 'inspector1', date: '2024-08-12T11:30:00Z', reason: 'Cita médica dental.', responsibleName: 'Sra. Diaz', responsibleId: '123456789-0' }
 ];
 
 export const MOCK_CITACIONES: Citacion[] = [
-  {
-    id: 'cit1',
-    institutionId: 'uemol',
-    studentId: 'student1',
-    parentId: 'parent1',
-    staffId: 'teacher1',
-    date: '2024-09-15T10:00:00Z',
-    reason: 'Discutir el rendimiento académico del estudiante en la asignatura de Matemáticas y establecer un plan de mejora.',
-    status: CitacionStatus.Sent,
-    creationDate: '2024-09-10T14:00:00Z',
-  }
+  { id: 'cit1', institutionId: 'uemol', studentId: 'student1', parentId: 'parent1', staffId: 'teacher1', date: '2024-09-15T10:00:00Z', reason: 'Rendimiento académico.', status: CitacionStatus.Sent, creationDate: '2024-09-10T14:00:00Z' }
 ];
 
 export const MOCK_LECCIONARIO_ENTRIES: LeccionarioEntry[] = [
-  {
-    id: 'lec1',
-    institutionId: 'uemol',
-    teacherId: 'teacher1',
-    classId: 'class1',
-    subjectId: 'subj1',
-    date: new Date().toISOString().split('T')[0],
-    timeSlotId: 'ts1',
-    skillCode: 'M.2.1.1.',
-    topics: 'Revisión de sumas y restas con llevadas.',
-    tasks: 'Realizar ejercicios de la página 25 del libro de texto.',
-    observations: 'Grupo participativo. Juan Martinez necesita refuerzo en restas.',
-  }
+  { id: 'lec1', institutionId: 'uemol', teacherId: 'teacher1', classId: 'class1', subjectId: 'subj1', date: new Date().toISOString().split('T')[0], timeSlotId: 'ts1', skillCode: 'M.2.1.1.', topics: 'Sumas y restas.', tasks: 'Ejercicios pág 25.', observations: 'Grupo participativo.' }
 ];
 
 export const MOCK_MICRO_PLANS: MicroPlan[] = [
-  {
-    id: 'mp1',
-    institutionId: 'uemol',
-    teacherId: 'teacher1',
-    classId: 'class1',
-    subjectId: 'subj1',
-    academicYear: '2024-2025',
-    unitTitle: 'Unidad 1: Números Naturales',
-    unitObjectives: 'Comprender y utilizar los números naturales para resolver problemas cotidianos.',
-    dcdIds: ['dcd-m-1'],
-    duaRepresentation: 'Proveer ejemplos concretos (ábaco) y visuales (recta numérica) para la representación de números.',
-    duaActionExpression: 'Permitir que los estudiantes demuestren comprensión mediante ejercicios escritos o explicación verbal en grupos.',
-    duaEngagement: 'Conectar el uso de números con situaciones de compra en la tienda escolar.',
-    methodology: 'Inicio: Lluvia de ideas. Desarrollo: Uso de ábaco. Cierre: Bingo.',
-    resources: 'Ábaco, material base 10, fichas de trabajo, proyector.',
-    evaluation: 'Observación directa, revisión de fichas, participación en el juego.',
-    adaptations: [{ studentId: 'student5', dcdModificada: 'Representar, escribir y leer los números naturales del 0 al 100.', grade: '3' }],
-    status: CurricularPlanStatus.Draft,
-    creationDate: '2024-08-20T10:00:00Z',
-  },
-  {
-    id: 'mp2',
-    institutionId: 'uemol',
-    teacherId: 'teacher2',
-    classId: 'class2',
-    subjectId: 'subj2',
-    academicYear: '2024-2025',
-    unitTitle: 'Unidad 1: La Antigua Grecia',
-    unitObjectives: 'Identificar los aportes de la civilización griega a la cultura occidental.',
-    dcdIds: ['dcd-ll-1'],
-    duaRepresentation: 'Uso de videos documentales con subtítulos y mapas interactivos.',
-    duaActionExpression: 'Creación de maquetas, dramatizaciones o ensayos cortos.',
-    duaEngagement: 'Debate sobre la democracia actual comparada con la ateniense.',
-    methodology: 'Presentación de video, trabajo grupal, debate.',
-    resources: 'Video, acceso a internet, cartulinas, marcadores.',
-    evaluation: 'Rúbrica para el trabajo grupal y participación en el debate.',
-    adaptations: [],
-    status: CurricularPlanStatus.PendingReview,
-    creationDate: '2024-08-21T11:00:00Z',
-    submittedDate: '2024-08-22T09:00:00Z',
-  },
-  {
-    id: 'mp3',
-    institutionId: 'uemol',
-    teacherId: 'teacher1',
-    classId: 'class1',
-    subjectId: 'subj1',
-    academicYear: '2024-2025',
-    unitTitle: 'Unidad 2: Suma y Resta',
-    unitObjectives: 'Aplicar algoritmos de la adición y sustracción con números naturales.',
-    dcdIds: ['dcd-m-1'],
-    duaRepresentation: 'Uso de bloques lógicos y software educativo de matemáticas.',
-    duaActionExpression: 'Resolución de problemas en pizarra digital o cuaderno.',
-    duaEngagement: 'Juego de roles "El Mercado".',
-    methodology: 'Resolución de problemas, competencia por equipos.',
-    resources: 'Libro de texto, cuaderno, pizarra digital.',
-    evaluation: 'Revisión de cuadernos, prueba corta al final de la unidad.',
-    adaptations: [],
-    status: CurricularPlanStatus.Approved,
-    creationDate: '2024-08-15T14:00:00Z',
-    submittedDate: '2024-08-16T10:00:00Z',
-    reviewDate: '2024-08-18T15:00:00Z',
-    reviewerId: 'vicerrector1',
-  },
+  { id: 'mp1', institutionId: 'uemol', teacherId: 'teacher1', classId: 'class1', subjectId: 'subj1', academicYear: '2024-2025', unitTitle: 'Unidad 1', unitObjectives: 'Objetivos...', dcdIds: ['dcd-m-1'], duaRepresentation: '...', duaActionExpression: '...', duaEngagement: '...', methodology: '...', resources: '...', evaluation: '...', adaptations: [], status: CurricularPlanStatus.Draft, creationDate: '2024-08-20' },
+  { id: 'mp2', institutionId: 'uemol', teacherId: 'teacher2', classId: 'class2', subjectId: 'subj2', academicYear: '2024-08-25', unitTitle: 'Unidad 1', unitObjectives: 'Objetivos...', dcdIds: ['dcd-ll-1'], duaRepresentation: '...', duaActionExpression: '...', duaEngagement: '...', methodology: '...', resources: '...', evaluation: '...', adaptations: [], status: CurricularPlanStatus.PendingReview, creationDate: '2024-08-21' },
+  { id: 'mp3', institutionId: 'uemol', teacherId: 'teacher1', classId: 'class1', subjectId: 'subj1', academicYear: '2024-08-15', unitTitle: 'Unidad 2', unitObjectives: 'Objetivos...', dcdIds: ['dcd-m-1'], duaRepresentation: '...', duaActionExpression: '...', duaEngagement: '...', methodology: '...', resources: '...', evaluation: '...', adaptations: [], status: CurricularPlanStatus.Approved, creationDate: '2024-08-15' },
 ];
 
 export const MOCK_EVALUATION_CRITERIA: EvaluationCriterion[] = [
-  {
-    id: 'ce-ll-4-1',
-    institutionId: 'uemol',
-    code: 'CE.LL.4.1.',
-    description: 'Explica los aportes de la cultura escrita al desarrollo histórico, social y cultural de la humanidad y valora la diversidad del mundo expresada en textos escritos representativos de las diferentes culturas, en diversas épocas históricas.',
-    subjectId: 'subj2',
-    gradeLevel: 'EGB Superior',
-  },
-  {
-    id: 'ce-ll-4-2',
-    institutionId: 'uemol',
-    code: 'CE.LL.4.2.',
-    description: 'Explica la influencia de las variaciones lingüísticas socioculturales y situacionales del Ecuador en las relaciones sociales.',
-    subjectId: 'subj2',
-    gradeLevel: 'EGB Superior',
-  },
-  {
-    id: 'ce-m-4-1',
-    institutionId: 'uemol',
-    code: 'CE.M.4.1.',
-    description: 'Emplea las relaciones de orden, las propiedades algebraicas (adición y multiplicación), las operaciones con distintos tipos de números (Z, Q, I) y expresiones algebraicas, para afrontar inecuaciones y ecuaciones.',
-    subjectId: 'subj1',
-    gradeLevel: 'EGB Superior',
-  },
+  { id: 'ce-ll-4-1', institutionId: 'uemol', code: 'CE.LL.4.1.', description: 'Criterio LL', subjectId: 'subj2', gradeLevel: 'EGB Superior' },
+  { id: 'ce-ll-4-2', institutionId: 'uemol', code: 'CE.LL.4.2.', description: 'Criterio LL 2', subjectId: 'subj2', gradeLevel: 'EGB Superior' },
+  { id: 'ce-m-4-1', institutionId: 'uemol', code: 'CE.M.4.1.', description: 'Criterio M', subjectId: 'subj1', gradeLevel: 'EGB Superior' },
 ];
 
 export const MOCK_EVALUATION_INDICATORS: EvaluationIndicator[] = [
-  {
-    id: 'ie-ll-4-1-1',
-    institutionId: 'uemol',
-    code: 'I.LL.4.1.1.',
-    description: 'Explica el origen, el desarrollo y la influencia de la escritura en distintos momentos históricos, regiones y culturas del mundo.',
-    criterionId: 'ce-ll-4-1',
-  },
-  {
-    id: 'ie-ll-4-2-1',
-    institutionId: 'uemol',
-    code: 'I.LL.4.2.1.',
-    description: 'Explica la influencia de las variaciones lingüísticas sociales y situacionales del Ecuador en las relaciones sociales.',
-    criterionId: 'ce-ll-4-2',
-  },
+  { id: 'ie-ll-4-1-1', institutionId: 'uemol', code: 'I.LL.4.1.1.', description: 'Indicador LL', criterionId: 'ce-ll-4-1' },
+  { id: 'ie-ll-4-2-1', institutionId: 'uemol', code: 'I.LL.4.2.1.', description: 'Indicador LL 2', criterionId: 'ce-ll-4-2' },
 ];
 
-
 export const MOCK_DCDS: Dcd[] = [
-  {
-    id: 'dcd-m-1',
-    institutionId: 'uemol',
-    code: 'M.4.1.1.',
-    description: 'Reconocer los elementos del conjunto de números enteros Z, ejemplificando situaciones reales en las que se utilizan los números enteros negativos.',
-    subjectId: 'subj1',
-    gradeLevel: 'EGB Superior',
-    criterionId: 'ce-m-4-1',
-    competencies: ['Lógico-Matemática'],
-    curricularInsertions: ['Educación Financiera'],
-    isDisaggregated: false,
-  },
-  {
-    id: 'dcd-ll-1',
-    institutionId: 'uemol',
-    code: 'LL.4.1.1.',
-    description: 'Indagar y explicar los aportes de la cultura escrita al desarrollo histórico, social y cultural de la humanidad.',
-    subjectId: 'subj2',
-    gradeLevel: 'EGB Superior',
-    criterionId: 'ce-ll-4-1',
-    competencies: ['Comunicacional', 'Socioemocional'],
-    curricularInsertions: ['Educación Cívica, Ética e Integridad', 'Socioemocional'],
-    isDisaggregated: false,
-  },
-  {
-    id: 'dcd-ll-2',
-    institutionId: 'uemol',
-    code: 'LL.4.1.3.',
-    description: 'Indagar sobre las variaciones lingüísticas socioculturales del Ecuador y explicar su influencia en las relaciones sociales.',
-    subjectId: 'subj2',
-    gradeLevel: 'EGB Superior',
-    criterionId: 'ce-ll-4-2',
-    competencies: ['Comunicacional'],
-    curricularInsertions: ['Educación para el Desarrollo Sostenible'],
-    isDisaggregated: true,
-    refCode: 'LL.4.1.3'
-  }
+  { id: 'dcd-m-1', institutionId: 'uemol', code: 'M.4.1.1.', description: 'Destreza M', subjectId: 'subj1', gradeLevel: 'EGB Superior', criterionId: 'ce-m-4-1', competencies: ['Lógico-Matemática'], curricularInsertions: ['Educación Financiera'], isDisaggregated: false },
+  { id: 'dcd-ll-1', institutionId: 'uemol', code: 'LL.4.1.1.', description: 'Destreza LL', subjectId: 'subj2', gradeLevel: 'EGB Superior', criterionId: 'ce-ll-4-1', competencies: ['Comunicacional'], curricularInsertions: ['Socioemocional'], isDisaggregated: false },
+  { id: 'dcd-ll-2', institutionId: 'uemol', code: 'LL.4.1.3.', description: 'Destreza LL 2', subjectId: 'subj2', gradeLevel: 'EGB Superior', criterionId: 'ce-ll-4-2', competencies: ['Comunicacional'], curricularInsertions: ['Educación para el Desarrollo Sostenible'], isDisaggregated: true, refCode: 'LL.4.1.3' }
 ];
 
 // Helper to create empty trimester records
-const createEmptyTrimester = (): TrimesterRecord => ({
-  actividades: Array(5).fill(null).map(() => ({ promedio: 0, activityId: undefined })),
-  promedioFormativas: 0,
-  portafolio: { promedio: 0 },
-  evaluacionSumativa: { promedio: 0 },
-  proyectoIntegrador: { promedio: 0 },
-  sumaTrimestre: 0,
-});
-
-const createEmptyStudentGradebook = (studentId: string): StudentGradebook => ({
-  studentId,
-  trimester1: createEmptyTrimester(),
-  trimester2: createEmptyTrimester(),
-  trimester3: createEmptyTrimester(),
-  mejorasUtilizadas: 0,
-  promedioTrimestralFinal: 0,
-  notaAnual90: 0,
-  proyectoFinal10: { promedio: 0 },
-  notaFinal100: 0,
-  observacionFinal: 'Pendiente'
-});
-
+const createEmptyTrimester = (): TrimesterRecord => ({ actividades: Array(5).fill(null).map(() => ({ promedio: 0, activityId: undefined })), promedioFormativas: 0, portafolio: { promedio: 0 }, evaluacionSumativa: { promedio: 0 }, proyectoIntegrador: { promedio: 0 }, sumaTrimestre: 0 });
+const createEmptyStudentGradebook = (studentId: string): StudentGradebook => ({ studentId, trimester1: createEmptyTrimester(), trimester2: createEmptyTrimester(), trimester3: createEmptyTrimester(), mejorasUtilizadas: 0, promedioTrimestralFinal: 0, notaAnual90: 0, proyectoFinal10: { promedio: 0 }, notaFinal100: 0, observacionFinal: 'Pendiente' });
 
 export const MOCK_GRADEBOOKS: Gradebook[] = [
-  {
-    id: 'gb1',
-    institutionId: 'uemol',
-    classId: 'class1',
-    subjectId: 'subj1', // Matemáticas - Prof. García
-    records: [
-      {
-        studentId: 'student1',
-        trimester1: {
-          actividades: [ 
-            { activityId: 'act1', nota: 8, mejora: 9, promedio: 9 }, 
-            { activityId: 'act3', nota: 7, promedio: 7 }, 
-            { promedio: 0 }, 
-            { nota: 6, refuerzo: 7, promedio: 7 }, 
-            { nota: 8, promedio: 8 } 
-          ],
-          promedioFormativas: 8.0, 
-          portafolio: { nota: 10, promedio: 10 }, 
-          evaluacionSumativa: { nota: 7.5, promedio: 7.5 }, 
-          proyectoIntegrador: { nota: 8, promedio: 8 }, 
-          sumaTrimestre: 8.08
-        },
-        trimester2: createEmptyTrimester(),
-        trimester3: createEmptyTrimester(),
-        mejorasUtilizadas: 1,
-        promedioTrimestralFinal: 0, 
-        notaAnual90: 0, 
-        proyectoFinal10: { promedio: 0 },
-        notaFinal100: 0, 
-        observacionFinal: 'Pendiente'
-      },
-      {
-        studentId: 'student3',
-        trimester1: {
-          actividades: [ 
-            { activityId: 'act1', nota: 5, promedio: 5 }, 
-            { activityId: 'act3', nota: 6, promedio: 6 }, 
-            { nota: 7, promedio: 7 }, 
-            { nota: 5, refuerzo: 6, promedio: 6 }, 
-            { nota: 7, promedio: 7 } ],
-          promedioFormativas: 6.2, 
-          portafolio: { nota: 8, promedio: 8 }, 
-          evaluacionSumativa: { nota: 6, promedio: 6 }, 
-          proyectoIntegrador: { nota: 7, promedio: 7 }, 
-          sumaTrimestre: 6.44
-        },
-        trimester2: createEmptyTrimester(),
-        trimester3: createEmptyTrimester(),
-        mejorasUtilizadas: 0,
-        promedioTrimestralFinal: 0, 
-        notaAnual90: 0, 
-        proyectoFinal10: { promedio: 0 },
-        notaFinal100: 0, 
-        observacionFinal: 'Pendiente'
-      },
-      createEmptyStudentGradebook('student5')
-    ]
-  }
+  { id: 'gb1', institutionId: 'uemol', classId: 'class1', subjectId: 'subj1', records: [ { studentId: 'student1', trimester1: { actividades: [ { activityId: 'act1', nota: 8, mejora: 9, promedio: 9 }, { activityId: 'act3', nota: 7, promedio: 7 }, { promedio: 0 }, { nota: 6, refuerzo: 7, promedio: 7 }, { nota: 8, promedio: 8 } ], promedioFormativas: 8.0, portafolio: { nota: 10, promedio: 10 }, evaluacionSumativa: { nota: 7.5, promedio: 7.5 }, proyectoIntegrador: { nota: 8, promedio: 8 }, sumaTrimestre: 8.08 }, trimester2: createEmptyTrimester(), trimester3: createEmptyTrimester(), mejorasUtilizadas: 1, promedioTrimestralFinal: 0, notaAnual90: 0, proyectoFinal10: { promedio: 0 }, notaFinal100: 0, observacionFinal: 'Pendiente' }, { studentId: 'student3', trimester1: { actividades: [ { activityId: 'act1', nota: 5, promedio: 5 }, { activityId: 'act3', nota: 6, promedio: 6 }, { nota: 7, promedio: 7 }, { nota: 5, refuerzo: 6, promedio: 6 }, { nota: 7, promedio: 7 } ], promedioFormativas: 6.2, portafolio: { nota: 8, promedio: 8 }, evaluacionSumativa: { nota: 6, promedio: 6 }, proyectoIntegrador: { nota: 7, promedio: 7 }, sumaTrimestre: 6.44 }, trimester2: createEmptyTrimester(), trimester3: createEmptyTrimester(), mejorasUtilizadas: 0, promedioTrimestralFinal: 0, notaAnual90: 0, proyectoFinal10: { promedio: 0 }, notaFinal100: 0, observacionFinal: 'Pendiente' }, createEmptyStudentGradebook('student5') ] }
 ];
 
-export const MOCK_CLASSROOM_OBSERVATIONS: ClassroomObservation[] = [
+export const MOCK_DISCIPLINARY_ACTIONS: DisciplinaryAction[] = [
+    { id: 'da1', institutionId: 'uemol', studentId: 'student3', date: '2024-09-10', infraction: 'Incumplimiento', description: 'Uso de móvil.', severity: DisciplinarySeverity.Serious, status: 'En Proceso', actionsTaken: 'Retiro.' }
+];
+
+export const MOCK_INSPECTION_VISITS: InspectionVisit[] = [
+    { id: 'iv1', institutionId: 'uemol', inspectorId: 'inspector1', date: '2024-09-05', type: 'Ordinaria', target: 'Laboratorios', findings: 'Falta señalética.', status: 'Realizada' }
+];
+
+export const MOCK_CONFLICT_MEDIATIONS: ConflictMediation[] = [
+    { id: 'cm1', institutionId: 'uemol', date: '2024-10-01', partiesInvolved: ['student1', 'student2'], description: 'Disputa verbal.', status: 'En Mediación', agreements: '' }
+];
+
+export const MOCK_QUALITY_METRICS: QualityMetric[] = [
+    { id: 'qm1', institutionId: 'uemol', year: '2024', category: 'Asistencia', metric: 'Tasa Global', value: 92.5, target: 95 },
+    { id: 'qm2', institutionId: 'uemol', year: '2024', category: 'Rendimiento', metric: 'Promedio Matemáticas', value: 7.8, target: 8.0 }
+];
+
+export const MOCK_REINFORCEMENT_PLANS: ReinforcementPlan[] = [
+    { id: 'rp1', institutionId: 'uemol', studentId: 'student1', subjectId: 'subj1', teacherId: 'teacher1', tutorId: 'teacher2', academicYear: '2025-2026', status: 'In_Progress', nominationDate: '2024-09-10', nominationObservations: 'Dificultades...', modalidad: 'extra_class', groupType: 'small_group', schedule: 'Ma/Ju 14:00', duration: '6 sem', startDate: '2024-09-15', generalObjective: 'Fortalecer...', topics: [{ dcd: 'M.4.1.1.', strategies: '...', resources: '...', evaluationCriteria: '...' }], notificationDate: '2024-09-12', parentConsented: true, parentConsentDate: '2024-09-13', sessions: [{ id: 'sess1', date: '2024-09-15', attendance: true, skillsReinforced: '...', achievements: '...', observations: '...' }] },
+    { id: 'rp2', institutionId: 'uemol', studentId: 'student3', subjectId: 'subj-ll', teacherId: 'teacher2', tutorId: 'teacher2', academicYear: '2025-2026', status: 'Nominated', nominationDate: '2024-10-01', nominationObservations: 'Bajo rendimiento...', topics: [], sessions: [], parentConsented: false }
+];
+
+// ... existing imports
+import { FormalRequest, Role } from './types';
+
+// ... existing constants
+
+// FIX: Add MOCK_FORMAL_REQUESTS
+export const MOCK_FORMAL_REQUESTS: FormalRequest[] = [
     {
-        id: 'obs1',
+        id: 'req1',
         institutionId: 'uemol',
-        teacherId: 'teacher1',
-        observerId: 'vicerrector1',
-        date: '2024-09-15',
-        className: 'ESO 1ºA',
-        subject: 'Matemáticas',
-        topic: 'Números Enteros',
-        strengths: 'Buen dominio del grupo, uso de material concreto.',
-        recommendations: 'Mejorar el cierre de la clase y la evaluación formativa.',
-        rating: 4
-    }
+        requesterId: 'teacher1',
+        recipientRole: Role.Vicerrector,
+        type: 'Time Off',
+        subject: 'Permiso por cita médica',
+        details: 'Solicito permiso para ausentarme el día 25 de octubre por una cita médica programada.',
+        attachmentUrl: 'https://example.com/medical_note.pdf',
+        status: 'Pending',
+        submissionDate: '2024-10-20T09:00:00Z',
+    },
+    {
+        id: 'req2',
+        institutionId: 'uemol',
+        requesterId: 'teacher2',
+        recipientRole: Role.Rector,
+        type: 'Supply Request',
+        subject: 'Solicitud de materiales para laboratorio',
+        details: 'Se requieren reactivos para las prácticas de química del próximo mes.',
+        attachmentUrl: '',
+        status: 'Approved',
+        submissionDate: '2024-10-15T14:30:00Z',
+        resolutionDate: '2024-10-16T10:00:00Z',
+        resolverId: 'admin1',
+        resolutionComments: 'Materiales aprobados, se realizará la compra en la próxima semana.'
+    },
+];
+
+// FIX: Ensure MOCK_STAFF_ATTENDANCE structure matches the new type
+export const MOCK_STAFF_ATTENDANCE: StaffAttendanceRecord[] = [
+    { id: 'sa1', institutionId: 'uemol', userId: 'teacher1', date: '2024-10-20', punches: [{ time: '07:55:00', type: 'in', method: 'Biometric' }] },
+    { id: 'sa2', institutionId: 'uemol', userId: 'teacher1', date: '2024-10-21', punches: [{ time: '08:05:00', type: 'in', method: 'Biometric', location: { latitude: -0.2111, longitude: -78.4891 } }] },
+    { id: 'sa3', institutionId: 'uemol', userId: 'teacher2', date: '2024-10-20', punches: [{ time: '08:00:00', type: 'in', method: 'Manual' }] },
+    { id: 'sa4', institutionId: 'uemol', userId: 'teacher4', date: '2024-10-21', punches: [{ time: '07:28:00', type: 'in', method: 'Biometric' }, { time: '12:00:00', type: 'out_break', method: 'Biometric' }, { time: '12:45:00', type: 'in_break', method: 'Biometric' }, { time: '16:00:00', type: 'out', method: 'Biometric', location: { latitude: -0.2115, longitude: -78.4895 } }] },
+    { id: 'sa5', institutionId: 'uemol', userId: 'teacher1', date: '2024-10-22', punches: [{ time: '07:58:00', type: 'in', method: 'Biometric' }] },
 ];
 
 export const MOCK_TRAINING_SESSIONS: TrainingSession[] = [
@@ -979,115 +508,45 @@ export const MOCK_MEETING_RECORDS: MeetingRecord[] = [
     }
 ];
 
-// Inspection Mock Data
-export const MOCK_DISCIPLINARY_ACTIONS: DisciplinaryAction[] = [
+export const MOCK_TRAINING_PLANS: TrainingPlan[] = [
     {
-        id: 'da1',
+        id: 'tp1',
         institutionId: 'uemol',
-        studentId: 'student3',
-        date: '2024-09-10',
-        infraction: 'Art. 134.N - Incumplimiento de disposiciones',
-        description: 'Uso de dispositivo móvil en evaluación sumativa.',
-        severity: DisciplinarySeverity.Serious,
-        status: 'En Proceso',
-        actionsTaken: 'Retiro del dispositivo, notificación a representantes.',
-    }
-];
-
-export const MOCK_INSPECTION_VISITS: InspectionVisit[] = [
-    {
-        id: 'iv1',
-        institutionId: 'uemol',
-        inspectorId: 'inspector1',
-        date: '2024-09-05',
-        type: 'Ordinaria',
-        target: 'Laboratorios de Computación',
-        findings: 'Equipos en buen estado, falta señalética de emergencia.',
-        status: 'Realizada',
-    }
-];
-
-export const MOCK_CONFLICT_MEDIATIONS: ConflictMediation[] = [
-    {
-        id: 'cm1',
-        institutionId: 'uemol',
-        date: '2024-10-01',
-        partiesInvolved: ['student1', 'student2'],
-        description: 'Disputa verbal durante el recreo.',
-        status: 'En Mediación',
-        agreements: '',
-    }
-];
-
-export const MOCK_QUALITY_METRICS: QualityMetric[] = [
-    {
-        id: 'qm1',
-        institutionId: 'uemol',
-        year: '2024',
-        category: 'Asistencia',
-        metric: 'Tasa de Asistencia Global',
-        value: 92.5,
-        target: 95,
-    },
-    {
-        id: 'qm2',
-        institutionId: 'uemol',
-        year: '2024',
-        category: 'Rendimiento',
-        metric: 'Promedio General Matemáticas',
-        value: 7.8,
-        target: 8.0,
-    }
-];
-
-export const MOCK_REINFORCEMENT_PLANS: ReinforcementPlan[] = [
-    {
-        id: 'rp1',
-        institutionId: 'uemol',
-        studentId: 'student1', // Adele
-        subjectId: 'subj1', // Matemáticas
-        teacherId: 'teacher1',
-        tutorId: 'teacher2',
         academicYear: '2025-2026',
+        title: 'Plan de Fortalecimiento Pedagógico DUA',
+        objectives: 'Capacitar al 100% de la planta docente en estrategias de Diseño Universal para el Aprendizaje y manejo de adaptaciones curriculares.',
+        justification: 'Necesidad detectada en el informe del DECE sobre el incremento de estudiantes con NEE y reporte de Juntas de Curso.',
+        transversalThemes: ['Inclusión Educativa', 'Derechos Humanos'],
+        methodology: 'Talleres prácticos con modelado y acompañamiento áulico posterior.',
         status: 'In_Progress',
-        nominationDate: '2024-09-10',
-        nominationObservations: 'Dificultades persistentes en operaciones con números enteros y resolución de problemas lógicos.',
-        modalidad: 'extra_class',
-        groupType: 'small_group',
-        schedule: 'Martes y Jueves 14:00 - 15:00',
-        duration: '6 semanas',
-        startDate: '2024-09-15',
-        generalObjective: 'Fortalecer la comprensión y aplicación de algoritmos de operaciones básicas con números enteros.',
-        topics: [
-            { dcd: 'M.4.1.1. Reconocer elementos del conjunto Z.', strategies: 'Uso de material concreto (fichas de colores), Recta numérica interactiva.', resources: 'Fichas, Pizarra, Software GeoGebra.', evaluationCriteria: 'Resuelve operaciones combinadas con precisión.' }
-        ],
-        notificationDate: '2024-09-12',
-        parentConsented: true,
-        parentConsentDate: '2024-09-13',
-        sessions: [
-            { id: 'sess1', date: '2024-09-15', attendance: true, skillsReinforced: 'Suma y resta Z', achievements: 'Logra sumar con recta numérica.', observations: 'Requiere más práctica sin apoyo visual.' }
+        courses: [
+            {
+                id: 'tc1',
+                planId: 'tp1',
+                title: 'Estrategias DUA en el Aula: Principio de Representación',
+                instructor: 'MSc. Laura Torres',
+                startDate: '2024-09-01',
+                endDate: '2024-09-05',
+                durationHours: 20,
+                modality: 'Híbrida',
+                type: 'Interna',
+                enrolledTeachers: [
+                    { teacherId: 'teacher1', attendancePercentage: 100, finalGrade: 9.5, status: 'Aprobado' },
+                    { teacherId: 'teacher2', attendancePercentage: 80, finalGrade: 8.0, status: 'Aprobado' }
+                ]
+            },
+             {
+                id: 'tc2',
+                planId: 'tp1',
+                title: 'Evaluación Diferenciada',
+                instructor: 'Dr. Carlos Vera',
+                startDate: '2024-10-15',
+                endDate: '2024-10-20',
+                durationHours: 40,
+                modality: 'Presencial',
+                type: 'Interna',
+                enrolledTeachers: []
+            }
         ]
-    },
-    {
-        id: 'rp2',
-        institutionId: 'uemol',
-        studentId: 'student3', // Pedro
-        subjectId: 'subj-ll', // Lengua
-        teacherId: 'teacher2',
-        tutorId: 'teacher2',
-        academicYear: '2025-2026',
-        status: 'Nominated',
-        nominationDate: '2024-10-01',
-        nominationObservations: 'Bajo rendimiento en comprensión lectora y ortografía.',
-        topics: [],
-        sessions: [],
-        parentConsented: false
     }
-];
-
-// FIX: Correct the structure of MOCK_STAFF_ATTENDANCE to match the StaffAttendanceRecord type.
-export const MOCK_STAFF_ATTENDANCE: StaffAttendanceRecord[] = [
-    { id: 'sa1', institutionId: 'uemol', userId: 'teacher1', date: '2024-10-20', punches: [{ time: '07:55:00', type: 'in', method: 'Biometric' }] },
-    { id: 'sa2', institutionId: 'uemol', userId: 'teacher1', date: '2024-10-21', punches: [{ time: '08:05:00', type: 'in', method: 'Biometric' }] },
-    { id: 'sa3', institutionId: 'uemol', userId: 'teacher2', date: '2024-10-20', punches: [{ time: '08:00:00', type: 'in', method: 'Manual' }] },
 ];

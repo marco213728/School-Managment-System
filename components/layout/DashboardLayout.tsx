@@ -1,4 +1,3 @@
-
 import React, { useState, useContext } from 'react';
 import Sidebar from './Sidebar';
 import Header from './Header';
@@ -9,7 +8,7 @@ import ReportsPage from '../../pages/ReportsPage';
 import ManagePage from '../../pages/ManagePage';
 import DecePage from '../../pages/DecePage';
 import HealthPage from '../../pages/HealthPage';
-import { User, Class, Student, ScheduleEntry, Notification, SupportContact, HealthRecord, MedicalVisit, Subject, TimeSlot, Room, Timetable, ViccIntervention, AttendanceRecord, ExitPass, Citacion, AcademicCalendarEvent, LeccionarioEntry, MicroPlan, Dcd, EvaluationCriterion, EvaluationIndicator, Gradebook, Activity, ReinforcementPlan, StaffAttendanceRecord } from '../../types';
+import { User, Class, Student, ScheduleEntry, Notification, SupportContact, HealthRecord, MedicalVisit, Subject, TimeSlot, Room, Timetable, ViccIntervention, AttendanceRecord, ExitPass, Citacion, AcademicCalendarEvent, LeccionarioEntry, MicroPlan, Dcd, EvaluationCriterion, EvaluationIndicator, Gradebook, Activity, ReinforcementPlan, StaffAttendanceRecord, FormalRequest, TrainingPlan } from '../../types';
 import StudentManagementPage from '../../pages/StudentManagementPage';
 import CommunicationsPage from '../../pages/CommunicationsPage';
 import SchedulePage from '../../pages/SchedulePage';
@@ -21,10 +20,14 @@ import CurriculumRepositoryPage from '../../pages/CurriculumRepositoryPage';
 import GradebookPage from '../../pages/GradebookPage';
 import VicerrectoradoPage from '../../pages/VicerrectoradoPage';
 import TeacherReinforcementPage from '../../pages/TeacherReinforcementPage';
-import StaffAttendanceModal from '../staff/StaffAttendanceModal'; // Import the new modal
+import StaffAttendanceModal from '../staff/StaffAttendanceModal';
+// FIX: Import the new TeacherTrainingPage
+import TeacherTrainingPage from '../../pages/TeacherTrainingPage'; 
+import { UserContext } from '../../contexts/UserContext';
+import { InstitutionalDocument, MeetingRecord } from '../../types'; // Import types
 
 
-type Page = 'dashboard' | 'attendance' | 'activities' | 'reports' | 'manage' | 'dece' | 'health' | 'students' | 'communications' | 'schedule' | 'inspection' | 'citaciones' | 'leccionario' | 'curricular_planning' | 'curriculum_repository' | 'gradebook' | 'vicerrector_dashboard' | 'reinforcement';
+type Page = 'dashboard' | 'attendance' | 'activities' | 'reports' | 'manage' | 'dece' | 'health' | 'students' | 'communications' | 'schedule' | 'inspection' | 'citaciones' | 'leccionario' | 'curricular_planning' | 'curriculum_repository' | 'gradebook' | 'vicerrector_dashboard' | 'reinforcement' | 'teacher_training';
 
 interface DashboardLayoutProps {
   users: User[];
@@ -52,7 +55,9 @@ interface DashboardLayoutProps {
   gradebooks: Gradebook[];
   activities: Activity[];
   reinforcementPlans: ReinforcementPlan[];
-  staffAttendanceRecords: StaffAttendanceRecord[]; // Added for staff attendance
+  staffAttendanceRecords: StaffAttendanceRecord[];
+  formalRequests: FormalRequest[];
+  trainingPlans: TrainingPlan[]; // FIX: Added prop
   onUpdateUsers: (users: User[]) => void;
   onUpdateClasses: (classes: Class[]) => void;
   onUpdateSchedule: (schedule: ScheduleEntry[]) => void;
@@ -64,7 +69,7 @@ interface DashboardLayoutProps {
   onUpdateSubjects: (subjects: Subject[]) => void;
   onUpdateTimeSlots: (timeSlots: TimeSlot[]) => void;
   onUpdateRooms: (rooms: Room[]) => void;
-  onUpdateTimetables: (timetables: Timetable[]) => void;
+  onUpdateTimetables: (timetables: Timetable[]) => void; 
   onUpdateViccInterventions: (interventions: ViccIntervention[]) => void;
   onUpdateAttendance: (records: AttendanceRecord[]) => void;
   onUpdateExitPasses: (passes: ExitPass[]) => void;
@@ -78,34 +83,46 @@ interface DashboardLayoutProps {
   onUpdateGradebooks: (gradebooks: Gradebook[]) => void;
   onUpdateActivities: (activities: Activity[]) => void;
   onUpdateReinforcementPlans: (plans: ReinforcementPlan[]) => void;
-  onUpdateStaffAttendance: (userId: string, method: 'Biometric' | 'Manual', location?: { latitude: number; longitude: number; }) => void; // Updated for staff attendance
+  onUpdateStaffAttendance: (userId: string, method: 'Biometric' | 'Manual' | 'Facial', location?: { latitude: number; longitude: number; }) => void;
+  onUpdateFormalRequests: (requests: FormalRequest[]) => void;
+  onUpdateTrainingPlans: (plans: TrainingPlan[]) => void; // FIX: Added prop
+  institutionalDocuments: InstitutionalDocument[]; // NEW
+  onUpdateDocuments: (docs: InstitutionalDocument[]) => void; // NEW
+  meetingRecords: MeetingRecord[]; // NEW
+  onUpdateMeetings: (meetings: MeetingRecord[]) => void; // NEW
 }
 
 const DashboardLayout: React.FC<DashboardLayoutProps> = (props) => {
+  const { user } = useContext(UserContext);
   const {
     users,
     classes,
+    students,
     schedule,
     subjects,
     timeSlots,
     leccionarioEntries, 
     onUpdateLeccionarioEntries,
     microPlans,
+    onUpdateMicroPlans,
     dcds,
     reinforcementPlans,
     onUpdateReinforcementPlans,
     staffAttendanceRecords,
     onUpdateStaffAttendance,
+    formalRequests,
+    onUpdateFormalRequests,
+    trainingPlans, // FIX: Destructure
+    onUpdateTrainingPlans, // FIX: Destructure
     ...restProps
   } = props;
 
   const [currentPage, setCurrentPage] = useState<Page>('dashboard');
   const [isSidebarOpen, setSidebarOpen] = useState(false);
-  const [isAttendanceModalOpen, setIsAttendanceModalOpen] = useState(false); // State for the modal
+  const [isAttendanceModalOpen, setIsAttendanceModalOpen] = useState(false);
 
   const renderContent = () => {
     switch (currentPage) {
-        // ... (all other cases remain the same)
         case 'dashboard':
           return <DashboardPage 
               {...restProps} 
@@ -116,14 +133,16 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = (props) => {
               rooms={restProps.rooms} 
               timetables={restProps.timetables} 
               users={users} 
-              onNavigate={setCurrentPage} 
+              onNavigate={setCurrentPage}
+              students={students}
+              formalRequests={formalRequests}
           />;
         case 'manage':
           return <ManagePage 
             {...restProps}
             allUsers={users}
             allClasses={classes}
-            allStudents={restProps.students}
+            allStudents={students}
             schedule={schedule}
             supportContacts={restProps.supportContacts}
             subjects={subjects}
@@ -146,47 +165,67 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = (props) => {
           />;
         case 'reinforcement':
             return <TeacherReinforcementPage
-                students={props.students}
-                classes={props.classes}
-                subjects={props.subjects}
-                users={props.users}
+                students={students}
+                classes={classes}
+                subjects={subjects}
+                users={users}
                 reinforcementPlans={reinforcementPlans}
                 onUpdateReinforcementPlans={onUpdateReinforcementPlans}
             />;
+        case 'teacher_training': // FIX: New Route for Teachers
+             return <TeacherTrainingPage
+                trainingPlans={trainingPlans}
+                onUpdateTrainingPlans={onUpdateTrainingPlans}
+             />;
         case 'vicerrector_dashboard':
             return <VicerrectoradoPage
-                microPlans={props.microPlans}
-                viccInterventions={props.viccInterventions}
-                gradebooks={props.gradebooks}
-                users={props.users}
-                subjects={props.subjects}
-                classes={props.classes}
-                students={props.students}
+                microPlans={microPlans}
+                viccInterventions={restProps.viccInterventions}
+                gradebooks={restProps.gradebooks}
+                users={users}
+                subjects={subjects}
+                classes={classes}
+                students={students}
                 onNavigate={setCurrentPage}
-                notifications={props.notifications}
-                onUpdateNotifications={props.onUpdateNotifications}
-                // FIX: Pass reinforcementPlans and its updater to VicerrectoradoPage
+                notifications={restProps.notifications}
+                onUpdateNotifications={restProps.onUpdateNotifications}
                 reinforcementPlans={reinforcementPlans}
                 onUpdateReinforcementPlans={onUpdateReinforcementPlans}
+                trainingPlans={trainingPlans} // FIX: Pass prop
+                onUpdateTrainingPlans={onUpdateTrainingPlans} // FIX: Pass prop
+                institutionalDocuments={props.institutionalDocuments} // PASS
+                onUpdateDocuments={props.onUpdateDocuments} // PASS
+                meetingRecords={props.meetingRecords} // PASS
+                onUpdateMeetings={props.onUpdateMeetings} // PASS
+            />;
+        case 'communications':
+            return <CommunicationsPage
+                {...restProps}
+                users={users}
+                students={students}
+                classes={classes}
+                allNotifications={restProps.notifications}
+                onUpdateNotifications={restProps.onUpdateNotifications}
+                formalRequests={formalRequests}
+                onUpdateFormalRequests={onUpdateFormalRequests}
             />;
         default:
              const AllOtherPages = {
                 'attendance': <AttendancePage classes={classes} timeSlots={timeSlots} timetables={restProps.timetables} attendanceRecords={restProps.attendanceRecords} onUpdateAttendance={restProps.onUpdateAttendance} />,
-                'activities': <ActivitiesPage activities={props.activities} onUpdateActivities={props.onUpdateActivities} classes={props.classes} subjects={props.subjects} students={props.students} gradebooks={props.gradebooks} onUpdateGradebooks={props.onUpdateGradebooks} users={props.users} microPlans={microPlans} dcds={dcds} />,
-                'reports': <ReportsPage attendanceRecords={restProps.attendanceRecords} academicCalendarEvents={restProps.academicCalendarEvents} students={restProps.students} classes={classes} schedule={schedule} timeSlots={timeSlots} timetables={restProps.timetables} users={users} subjects={subjects} gradebooks={props.gradebooks} />,
-                'dece': <DecePage {...restProps} users={users} classes={classes} schedule={schedule} subjects={subjects} timeSlots={timeSlots} />,
-                'health': <HealthPage {...restProps} users={users} classes={classes} schedule={schedule} subjects={subjects} timeSlots={timeSlots} />,
-                'students': <StudentManagementPage {...restProps} users={users} classes={classes} schedule={schedule} subjects={subjects} timeSlots={timeSlots} rooms={restProps.rooms} timetables={restProps.timetables} />,
-                'communications': <CommunicationsPage {...restProps} users={users} classes={classes} allNotifications={props.notifications} />,
-                'schedule': <SchedulePage {...restProps} schedule={schedule} subjects={subjects} timeSlots={timeSlots} users={users} classes={classes} />,
-                'inspection': <InspectionPage {...restProps} classes={classes} users={users} />,
-                'citaciones': <CitacionesPage {...restProps} users={users} />,
+                'activities': <ActivitiesPage activities={restProps.activities} onUpdateActivities={restProps.onUpdateActivities} classes={classes} subjects={subjects} students={students} gradebooks={restProps.gradebooks} onUpdateGradebooks={restProps.onUpdateGradebooks} users={users} microPlans={microPlans} dcds={dcds} />,
+                'reports': <ReportsPage attendanceRecords={restProps.attendanceRecords} academicCalendarEvents={restProps.academicCalendarEvents} students={students} classes={classes} schedule={schedule} timeSlots={timeSlots} timetables={restProps.timetables} users={users} subjects={subjects} gradebooks={restProps.gradebooks} />,
+                'dece': <DecePage {...restProps} users={users} classes={classes} schedule={schedule} subjects={subjects} timeSlots={timeSlots} students={students} onUpdateStudents={restProps.onUpdateStudents} viccInterventions={restProps.viccInterventions} onUpdateViccInterventions={restProps.onUpdateViccInterventions} />,
+                'health': <HealthPage {...restProps} users={users} classes={classes} schedule={schedule} subjects={subjects} timeSlots={timeSlots} students={students} onUpdateStudents={restProps.onUpdateStudents} viccInterventions={restProps.viccInterventions} onUpdateViccInterventions={restProps.onUpdateViccInterventions} />,
+                'students': <StudentManagementPage {...restProps} users={users} classes={classes} schedule={schedule} subjects={subjects} timeSlots={timeSlots} rooms={restProps.rooms} timetables={restProps.timetables} students={students} onUpdateStudents={restProps.onUpdateStudents} />,
+                'schedule': <SchedulePage {...restProps} schedule={schedule} subjects={subjects} timeSlots={timeSlots} users={users} classes={classes} students={students} />,
+                'inspection': <InspectionPage {...restProps} classes={classes} users={users} students={students} />,
+                'citaciones': <CitacionesPage {...restProps} users={users} students={students} />,
                 'leccionario': <LeccionarioPage leccionarioEntries={leccionarioEntries} onUpdateLeccionarioEntries={onUpdateLeccionarioEntries} schedule={schedule} classes={classes} subjects={subjects} users={users} timeSlots={timeSlots} microPlans={microPlans} />,
-                'curricular_planning': <CurricularPlanningPage microPlans={props.microPlans} onUpdateMicroPlans={props.onUpdateMicroPlans} classes={props.classes} subjects={props.subjects} students={props.students} users={props.users} dcds={props.dcds} evaluationCriteria={props.evaluationCriteria} evaluationIndicators={props.evaluationIndicators} />,
-                'curriculum_repository': <CurriculumRepositoryPage dcds={props.dcds} onUpdateDcds={props.onUpdateDcds} subjects={props.subjects} evaluationCriteria={props.evaluationCriteria} onUpdateEvaluationCriteria={props.onUpdateEvaluationCriteria} evaluationIndicators={props.evaluationIndicators} onUpdateEvaluationIndicators={props.onUpdateEvaluationIndicators} />,
-                'gradebook': <GradebookPage gradebooks={props.gradebooks} onUpdateGradebooks={props.onUpdateGradebooks} classes={props.classes} subjects={props.subjects} students={props.students} users={props.users} schedule={props.schedule} activities={props.activities} />,
+                'curricular_planning': <CurricularPlanningPage microPlans={microPlans} onUpdateMicroPlans={onUpdateMicroPlans} classes={classes} subjects={subjects} students={students} users={users} dcds={dcds} evaluationCriteria={restProps.evaluationCriteria} evaluationIndicators={restProps.evaluationIndicators} />,
+                'curriculum_repository': <CurriculumRepositoryPage dcds={dcds} onUpdateDcds={restProps.onUpdateDcds} subjects={subjects} evaluationCriteria={restProps.evaluationCriteria} onUpdateEvaluationCriteria={restProps.onUpdateEvaluationCriteria} evaluationIndicators={restProps.evaluationIndicators} onUpdateEvaluationIndicators={restProps.onUpdateEvaluationIndicators} />,
+                'gradebook': <GradebookPage gradebooks={restProps.gradebooks} onUpdateGradebooks={restProps.onUpdateGradebooks} classes={classes} subjects={subjects} students={students} users={users} schedule={schedule} activities={restProps.activities} />,
             };
-            return AllOtherPages[currentPage] || <DashboardPage {...restProps} schedule={schedule} classes={classes} subjects={subjects} timeSlots={timeSlots} rooms={restProps.rooms} timetables={restProps.timetables} users={users} onNavigate={setCurrentPage} />;
+            return AllOtherPages[currentPage] || <DashboardPage {...restProps} schedule={schedule} classes={classes} subjects={subjects} timeSlots={timeSlots} rooms={restProps.rooms} timetables={restProps.timetables} users={users} onNavigate={setCurrentPage} students={students} formalRequests={formalRequests} />;
     }
   };
 
@@ -202,8 +241,8 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = (props) => {
       <div className="flex-1 flex flex-col overflow-hidden">
         <Header 
           toggleSidebar={() => setSidebarOpen(!isSidebarOpen)} 
-          notifications={props.notifications}
-          onUpdateNotifications={props.onUpdateNotifications}
+          notifications={restProps.notifications}
+          onUpdateNotifications={restProps.onUpdateNotifications}
         />
         <main className="flex-1 overflow-x-hidden overflow-y-auto bg-slate-50 p-4 sm:p-6 lg:p-8">
           {renderContent()}
@@ -215,6 +254,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = (props) => {
         users={users}
         onRecordAttendance={onUpdateStaffAttendance}
         records={staffAttendanceRecords}
+        currentUser={user!}
       />
     </div>
   );
