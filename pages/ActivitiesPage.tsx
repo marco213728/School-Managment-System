@@ -1,9 +1,74 @@
-
 import React, { useState, useContext, useMemo, useEffect } from 'react';
 import { UserContext } from '../contexts/UserContext';
-import { MOCK_CLASSES, MOCK_USERS, EVALUATION_CATEGORIES, MOCK_GRADEBOOKS } from '../constants';
-import { Role, Activity, ActivityType, Class, Subject, Student, Gradebook, StudentGradebook, GradeEntry, TrimesterRecord, EvaluationCategory, User, MicroPlan, Dcd } from '../types';
-import { EditIcon, TrashIcon, PlusIcon, CloseIcon, CheckCircleIcon } from '../components/icons/Icons';
+import { MOCK_CLASSES, MOCK_USERS, EVALUATION_CATEGORIES, MOCK_GRADEBOOKS, MOCK_RUBRICS, MOCK_REPOSITORY_ITEMS } from '../constants';
+import { Role, Activity, ActivityType, Class, Subject, Student, Gradebook, StudentGradebook, GradeEntry, TrimesterRecord, EvaluationCategory, User, MicroPlan, Dcd, Rubric, ResourceRepositoryItem } from '../types';
+import { EditIcon, TrashIcon, PlusIcon, CloseIcon, CheckCircleIcon, SearchIcon, ArchiveBoxIcon } from '../components/icons/Icons';
+import RubricManager from '../components/rubrics/RubricManager';
+import RubricEvaluator from '../components/rubrics/RubricEvaluator';
+
+// --- NEW COMPONENT: Resource Selector Modal ---
+interface ResourceSelectorModalProps {
+    isOpen: boolean;
+    onClose: () => void;
+    onSelect: (resource: ResourceRepositoryItem) => void;
+}
+
+const ResourceSelectorModal: React.FC<ResourceSelectorModalProps> = ({ isOpen, onClose, onSelect }) => {
+    const [searchTerm, setSearchTerm] = useState('');
+    
+    // In a real app, this would come from props or context
+    const resources = MOCK_REPOSITORY_ITEMS; 
+
+    const filteredResources = useMemo(() => {
+        return resources.filter(r => 
+            r.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
+            r.description.toLowerCase().includes(searchTerm.toLowerCase())
+        );
+    }, [resources, searchTerm]);
+
+    if (!isOpen) return null;
+
+    return (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-[70] flex justify-center items-center p-4" onClick={onClose}>
+            <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-2xl max-h-[80vh] flex flex-col" onClick={e => e.stopPropagation()}>
+                <header className="flex justify-between items-center mb-4 border-b pb-2">
+                    <h3 className="text-lg font-bold text-gray-800">Importar del Banco de Recursos</h3>
+                    <button onClick={onClose}><CloseIcon className="h-6 w-6 text-gray-500" /></button>
+                </header>
+                
+                <div className="relative mb-4">
+                    <input 
+                        type="text" 
+                        placeholder="Buscar recurso..." 
+                        value={searchTerm}
+                        onChange={e => setSearchTerm(e.target.value)}
+                        className="w-full pl-10 pr-4 py-2 border rounded-md"
+                    />
+                    <SearchIcon className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
+                </div>
+
+                <div className="overflow-y-auto flex-grow space-y-3">
+                    {filteredResources.map(res => (
+                        <div key={res.id} onClick={() => onSelect(res)} className="p-3 border rounded-lg hover:bg-blue-50 cursor-pointer group transition-colors">
+                            <div className="flex justify-between items-start">
+                                <div>
+                                    <h4 className="font-bold text-gray-800 group-hover:text-blue-700">{res.title}</h4>
+                                    <p className="text-xs text-gray-500 mt-1">{res.type} • {res.level}</p>
+                                </div>
+                                <span className="text-xs bg-gray-100 px-2 py-1 rounded text-gray-600">Seleccionar</span>
+                            </div>
+                            <p className="text-sm text-gray-600 mt-2 line-clamp-2">{res.description}</p>
+                            {res.dcdIds.length > 0 && <p className="text-xs text-gray-400 mt-2">{res.dcdIds.length} destrezas vinculadas</p>}
+                        </div>
+                    ))}
+                    {filteredResources.length === 0 && <p className="text-center text-gray-500 py-4">No se encontraron recursos.</p>}
+                </div>
+            </div>
+        </div>
+    );
+};
+// ----------------------------------------------
+
 
 interface ActivityFormProps {
     isOpen: boolean;
@@ -17,6 +82,7 @@ interface ActivityFormProps {
 }
 
 const ActivityForm: React.FC<ActivityFormProps> = ({ isOpen, onClose, onSave, activityToEdit, classes, subjects, microPlans, dcds }) => {
+    const { user } = useContext(UserContext);
     const [formData, setFormData] = useState({
         classId: '', subjectId: '', title: '', description: '', type: ActivityType.Homework,
         deliveryDate: new Date().toISOString().split('T')[0],
@@ -26,7 +92,11 @@ const ActivityForm: React.FC<ActivityFormProps> = ({ isOpen, onClose, onSave, ac
         microPlanId: '',
         dcdId: '',
         duaPrinciple: '' as 'representation' | 'actionExpression' | 'engagement' | '',
+        rubricId: ''
     });
+
+    const [isRubricManagerOpen, setIsRubricManagerOpen] = useState(false);
+    const [isResourceSelectorOpen, setIsResourceSelectorOpen] = useState(false); // State for resource selector
 
     useEffect(() => {
         if (activityToEdit) {
@@ -43,6 +113,7 @@ const ActivityForm: React.FC<ActivityFormProps> = ({ isOpen, onClose, onSave, ac
                 microPlanId: activityToEdit.microPlanId || '',
                 dcdId: activityToEdit.dcdId || '',
                 duaPrinciple: activityToEdit.duaPrinciple || '',
+                rubricId: activityToEdit.rubricId || '',
             });
         } else {
              setFormData({
@@ -54,10 +125,25 @@ const ActivityForm: React.FC<ActivityFormProps> = ({ isOpen, onClose, onSave, ac
                 microPlanId: '',
                 dcdId: '',
                 duaPrinciple: '',
+                rubricId: '',
             });
         }
     }, [activityToEdit, isOpen]);
     
+    // Handler to populate form from resource
+    const handleImportResource = (resource: ResourceRepositoryItem) => {
+        setFormData(prev => ({
+            ...prev,
+            title: resource.title,
+            description: resource.description,
+            dcdId: resource.dcdIds[0] || '', // Take the first DCD as primary
+            rubricId: resource.rubricId || '',
+            // Map resource type to activity type roughly
+            type: resource.type === 'Project' || resource.type === 'ABP' ? ActivityType.Homework : ActivityType.Homework, 
+        }));
+        setIsResourceSelectorOpen(false);
+    };
+
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         onSave({
@@ -67,6 +153,7 @@ const ActivityForm: React.FC<ActivityFormProps> = ({ isOpen, onClose, onSave, ac
             microPlanId: formData.microPlanId || undefined,
             dcdId: formData.dcdId || undefined,
             duaPrinciple: formData.duaPrinciple as 'representation' | 'actionExpression' | 'engagement' || undefined,
+            rubricId: formData.rubricId || undefined,
         }, activityToEdit?.id);
     };
     
@@ -92,7 +179,18 @@ const ActivityForm: React.FC<ActivityFormProps> = ({ isOpen, onClose, onSave, ac
         <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-center items-center p-4" onClick={onClose}>
             <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-3xl max-h-[90vh] flex flex-col" onClick={e => e.stopPropagation()}>
                 <header className="flex justify-between items-center mb-4">
-                    <h2 className="text-xl font-bold">{activityToEdit ? 'Editar' : 'Crear'} Actividad</h2>
+                    <div className="flex items-center gap-3">
+                         <h2 className="text-xl font-bold">{activityToEdit ? 'Editar' : 'Crear'} Actividad</h2>
+                         {/* IMPORT BUTTON */}
+                         {!activityToEdit && (
+                             <button 
+                                onClick={() => setIsResourceSelectorOpen(true)}
+                                className="flex items-center gap-1 text-xs font-semibold text-blue-600 bg-blue-50 px-3 py-1.5 rounded-full hover:bg-blue-100 border border-blue-200"
+                             >
+                                <ArchiveBoxIcon className="h-4 w-4" /> Importar de Banco
+                             </button>
+                         )}
+                    </div>
                     <button onClick={onClose} className="p-1"><CloseIcon className="h-6 w-6" /></button>
                 </header>
                 <form onSubmit={handleSubmit} className="space-y-4 overflow-y-auto pr-2">
@@ -112,9 +210,10 @@ const ActivityForm: React.FC<ActivityFormProps> = ({ isOpen, onClose, onSave, ac
                                 <option value="">Seleccionar Unidad de Planificación (PUD)</option>
                                 {relevantMicroPlans.map(mp => <option key={mp.id} value={mp.id}>{mp.unitTitle}</option>)}
                             </select>
-                            <select value={formData.dcdId} onChange={e => setFormData(p => ({...p, dcdId: e.target.value}))} className="w-full p-2 border rounded bg-white" disabled={!formData.microPlanId}>
+                            <select value={formData.dcdId} onChange={e => setFormData(p => ({...p, dcdId: e.target.value}))} className="w-full p-2 border rounded bg-white" disabled={!formData.microPlanId && !formData.dcdId}> {/* Enabled if pre-filled from resource */}
                                 <option value="">Seleccionar Destreza (DCD)</option>
-                                {relevantDcds.map(d => <option key={d.id} value={d.id}>{d.code} - {d.description.substring(0, 60)}...</option>)}
+                                {relevantDcds.length > 0 ? relevantDcds.map(d => <option key={d.id} value={d.id}>{d.code} - {d.description.substring(0, 60)}...</option>) : 
+                                 formData.dcdId ? <option value={formData.dcdId}>DCD Importada (Verificar PUD)</option> : null}
                             </select>
                             {selectedDcd && (
                                 <div className="text-xs bg-white p-2 rounded border text-gray-600">
@@ -130,6 +229,21 @@ const ActivityForm: React.FC<ActivityFormProps> = ({ isOpen, onClose, onSave, ac
                             </select>
                         </div>
                     </fieldset>
+                    
+                    <fieldset className="border p-4 rounded-md bg-purple-50 border-purple-200 mt-4">
+                        <legend className="font-semibold px-2 text-purple-800">Evaluación Automática</legend>
+                        <div className="flex items-center gap-4">
+                            <select 
+                                value={formData.rubricId || ''} 
+                                onChange={e => setFormData(p => ({...p, rubricId: e.target.value}))} 
+                                className="w-full p-2 border rounded bg-white"
+                            >
+                                <option value="">-- Sin Rúbrica (Calificación Manual) --</option>
+                                {MOCK_RUBRICS.map(r => <option key={r.id} value={r.id}>{r.title}</option>)}
+                            </select>
+                            <button type="button" onClick={() => setIsRubricManagerOpen(true)} className="text-xs bg-purple-600 text-white px-3 py-2 rounded font-semibold whitespace-nowrap">Gestionar Rúbricas</button>
+                        </div>
+                    </fieldset>
 
                     <fieldset className="border p-4 rounded-md">
                         <legend className="font-semibold px-2">Vinculación con Registro Docente</legend>
@@ -142,6 +256,22 @@ const ActivityForm: React.FC<ActivityFormProps> = ({ isOpen, onClose, onSave, ac
                     <div className="flex justify-end gap-2 pt-2"><button type="button" onClick={onClose} className="px-4 py-2 bg-gray-200 rounded">Cancelar</button><button type="submit" className="px-4 py-2 bg-primary-600 text-white rounded">Guardar</button></div>
                 </form>
             </div>
+            
+            <RubricManager 
+                isOpen={isRubricManagerOpen} 
+                onClose={() => setIsRubricManagerOpen(false)} 
+                onSave={(newRubric) => { 
+                    MOCK_RUBRICS.push(newRubric); 
+                    setFormData(p => ({...p, rubricId: newRubric.id}));
+                }}
+                institutionId={user?.institutionId || ''}
+            />
+
+            <ResourceSelectorModal 
+                isOpen={isResourceSelectorOpen}
+                onClose={() => setIsResourceSelectorOpen(false)}
+                onSelect={handleImportResource}
+            />
         </div>
     );
 };
@@ -168,6 +298,7 @@ const ActivityCard: React.FC<{ activity: Activity; classInfo?: Class; grade?: Gr
             </div>
             <p className="text-xs text-gray-600 mt-2 flex-grow">{activity.description}</p>
             {dcd && <p className="text-[10px] text-gray-500 mt-2 bg-gray-50 p-1 rounded border border-gray-100"><strong>DCD:</strong> {dcd.code}</p>}
+            {activity.rubricId && <p className="text-[10px] text-purple-600 mt-1 font-semibold flex items-center gap-1"><CheckCircleIcon className="h-3 w-3"/> Rúbrica Adjunta</p>}
             <div className="mt-auto pt-3 border-t">
                 <p className="text-xs font-semibold text-gray-700 mb-2">Entrega: {new Date(activity.deliveryDate).toLocaleDateString()}</p>
                 {grade && (
@@ -234,6 +365,8 @@ interface ActivityGradebookModalProps {
 
 const ActivityGradebookModal: React.FC<ActivityGradebookModalProps> = ({ isOpen, onClose, activity, students, gradebook, onSaveGrades }) => {
     const [localGrades, setLocalGrades] = useState<Record<string, Partial<GradeEntry>>>({});
+    const [studentForRubric, setStudentForRubric] = useState<string | null>(null);
+    const selectedRubric = MOCK_RUBRICS.find(r => r.id === activity.rubricId);
 
     useEffect(() => {
         if (isOpen && gradebook) {
@@ -317,45 +450,77 @@ const ActivityGradebookModal: React.FC<ActivityGradebookModalProps> = ({ isOpen,
     return (
         <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-center items-center p-4" onClick={onClose}>
             <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-3xl max-h-[90vh] flex flex-col" onClick={e => e.stopPropagation()}>
-                <header className="flex justify-between items-center mb-4">
-                    <div>
-                        <h2 className="text-xl font-bold">Calificar Actividad</h2>
-                        <p className="text-sm text-gray-500">{activity.title}</p>
+                {studentForRubric && selectedRubric ? (
+                     <div className="flex flex-col h-full">
+                         <div className="mb-4 flex justify-between items-center border-b pb-2">
+                             <div>
+                                 <h3 className="font-bold text-lg text-gray-800">Evaluando a: {students.find(s => s.id === studentForRubric)?.name}</h3>
+                                 <p className="text-xs text-gray-500">Usando rúbrica: {selectedRubric.title}</p>
+                             </div>
+                             <button onClick={() => setStudentForRubric(null)} className="text-sm text-gray-500 hover:text-gray-800">Cancelar / Volver</button>
+                         </div>
+                         <div className="overflow-y-auto flex-grow">
+                             <RubricEvaluator 
+                                rubric={selectedRubric} 
+                                onCalculate={(score) => {
+                                    handleGradeChange(studentForRubric, 'nota', score.toString());
+                                }} 
+                             />
+                         </div>
+                         <div className="mt-4 pt-4 border-t text-right">
+                            <button onClick={() => setStudentForRubric(null)} className="px-6 py-2 bg-green-600 text-white rounded font-bold hover:bg-green-700">Confirmar Nota</button>
+                         </div>
                     </div>
-                    <button onClick={onClose}><CloseIcon className="h-6 w-6" /></button>
-                </header>
-                <main className="overflow-y-auto pr-2">
-                    <table className="min-w-full divide-y divide-gray-200">
-                        <thead className="bg-gray-50">
-                            <tr>
-                                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Estudiante</th>
-                                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Nota</th>
-                                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Mejora</th>
-                                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Refuerzo</th>
-                                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Promedio</th>
-                            </tr>
-                        </thead>
-                        <tbody className="bg-white divide-y divide-gray-200">
-                            {students.map(student => {
-                                const grades = localGrades[student.id] || {};
-                                const promedio = grades.refuerzo ?? grades.mejora ?? grades.nota ?? 0;
-                                return (
-                                    <tr key={student.id}>
-                                        <td className="px-4 py-2 text-sm font-medium">{student.name}</td>
-                                        <td><input type="number" step="0.01" min="0" max="10" value={grades.nota ?? ''} onChange={e => handleGradeChange(student.id, 'nota', e.target.value)} className="w-20 p-1 border rounded"/></td>
-                                        <td><input type="number" step="0.01" min="0" max="10" value={grades.mejora ?? ''} onChange={e => handleGradeChange(student.id, 'mejora', e.target.value)} className="w-20 p-1 border rounded"/></td>
-                                        <td><input type="number" step="0.01" min="0" max="10" value={grades.refuerzo ?? ''} onChange={e => handleGradeChange(student.id, 'refuerzo', e.target.value)} className="w-20 p-1 border rounded"/></td>
-                                        <td className="px-4 py-2 text-sm font-bold">{promedio.toFixed(2)}</td>
+                ) : (
+                    <>
+                        <header className="flex justify-between items-center mb-4">
+                            <div>
+                                <h2 className="text-xl font-bold">Calificar Actividad</h2>
+                                <p className="text-sm text-gray-500">{activity.title}</p>
+                            </div>
+                            <button onClick={onClose}><CloseIcon className="h-6 w-6" /></button>
+                        </header>
+                        <main className="overflow-y-auto pr-2 flex-grow">
+                            <table className="min-w-full divide-y divide-gray-200">
+                                <thead className="bg-gray-50 sticky top-0">
+                                    <tr>
+                                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Estudiante</th>
+                                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Nota</th>
+                                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Mejora</th>
+                                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Refuerzo</th>
+                                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Promedio</th>
                                     </tr>
-                                );
-                            })}
-                        </tbody>
-                    </table>
-                </main>
-                <footer className="flex justify-end gap-2 pt-4 mt-auto border-t">
-                    <button type="button" onClick={onClose} className="px-4 py-2 bg-gray-200 rounded">Cancelar</button>
-                    <button type="button" onClick={handleSave} className="px-4 py-2 bg-primary-600 text-white rounded">Guardar Calificaciones</button>
-                </footer>
+                                </thead>
+                                <tbody className="bg-white divide-y divide-gray-200">
+                                    {students.map(student => {
+                                        const grades = localGrades[student.id] || {};
+                                        const promedio = grades.refuerzo ?? grades.mejora ?? grades.nota ?? 0;
+                                        return (
+                                            <tr key={student.id}>
+                                                <td className="px-4 py-2 text-sm font-medium">{student.name}</td>
+                                                <td className="px-4 py-2">
+                                                    <div className="flex items-center gap-2">
+                                                        <input type="number" step="0.01" min="0" max="10" value={grades.nota ?? ''} onChange={e => handleGradeChange(student.id, 'nota', e.target.value)} className="w-16 p-1 border rounded"/>
+                                                        {activity.rubricId && (
+                                                            <button onClick={() => setStudentForRubric(student.id)} className="p-1 bg-purple-100 text-purple-700 rounded hover:bg-purple-200 text-xs font-semibold" title="Evaluar con Rúbrica">Rúbrica</button>
+                                                        )}
+                                                    </div>
+                                                </td>
+                                                <td><input type="number" step="0.01" min="0" max="10" value={grades.mejora ?? ''} onChange={e => handleGradeChange(student.id, 'mejora', e.target.value)} className="w-16 p-1 border rounded"/></td>
+                                                <td><input type="number" step="0.01" min="0" max="10" value={grades.refuerzo ?? ''} onChange={e => handleGradeChange(student.id, 'refuerzo', e.target.value)} className="w-16 p-1 border rounded"/></td>
+                                                <td className="px-4 py-2 text-sm font-bold">{promedio.toFixed(2)}</td>
+                                            </tr>
+                                        );
+                                    })}
+                                </tbody>
+                            </table>
+                        </main>
+                        <footer className="flex justify-end gap-2 pt-4 mt-auto border-t">
+                            <button type="button" onClick={onClose} className="px-4 py-2 bg-gray-200 rounded">Cancelar</button>
+                            <button type="button" onClick={handleSave} className="px-4 py-2 bg-primary-600 text-white rounded">Guardar Calificaciones</button>
+                        </footer>
+                    </>
+                )}
             </div>
         </div>
     );

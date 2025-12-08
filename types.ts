@@ -106,6 +106,7 @@ export interface Activity {
   teacherId: string;
   title: string;
   description: string;
+  rubricId?: string;
   type: ActivityType;
   deliveryDate: string;
   trimester: 1 | 2 | 3;
@@ -199,6 +200,43 @@ export interface ViccIntervention {
   summary: string;
   participants?: string[];
   agreements?: string;
+}
+
+export type RubricScaleType = 'Quantitative' | 'Qualitative';
+
+export interface RubricLevel {
+    id: string;
+    rubricId: string;
+    label: string; // e.g. "Domina", "Adquirido"
+    value: number; // e.g. 10, 9
+    order: number;
+    color?: string; // Visual cue (DUA)
+}
+
+export interface RubricDescriptor {
+    criteriaId: string;
+    levelId: string;
+    description: string;
+    audioUrl?: string; // DUA Accessiblity
+}
+
+export interface RubricCriteria {
+    id: string;
+    rubricId: string;
+    description: string;
+    weight: number; // Percentage (0-100)
+    dcdId?: string; // Link to specific skill
+}
+
+export interface Rubric {
+    id: string;
+    institutionId: string;
+    title: string;
+    description?: string;
+    scaleType: RubricScaleType;
+    levels: RubricLevel[];
+    criteria: RubricCriteria[];
+    descriptors: RubricDescriptor[]; // Flattened list of descriptors
 }
 
 export interface RubricCriterion {
@@ -902,5 +940,50 @@ export interface TrainingPlan {
     courses: TrainingCourse[];
 }
 
-// Ensure Role enum includes Rector if not already present
-// export enum Role { ... , Rector = 'Rector', ... }
+export type ResourceType = 'Activity' | 'Project' | 'ABP';
+
+export interface ResourcePhase {
+    name: string; // "Fase 1: Investigación", "Fase 2: Elaboración"
+    trimester: 1 | 2 | 3;
+    description: string;
+}
+
+export interface ResourceRepositoryItem {
+    id: string;
+    institutionId: string;
+    authorId: string;
+    title: string;
+    description: string;
+    
+    // Taxonomy
+    level: SubjectLevel; // EGB, BGU...
+    gradeLevel?: GradeLevel; // Optional specific grade
+    type: ResourceType;
+    areaOfKnowledge?: AreaOfKnowledge; // For disciplinary
+    
+    // Curricular Alignment
+    dcdIds: string[]; // Linked DCDs
+    curricularInsertions: CurricularInsertion[]; // Transversal Axes
+    competencies: Competency[];
+    
+    // DUA Structure
+    duaRepresentation?: string; // Resources/Media
+    duaActionExpression?: string; // Output formats
+    duaEngagement?: string; // Motivation strategy
+    
+    // Project Specifics
+    isInterdisciplinary?: boolean;
+    generativeTopic?: string; // "Gran Tema"
+    finalProduct?: string;
+    phases?: ResourcePhase[];
+    linkedSubjectIds?: string[]; // IDs of subjects involved
+    
+    // Evaluation
+    rubricId?: string;
+    
+    // Meta
+    shared: boolean; // Public to institution?
+    clonedFromId?: string;
+    creationDate: string;
+    resourceLinks?: string[]; // URLs
+}

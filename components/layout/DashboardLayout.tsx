@@ -8,7 +8,7 @@ import ReportsPage from '../../pages/ReportsPage';
 import ManagePage from '../../pages/ManagePage';
 import DecePage from '../../pages/DecePage';
 import HealthPage from '../../pages/HealthPage';
-import { User, Class, Student, ScheduleEntry, Notification, SupportContact, HealthRecord, MedicalVisit, Subject, TimeSlot, Room, Timetable, ViccIntervention, AttendanceRecord, ExitPass, Citacion, AcademicCalendarEvent, LeccionarioEntry, MicroPlan, Dcd, EvaluationCriterion, EvaluationIndicator, Gradebook, Activity, ReinforcementPlan, StaffAttendanceRecord, FormalRequest, TrainingPlan } from '../../types';
+import { User, Class, Student, ScheduleEntry, Notification, SupportContact, HealthRecord, MedicalVisit, Subject, TimeSlot, Room, Timetable, ViccIntervention, AttendanceRecord, ExitPass, Citacion, AcademicCalendarEvent, LeccionarioEntry, MicroPlan, Dcd, EvaluationCriterion, EvaluationIndicator, Gradebook, Activity, ReinforcementPlan, StaffAttendanceRecord, FormalRequest, TrainingPlan, InstitutionalDocument, MeetingRecord } from '../../types';
 import StudentManagementPage from '../../pages/StudentManagementPage';
 import CommunicationsPage from '../../pages/CommunicationsPage';
 import SchedulePage from '../../pages/SchedulePage';
@@ -21,13 +21,12 @@ import GradebookPage from '../../pages/GradebookPage';
 import VicerrectoradoPage from '../../pages/VicerrectoradoPage';
 import TeacherReinforcementPage from '../../pages/TeacherReinforcementPage';
 import StaffAttendanceModal from '../staff/StaffAttendanceModal';
-// FIX: Import the new TeacherTrainingPage
 import TeacherTrainingPage from '../../pages/TeacherTrainingPage'; 
+import ResourceRepositoryPage from '../../pages/ResourceRepositoryPage';
 import { UserContext } from '../../contexts/UserContext';
-import { InstitutionalDocument, MeetingRecord } from '../../types'; // Import types
+import { MOCK_RUBRICS } from '../../constants'; // Import MOCK_RUBRICS for Resource Bank
 
-
-type Page = 'dashboard' | 'attendance' | 'activities' | 'reports' | 'manage' | 'dece' | 'health' | 'students' | 'communications' | 'schedule' | 'inspection' | 'citaciones' | 'leccionario' | 'curricular_planning' | 'curriculum_repository' | 'gradebook' | 'vicerrector_dashboard' | 'reinforcement' | 'teacher_training';
+type Page = 'dashboard' | 'attendance' | 'activities' | 'reports' | 'manage' | 'dece' | 'health' | 'students' | 'communications' | 'schedule' | 'inspection' | 'citaciones' | 'leccionario' | 'curricular_planning' | 'curriculum_repository' | 'gradebook' | 'vicerrector_dashboard' | 'reinforcement' | 'teacher_training' | 'resource_bank';
 
 interface DashboardLayoutProps {
   users: User[];
@@ -57,7 +56,10 @@ interface DashboardLayoutProps {
   reinforcementPlans: ReinforcementPlan[];
   staffAttendanceRecords: StaffAttendanceRecord[];
   formalRequests: FormalRequest[];
-  trainingPlans: TrainingPlan[]; // FIX: Added prop
+  trainingPlans: TrainingPlan[];
+  institutionalDocuments: InstitutionalDocument[];
+  meetingRecords: MeetingRecord[];
+
   onUpdateUsers: (users: User[]) => void;
   onUpdateClasses: (classes: Class[]) => void;
   onUpdateSchedule: (schedule: ScheduleEntry[]) => void;
@@ -85,11 +87,9 @@ interface DashboardLayoutProps {
   onUpdateReinforcementPlans: (plans: ReinforcementPlan[]) => void;
   onUpdateStaffAttendance: (userId: string, method: 'Biometric' | 'Manual' | 'Facial', location?: { latitude: number; longitude: number; }) => void;
   onUpdateFormalRequests: (requests: FormalRequest[]) => void;
-  onUpdateTrainingPlans: (plans: TrainingPlan[]) => void; // FIX: Added prop
-  institutionalDocuments: InstitutionalDocument[]; // NEW
-  onUpdateDocuments: (docs: InstitutionalDocument[]) => void; // NEW
-  meetingRecords: MeetingRecord[]; // NEW
-  onUpdateMeetings: (meetings: MeetingRecord[]) => void; // NEW
+  onUpdateTrainingPlans: (plans: TrainingPlan[]) => void;
+  onUpdateDocuments: (docs: InstitutionalDocument[]) => void;
+  onUpdateMeetings: (meetings: MeetingRecord[]) => void;
 }
 
 const DashboardLayout: React.FC<DashboardLayoutProps> = (props) => {
@@ -112,8 +112,12 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = (props) => {
     onUpdateStaffAttendance,
     formalRequests,
     onUpdateFormalRequests,
-    trainingPlans, // FIX: Destructure
-    onUpdateTrainingPlans, // FIX: Destructure
+    trainingPlans,
+    onUpdateTrainingPlans,
+    institutionalDocuments,
+    onUpdateDocuments,
+    meetingRecords,
+    onUpdateMeetings,
     ...restProps
   } = props;
 
@@ -172,7 +176,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = (props) => {
                 reinforcementPlans={reinforcementPlans}
                 onUpdateReinforcementPlans={onUpdateReinforcementPlans}
             />;
-        case 'teacher_training': // FIX: New Route for Teachers
+        case 'teacher_training':
              return <TeacherTrainingPage
                 trainingPlans={trainingPlans}
                 onUpdateTrainingPlans={onUpdateTrainingPlans}
@@ -191,12 +195,12 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = (props) => {
                 onUpdateNotifications={restProps.onUpdateNotifications}
                 reinforcementPlans={reinforcementPlans}
                 onUpdateReinforcementPlans={onUpdateReinforcementPlans}
-                trainingPlans={trainingPlans} // FIX: Pass prop
-                onUpdateTrainingPlans={onUpdateTrainingPlans} // FIX: Pass prop
-                institutionalDocuments={props.institutionalDocuments} // PASS
-                onUpdateDocuments={props.onUpdateDocuments} // PASS
-                meetingRecords={props.meetingRecords} // PASS
-                onUpdateMeetings={props.onUpdateMeetings} // PASS
+                trainingPlans={trainingPlans}
+                onUpdateTrainingPlans={onUpdateTrainingPlans}
+                institutionalDocuments={institutionalDocuments}
+                onUpdateDocuments={onUpdateDocuments}
+                meetingRecords={meetingRecords}
+                onUpdateMeetings={onUpdateMeetings}
             />;
         case 'communications':
             return <CommunicationsPage
@@ -208,6 +212,12 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = (props) => {
                 onUpdateNotifications={restProps.onUpdateNotifications}
                 formalRequests={formalRequests}
                 onUpdateFormalRequests={onUpdateFormalRequests}
+            />;
+        case 'resource_bank':
+            return <ResourceRepositoryPage 
+                dcds={dcds}
+                rubrics={MOCK_RUBRICS} // Pass MOCK_RUBRICS here
+                subjects={subjects}
             />;
         default:
              const AllOtherPages = {

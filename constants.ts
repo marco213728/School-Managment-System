@@ -1,4 +1,4 @@
-import { User, Role, Student, Class, Activity, ActivityType, AttendanceRecord, AttendanceStatus, Notification, SupportContact, Intervention, InterventionType, OvpActivity, OvpAxis, HealthRecord, Institution, OcrSubmission, OcrSubmissionStatus, ScheduleEntry, MedicalVisit, Shift, TimeSlot, Subject, Room, Timetable, ViccIntervention, ViccInterventionType, ExitPass, Citacion, CitacionStatus, AcademicCalendarEvent, LeccionarioEntry, MicroPlan, CurricularPlanStatus, GradeLevel, GRADE_LEVELS, Dcd, EvaluationCriterion, EvaluationIndicator, Competency, COMPETENCIES, CURRICULAR_INSERTIONS, AREAS_OF_KNOWLEDGE, SUBJECT_LEVELS, Gradebook, TrimesterRecord, StudentGradebook, GradeEntry, EVALUATION_CATEGORIES, ClassroomObservation, TrainingSession, InstitutionalDocument, MeetingRecord, DisciplinaryAction, DisciplinarySeverity, InspectionVisit, ConflictMediation, QualityMetric, ClassroomVisit, RubricCriterion, ReinforcementPlan, StaffAttendanceRecord, FormalRequestStatus, FormalRequestType, FormalRequestRecipient, TrainingPlan } from './types';
+import { User, Role, Student, Class, Activity, ActivityType, AttendanceRecord, AttendanceStatus, Notification, SupportContact, Intervention, InterventionType, OvpActivity, OvpAxis, HealthRecord, Institution, OcrSubmission, OcrSubmissionStatus, ScheduleEntry, MedicalVisit, Shift, TimeSlot, Subject, Room, Timetable, ViccIntervention, ViccInterventionType, ExitPass, Citacion, CitacionStatus, AcademicCalendarEvent, LeccionarioEntry, MicroPlan, CurricularPlanStatus, GradeLevel, GRADE_LEVELS, Dcd, EvaluationCriterion, EvaluationIndicator, Competency, COMPETENCIES, CURRICULAR_INSERTIONS, AREAS_OF_KNOWLEDGE, SUBJECT_LEVELS, Gradebook, TrimesterRecord, StudentGradebook, GradeEntry, EVALUATION_CATEGORIES, ClassroomObservation, TrainingSession, InstitutionalDocument, MeetingRecord, DisciplinaryAction, DisciplinarySeverity, InspectionVisit, ConflictMediation, QualityMetric, ClassroomVisit, RubricCriterion, ReinforcementPlan, StaffAttendanceRecord, FormalRequestStatus, FormalRequestType, FormalRequestRecipient, TrainingPlan, Rubric, ResourceRepositoryItem   } from './types';
 
 export { GRADE_LEVELS, COMPETENCIES, CURRICULAR_INSERTIONS, AREAS_OF_KNOWLEDGE, SUBJECT_LEVELS, EVALUATION_CATEGORIES };
 
@@ -548,5 +548,80 @@ export const MOCK_TRAINING_PLANS: TrainingPlan[] = [
                 enrolledTeachers: []
             }
         ]
+    }
+];
+
+export const MOCK_RUBRICS: Rubric[] = [
+    {
+        id: 'rub1',
+        institutionId: 'uemol',
+        title: 'Rúbrica de Debate (EGB Superior)',
+        description: 'Evaluación de argumentación y expresión oral.',
+        scaleType: 'Quantitative',
+        levels: [
+            { id: 'l1', rubricId: 'rub1', label: 'Domina', value: 10, order: 4, color: 'bg-green-100' },
+            { id: 'l2', rubricId: 'rub1', label: 'Adquirido', value: 8, order: 3, color: 'bg-blue-100' },
+            { id: 'l3', rubricId: 'rub1', label: 'En Proceso', value: 6, order: 2, color: 'bg-yellow-100' },
+            { id: 'l4', rubricId: 'rub1', label: 'Inicio', value: 4, order: 1, color: 'bg-red-100' }
+        ],
+        criteria: [
+            { id: 'c1', rubricId: 'rub1', description: 'Argumentación y Evidencia', weight: 50 },
+            { id: 'c2', rubricId: 'rub1', description: 'Expresión Oral y Corporal', weight: 30 },
+            { id: 'c3', rubricId: 'rub1', description: 'Respeto y Escucha Activa', weight: 20 }
+        ],
+        descriptors: [
+            { criteriaId: 'c1', levelId: 'l1', description: 'Argumentos sólidos respaldados por fuentes confiables.' },
+            { criteriaId: 'c1', levelId: 'l2', description: 'Argumentos claros con alguna evidencia.' },
+            { criteriaId: 'c1', levelId: 'l3', description: 'Argumentos débiles o sin evidencia suficiente.' },
+            { criteriaId: 'c1', levelId: 'l4', description: 'No presenta argumentos coherentes.' },
+            // ... descriptors for c2 and c3 would go here
+        ]
+    }
+];
+
+export const MOCK_REPOSITORY_ITEMS: ResourceRepositoryItem[] = [
+    {
+        id: 'res1',
+        institutionId: 'uemol',
+        authorId: 'teacher1',
+        title: 'La Tienda Matemática (Juego de Roles)',
+        description: 'Actividad práctica para reforzar operaciones básicas con números enteros en un contexto real.',
+        level: 'EGB',
+        gradeLevel: 'EGB Superior',
+        type: 'Activity',
+        areaOfKnowledge: 'Matemática',
+        dcdIds: ['dcd-m-1'], // M.4.1.1
+        curricularInsertions: ['Educación Financiera'],
+        competencies: ['Lógico-Matemática', 'Socioemocional'],
+        duaRepresentation: 'Uso de billetes didácticos y lista de precios visual.',
+        duaActionExpression: 'Los estudiantes pueden calcular mentalmente, usar papel o calculadora. Deben verbalizar la transacción.',
+        duaEngagement: 'Gamificación: Simulación de compra-venta competitiva.',
+        rubricId: 'rub1', // Linked Rubric
+        shared: true,
+        creationDate: '2024-09-10T10:00:00Z',
+        resourceLinks: ['https://example.com/billetes_imprimibles.pdf']
+    },
+    {
+        id: 'res2',
+        institutionId: 'uemol',
+        authorId: 'teacher2',
+        title: 'Proyecto: Huerto Escolar Sostenible',
+        description: 'Proyecto interdisciplinario para crear y mantener un huerto, aplicando conocimientos de Ciencias, Matemáticas y Lengua.',
+        level: 'EGB',
+        type: 'Project',
+        isInterdisciplinary: true,
+        generativeTopic: 'Soberanía Alimentaria y Vida Saludable',
+        finalProduct: 'Cosecha y Feria de Platos Saludables',
+        curricularInsertions: ['Educación para el Desarrollo Sostenible', 'Educación para la Salud'],
+        competencies: ['Comunicacional', 'Lógico-Matemática', 'Digital'],
+        dcdIds: ['dcd-cn-1', 'dcd-m-1'], // Mock IDs
+        phases: [
+            { name: 'Fase 1: Investigación de Suelos', trimester: 1, description: 'Análisis de tipos de tierra y semillas (Ciencias).' },
+            { name: 'Fase 2: Diseño y Siembra', trimester: 2, description: 'Cálculo de áreas y perímetros para parcelas (Matemáticas).' },
+            { name: 'Fase 3: Cosecha y Reporte', trimester: 3, description: 'Elaboración de informe y feria (Lengua).' }
+        ],
+        duaEngagement: 'Aprendizaje basado en la naturaleza y trabajo colaborativo al aire libre.',
+        shared: true,
+        creationDate: '2024-08-15T09:00:00Z',
     }
 ];
