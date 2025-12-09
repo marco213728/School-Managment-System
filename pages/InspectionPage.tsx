@@ -1,7 +1,7 @@
 
 import React, { useState, useMemo } from 'react';
 import { AttendanceRecord, Student, Class, ExitPass, Notification, User, DisciplinaryAction, InspectionVisit, ConflictMediation, QualityMetric, DisciplinarySeverity } from '../types';
-import { MOCK_DISCIPLINARY_ACTIONS, MOCK_INSPECTION_VISITS, MOCK_CONFLICT_MEDIATIONS, MOCK_QUALITY_METRICS } from '../constants';
+import { MOCK_DISCIPLINARY_ACTIONS, MOCK_INSPECTION_VISITS, MOCK_QUALITY_METRICS } from '../constants';
 import JustificationManagement from '../components/inspection/JustificationManagement';
 import ExitPassManagement from '../components/inspection/ExitPassManagement';
 import { InspectionIcon, AlertTriangleIcon, CheckCircleIcon, UsersIcon, ClipboardListIcon, ChartBarIcon } from '../components/icons/Icons';
@@ -16,20 +16,21 @@ interface InspectionPageProps {
     notifications: Notification[];
     onUpdateNotifications: (notifications: Notification[]) => void;
     users: User[];
+    conflictMediations?: ConflictMediation[];
+    onUpdateConflictMediations?: (conflicts: ConflictMediation[]) => void;
 }
 
 type InspectionView = 'dashboard' | 'justifications' | 'exit_passes';
 type DashboardTab = 'compliance' | 'quality' | 'coexistence';
 
 const InspectionPage: React.FC<InspectionPageProps> = (props) => {
-    const { attendanceRecords, onUpdateAttendance, students, classes, exitPasses, onUpdateExitPasses, notifications, onUpdateNotifications, users } = props;
+    const { attendanceRecords, onUpdateAttendance, students, classes, exitPasses, onUpdateExitPasses, notifications, onUpdateNotifications, users, conflictMediations = [], onUpdateConflictMediations } = props;
     const [currentView, setCurrentView] = useState<InspectionView>('dashboard');
     const [activeTab, setActiveTab] = useState<DashboardTab>('compliance');
 
     // Mock data states (in a real app, these would be props or fetched)
     const [disciplinaryActions, setDisciplinaryActions] = useState<DisciplinaryAction[]>(MOCK_DISCIPLINARY_ACTIONS);
     const [inspectionVisits, setInspectionVisits] = useState<InspectionVisit[]>(MOCK_INSPECTION_VISITS);
-    const [conflicts, setConflicts] = useState<ConflictMediation[]>(MOCK_CONFLICT_MEDIATIONS);
     const [metrics, setMetrics] = useState<QualityMetric[]>(MOCK_QUALITY_METRICS);
 
     const studentMap = useMemo(() => new Map(students.map(s => [s.id, s.name])), [students]);
@@ -166,6 +167,15 @@ const InspectionPage: React.FC<InspectionPageProps> = (props) => {
         </div>
     );
 
+    const handleDeriveToDece = (conflictId: string) => {
+        if (!onUpdateConflictMediations) return;
+        const updatedConflicts = conflictMediations.map(c => 
+            c.id === conflictId ? { ...c, derivedToDece: true } : c
+        );
+        onUpdateConflictMediations(updatedConflicts);
+        alert('Caso derivado al DECE exitosamente.');
+    };
+
     const renderCoexistenceTab = () => (
         <div className="space-y-6 animate-fade-in">
             <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
@@ -188,7 +198,7 @@ const InspectionPage: React.FC<InspectionPageProps> = (props) => {
                             </tr>
                         </thead>
                         <tbody className="divide-y">
-                            {conflicts.map(conflict => (
+                            {conflictMediations.map(conflict => (
                                 <tr key={conflict.id} className="hover:bg-gray-50">
                                     <td className="p-3">{new Date(conflict.date).toLocaleDateString()}</td>
                                     <td className="p-3">
@@ -202,11 +212,26 @@ const InspectionPage: React.FC<InspectionPageProps> = (props) => {
                                             {conflict.status}
                                         </span>
                                     </td>
-                                    <td className="p-3">
+                                    <td className="p-3 flex gap-2">
                                         <button className="text-teal-600 hover:underline text-xs">Ver Acta</button>
+                                        {conflict.derivedToDece ? (
+                                            <span className="text-xs text-purple-600 bg-purple-50 px-2 py-0.5 rounded border border-purple-200">Derivado al DECE</span>
+                                        ) : (
+                                            <button 
+                                                onClick={() => handleDeriveToDece(conflict.id)}
+                                                className="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded hover:bg-purple-200 border border-purple-200"
+                                            >
+                                                Derivar al DECE
+                                            </button>
+                                        )}
                                     </td>
                                 </tr>
                             ))}
+                            {conflictMediations.length === 0 && (
+                                <tr>
+                                    <td colSpan={5} className="p-4 text-center text-gray-500 italic">No hay conflictos registrados.</td>
+                                </tr>
+                            )}
                         </tbody>
                     </table>
                 </div>

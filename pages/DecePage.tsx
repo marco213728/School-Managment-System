@@ -1,13 +1,12 @@
 
-
 import React, { useContext, useState, useMemo } from 'react';
 import { UserContext } from '../contexts/UserContext';
-// FIX: Add User and Class to imports.
-import { Role, Student, User, Class, OvpAxis, OvpActivity, SupportContact, ScheduleEntry, Subject, TimeSlot, Room, Timetable, ViccIntervention } from '../types';
+import { Role, Student, User, Class, OvpAxis, OvpActivity, SupportContact, ScheduleEntry, Subject, TimeSlot, Room, Timetable, ViccIntervention, ConflictMediation, Intervention } from '../types';
 import { MOCK_OVP_ACTIVITIES } from '../constants';
 import SupportNetwork from '../components/dece/SupportNetwork';
 import StudentProfileCard from '../components/student/StudentProfileCard';
-import { SearchIcon, CloseIcon, UsersIcon, ReportIcon, ClipboardListIcon, PlusIcon, TrashIcon } from '../components/icons/Icons';
+import { SearchIcon, CloseIcon, UsersIcon, ReportIcon, ClipboardListIcon, PlusIcon, TrashIcon, AlertTriangleIcon } from '../components/icons/Icons';
+import InterventionForm from '../components/dece/InterventionForm';
 
 interface DecePageProps {
     students: Student[];
@@ -22,23 +21,30 @@ interface DecePageProps {
     timetables: Timetable[];
     viccInterventions: ViccIntervention[];
     onUpdateViccInterventions: (interventions: ViccIntervention[]) => void;
+    conflictMediations?: ConflictMediation[];
+    onUpdateConflictMediations?: (conflicts: ConflictMediation[]) => void;
 }
 
-// FIX: Changed DeceCard to be a React.FC with a props interface to fix children prop errors.
 interface DeceCardProps {
     title: string;
     description: string;
     buttonText: string;
     onClick?: () => void;
     disabled?: boolean;
+    badgeCount?: number;
 }
 
-const DeceCard: React.FC<DeceCardProps> = ({ title, description, buttonText, onClick, disabled = false }) => {
+const DeceCard: React.FC<DeceCardProps> = ({ title, description, buttonText, onClick, disabled = false, badgeCount }) => {
     const buttonClasses = "mt-4 w-full text-left px-4 py-2 bg-primary-600 text-white font-semibold rounded-md hover:bg-primary-700 disabled:bg-gray-300 disabled:cursor-not-allowed";
     const disabledButtonClasses = "mt-4 w-full text-left px-4 py-2 bg-gray-200 text-gray-700 font-semibold rounded-md cursor-not-allowed";
 
     return (
-        <div className="bg-white p-6 rounded-xl shadow-md flex flex-col">
+        <div className="bg-white p-6 rounded-xl shadow-md flex flex-col relative">
+            {badgeCount !== undefined && badgeCount > 0 && (
+                <span className="absolute top-4 right-4 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full animate-pulse">
+                    {badgeCount} Pendientes
+                </span>
+            )}
             <div className="flex-grow">
                 <h3 className="text-lg font-semibold text-gray-700 mb-2">{title}</h3>
                 <p className="text-gray-600 text-sm">{description}</p>
@@ -129,7 +135,6 @@ const StudentOvpProfile: React.FC<{
     const handleToggleStatus = (activityId: string) => {
         const updatedActivities = activities.map(act => {
             if (act.id === activityId) {
-                // FIX: Explicitly type `newStatus` to prevent TypeScript from widening the type to `string`.
                 const newStatus: OvpActivity['status'] = act.status === 'Completada' ? 'Pendiente' : 'Completada';
                 return { ...act, status: newStatus };
             }
@@ -230,13 +235,15 @@ const StudentOvpProfile: React.FC<{
 };
 
 
-const DecePage: React.FC<DecePageProps> = ({ students, onUpdateStudents, users, classes, supportContacts, schedule, subjects, timeSlots, rooms, timetables, viccInterventions, onUpdateViccInterventions }) => {
+const DecePage: React.FC<DecePageProps> = ({ students, onUpdateStudents, users, classes, supportContacts, schedule, subjects, timeSlots, rooms, timetables, viccInterventions, onUpdateViccInterventions, conflictMediations = [], onUpdateConflictMediations }) => {
     const { user } = useContext(UserContext);
-    const [view, setView] = useState<'dashboard' | 'student-list' | 'ovp-list'>('dashboard');
+    const [view, setView] = useState<'dashboard' | 'student-list' | 'ovp-list' | 'referred-cases'>('dashboard');
     const [selectedStudentForFile, setSelectedStudentForFile] = useState<string | null>(null);
     const [selectedStudentForOvp, setSelectedStudentForOvp] = useState<string | null>(null);
     const [studentListTitle, setStudentListTitle] = useState('');
     const [ovpActivities, setOvpActivities] = useState<OvpActivity[]>(MOCK_OVP_ACTIVITIES);
+    const [isInterventionFormOpen, setIsInterventionFormOpen] = useState(false);
+    const [conflictToProcess, setConflictToProcess] = useState<ConflictMediation | null>(null);
 
     const institutionStudents = useMemo(() => students.filter(s => s.institutionId === user?.institutionId), [students, user]);
     const institutionClasses = useMemo(() => classes.filter(c => c.institutionId === user?.institutionId), [classes, user]);
@@ -248,6 +255,8 @@ const DecePage: React.FC<DecePageProps> = ({ students, onUpdateStudents, users, 
     }).sort((a,b) => a.name.localeCompare(b.name)), [institutionStudents, institutionClasses]);
 
     const deceRoles = [Role.InstitutionAdmin, Role.JefeDECE, Role.PsicologoEducativo, Role.TrabajadorSocial];
+
+    const referredConflicts = useMemo(() => conflictMediations.filter(c => c.derivedToDece), [conflictMediations]);
 
     if (!user || !deceRoles.includes(user.role)) {
         return (
@@ -262,6 +271,66 @@ const DecePage: React.FC<DecePageProps> = ({ students, onUpdateStudents, users, 
         return studentsWithClass.find(s => s.id === selectedStudentForOvp);
     }, [selectedStudentForOvp, studentsWithClass]);
 
+    const handleProcessConflict = (conflict: ConflictMediation) => {
+        setConflictToProcess(conflict);
+        setIsInterventionFormOpen(true);
+    };
+
+    const handleSaveIntervention = (intervention: any) => {
+        // Here we would normally save the intervention to the backend/state
+        // For prototype, we'll just log and maybe clear the conflict processing state
+        console.log("Intervention saved:", intervention);
+        setIsInterventionFormOpen(false);
+        setConflictToProcess(null);
+        alert("Intervención registrada para el caso derivado.");
+    };
+
+    const renderReferredCases = () => (
+        <div className="bg-white p-6 rounded-xl shadow-md">
+            <h3 className="text-lg font-semibold text-gray-700 mb-4">Casos Derivados de Inspección General</h3>
+            <div className="overflow-x-auto">
+                <table className="w-full text-sm text-left">
+                    <thead className="bg-purple-50 text-purple-800 font-semibold">
+                        <tr>
+                            <th className="p-3">Fecha</th>
+                            <th className="p-3">Estudiantes</th>
+                            <th className="p-3">Descripción del Conflicto</th>
+                            <th className="p-3">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody className="divide-y">
+                        {referredConflicts.map(conflict => (
+                            <tr key={conflict.id} className="hover:bg-gray-50">
+                                <td className="p-3">{new Date(conflict.date).toLocaleDateString()}</td>
+                                <td className="p-3">
+                                    <ul className="list-disc list-inside text-xs">
+                                        {conflict.partiesInvolved.map((p, i) => {
+                                            const student = students.find(s => s.id === p);
+                                            return <li key={i}>{student ? student.name : p}</li>
+                                        })}
+                                    </ul>
+                                </td>
+                                <td className="p-3 text-gray-600">{conflict.description}</td>
+                                <td className="p-3">
+                                    <button 
+                                        onClick={() => handleProcessConflict(conflict)}
+                                        className="text-xs bg-primary-600 text-white px-3 py-1.5 rounded hover:bg-primary-700 flex items-center gap-1"
+                                    >
+                                        <PlusIcon className="h-3 w-3" /> Registrar Intervención
+                                    </button>
+                                </td>
+                            </tr>
+                        ))}
+                        {referredConflicts.length === 0 && (
+                            <tr>
+                                <td colSpan={4} className="p-4 text-center text-gray-500">No hay casos derivados pendientes.</td>
+                            </tr>
+                        )}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    );
 
     const renderContent = () => {
         switch (view) {
@@ -269,6 +338,8 @@ const DecePage: React.FC<DecePageProps> = ({ students, onUpdateStudents, users, 
                 return <StudentSelector students={studentsWithClass} onSelectStudent={(id) => setSelectedStudentForFile(id)} title={studentListTitle} />;
             case 'ovp-list':
                 return <StudentSelector students={studentsWithClass} onSelectStudent={(id) => setSelectedStudentForOvp(id)} title="Seleccionar Estudiante para OVP" />;
+            case 'referred-cases':
+                return renderReferredCases();
             case 'dashboard':
             default:
                 return (
@@ -291,6 +362,13 @@ const DecePage: React.FC<DecePageProps> = ({ students, onUpdateStudents, users, 
                                     setStudentListTitle("Seleccionar Estudiante para Gestión de Casos");
                                     setView('student-list');
                                 }}
+                            />
+                            <DeceCard
+                                title="Casos Derivados de Inspección"
+                                description="Atender conflictos y situaciones disciplinarias derivadas por Inspección General."
+                                buttonText="Ver Casos Derivados"
+                                onClick={() => setView('referred-cases')}
+                                badgeCount={referredConflicts.length}
                             />
                             <DeceCard
                                 title="Orientación Vocacional (OVP)"
@@ -347,6 +425,26 @@ const DecePage: React.FC<DecePageProps> = ({ students, onUpdateStudents, users, 
                     activities={ovpActivities}
                     onUpdate={setOvpActivities}
                  />
+            )}
+
+            {isInterventionFormOpen && conflictToProcess && (
+                <InterventionForm
+                    isOpen={isInterventionFormOpen}
+                    onClose={() => { setIsInterventionFormOpen(false); setConflictToProcess(null); }}
+                    onSave={handleSaveIntervention}
+                    interventionToEdit={{
+                        id: '',
+                        institutionId: user.institutionId!,
+                        studentId: conflictToProcess.partiesInvolved[0], // Default to first involved
+                        deceProfessionalId: user.id,
+                        date: new Date().toISOString().split('T')[0],
+                        type: 'Sesión Individual',
+                        summary: `Atención a caso derivado de Inspección: ${conflictToProcess.description}`,
+                        participants: [],
+                        agreements: ''
+                    } as any}
+                    studentName={students.find(s => s.id === conflictToProcess.partiesInvolved[0])?.name || 'Estudiante'}
+                />
             )}
         </div>
     );

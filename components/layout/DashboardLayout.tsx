@@ -1,3 +1,4 @@
+
 import React, { useState, useContext } from 'react';
 import Sidebar from './Sidebar';
 import Header from './Header';
@@ -8,7 +9,7 @@ import ReportsPage from '../../pages/ReportsPage';
 import ManagePage from '../../pages/ManagePage';
 import DecePage from '../../pages/DecePage';
 import HealthPage from '../../pages/HealthPage';
-import { User, Class, Student, ScheduleEntry, Notification, SupportContact, HealthRecord, MedicalVisit, Subject, TimeSlot, Room, Timetable, ViccIntervention, AttendanceRecord, ExitPass, Citacion, AcademicCalendarEvent, LeccionarioEntry, MicroPlan, Dcd, EvaluationCriterion, EvaluationIndicator, Gradebook, Activity, ReinforcementPlan, StaffAttendanceRecord, FormalRequest, TrainingPlan, InstitutionalDocument, MeetingRecord } from '../../types';
+import { User, Class, Student, ScheduleEntry, Notification, SupportContact, HealthRecord, MedicalVisit, Subject, TimeSlot, Room, Timetable, ViccIntervention, AttendanceRecord, ExitPass, Citacion, AcademicCalendarEvent, LeccionarioEntry, MicroPlan, Dcd, EvaluationCriterion, EvaluationIndicator, Gradebook, Activity, ReinforcementPlan, StaffAttendanceRecord, FormalRequest, TrainingPlan, InstitutionalDocument, MeetingRecord, Rubric, ConflictMediation } from '../../types';
 import StudentManagementPage from '../../pages/StudentManagementPage';
 import CommunicationsPage from '../../pages/CommunicationsPage';
 import SchedulePage from '../../pages/SchedulePage';
@@ -24,7 +25,7 @@ import StaffAttendanceModal from '../staff/StaffAttendanceModal';
 import TeacherTrainingPage from '../../pages/TeacherTrainingPage'; 
 import ResourceRepositoryPage from '../../pages/ResourceRepositoryPage';
 import { UserContext } from '../../contexts/UserContext';
-import { MOCK_RUBRICS } from '../../constants'; // Import MOCK_RUBRICS for Resource Bank
+import { MOCK_RUBRICS } from '../../constants'; // Import MOCK_RUBRICS for fallback
 
 type Page = 'dashboard' | 'attendance' | 'activities' | 'reports' | 'manage' | 'dece' | 'health' | 'students' | 'communications' | 'schedule' | 'inspection' | 'citaciones' | 'leccionario' | 'curricular_planning' | 'curriculum_repository' | 'gradebook' | 'vicerrector_dashboard' | 'reinforcement' | 'teacher_training' | 'resource_bank';
 
@@ -59,7 +60,9 @@ interface DashboardLayoutProps {
   trainingPlans: TrainingPlan[];
   institutionalDocuments: InstitutionalDocument[];
   meetingRecords: MeetingRecord[];
-
+  rubrics?: Rubric[]; // Optional rubrics prop
+  conflictMediations?: ConflictMediation[];
+  
   onUpdateUsers: (users: User[]) => void;
   onUpdateClasses: (classes: Class[]) => void;
   onUpdateSchedule: (schedule: ScheduleEntry[]) => void;
@@ -90,6 +93,8 @@ interface DashboardLayoutProps {
   onUpdateTrainingPlans: (plans: TrainingPlan[]) => void;
   onUpdateDocuments: (docs: InstitutionalDocument[]) => void;
   onUpdateMeetings: (meetings: MeetingRecord[]) => void;
+  onUpdateRubrics?: (rubrics: Rubric[]) => void; // Optional updater
+  onUpdateConflictMediations?: (conflicts: ConflictMediation[]) => void;
 }
 
 const DashboardLayout: React.FC<DashboardLayoutProps> = (props) => {
@@ -118,12 +123,18 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = (props) => {
     onUpdateDocuments,
     meetingRecords,
     onUpdateMeetings,
+    conflictMediations,
+    onUpdateConflictMediations,
     ...restProps
   } = props;
 
   const [currentPage, setCurrentPage] = useState<Page>('dashboard');
   const [isSidebarOpen, setSidebarOpen] = useState(false);
   const [isAttendanceModalOpen, setIsAttendanceModalOpen] = useState(false);
+
+  // Fallback for rubrics if not passed from App
+  const rubrics = props.rubrics || MOCK_RUBRICS;
+  const handleUpdateRubrics = props.onUpdateRubrics || ((r) => console.log('Mock update rubrics:', r));
 
   const renderContent = () => {
     switch (currentPage) {
@@ -216,19 +227,33 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = (props) => {
         case 'resource_bank':
             return <ResourceRepositoryPage 
                 dcds={dcds}
-                rubrics={MOCK_RUBRICS} // Pass MOCK_RUBRICS here
+                rubrics={rubrics}
+                onUpdateRubrics={handleUpdateRubrics}
                 subjects={subjects}
             />;
         default:
              const AllOtherPages = {
                 'attendance': <AttendancePage classes={classes} timeSlots={timeSlots} timetables={restProps.timetables} attendanceRecords={restProps.attendanceRecords} onUpdateAttendance={restProps.onUpdateAttendance} />,
-                'activities': <ActivitiesPage activities={restProps.activities} onUpdateActivities={restProps.onUpdateActivities} classes={classes} subjects={subjects} students={students} gradebooks={restProps.gradebooks} onUpdateGradebooks={restProps.onUpdateGradebooks} users={users} microPlans={microPlans} dcds={dcds} />,
+                'activities': <ActivitiesPage 
+                    activities={restProps.activities} 
+                    onUpdateActivities={restProps.onUpdateActivities} 
+                    classes={classes} 
+                    subjects={subjects} 
+                    students={students} 
+                    gradebooks={restProps.gradebooks} 
+                    onUpdateGradebooks={restProps.onUpdateGradebooks} 
+                    users={users} 
+                    microPlans={microPlans} 
+                    dcds={dcds} 
+                    rubrics={rubrics} // Pass rubrics
+                    onUpdateRubrics={handleUpdateRubrics} // Pass update handler
+                />,
                 'reports': <ReportsPage attendanceRecords={restProps.attendanceRecords} academicCalendarEvents={restProps.academicCalendarEvents} students={students} classes={classes} schedule={schedule} timeSlots={timeSlots} timetables={restProps.timetables} users={users} subjects={subjects} gradebooks={restProps.gradebooks} />,
-                'dece': <DecePage {...restProps} users={users} classes={classes} schedule={schedule} subjects={subjects} timeSlots={timeSlots} students={students} onUpdateStudents={restProps.onUpdateStudents} viccInterventions={restProps.viccInterventions} onUpdateViccInterventions={restProps.onUpdateViccInterventions} />,
+                'dece': <DecePage {...restProps} users={users} classes={classes} schedule={schedule} subjects={subjects} timeSlots={timeSlots} students={students} onUpdateStudents={restProps.onUpdateStudents} viccInterventions={restProps.viccInterventions} onUpdateViccInterventions={restProps.onUpdateViccInterventions} conflictMediations={conflictMediations} onUpdateConflictMediations={onUpdateConflictMediations} />,
                 'health': <HealthPage {...restProps} users={users} classes={classes} schedule={schedule} subjects={subjects} timeSlots={timeSlots} students={students} onUpdateStudents={restProps.onUpdateStudents} viccInterventions={restProps.viccInterventions} onUpdateViccInterventions={restProps.onUpdateViccInterventions} />,
                 'students': <StudentManagementPage {...restProps} users={users} classes={classes} schedule={schedule} subjects={subjects} timeSlots={timeSlots} rooms={restProps.rooms} timetables={restProps.timetables} students={students} onUpdateStudents={restProps.onUpdateStudents} />,
                 'schedule': <SchedulePage {...restProps} schedule={schedule} subjects={subjects} timeSlots={timeSlots} users={users} classes={classes} students={students} />,
-                'inspection': <InspectionPage {...restProps} classes={classes} users={users} students={students} />,
+                'inspection': <InspectionPage {...restProps} classes={classes} users={users} students={students} conflictMediations={conflictMediations} onUpdateConflictMediations={onUpdateConflictMediations} />,
                 'citaciones': <CitacionesPage {...restProps} users={users} students={students} />,
                 'leccionario': <LeccionarioPage leccionarioEntries={leccionarioEntries} onUpdateLeccionarioEntries={onUpdateLeccionarioEntries} schedule={schedule} classes={classes} subjects={subjects} users={users} timeSlots={timeSlots} microPlans={microPlans} />,
                 'curricular_planning': <CurricularPlanningPage microPlans={microPlans} onUpdateMicroPlans={onUpdateMicroPlans} classes={classes} subjects={subjects} students={students} users={users} dcds={dcds} evaluationCriteria={restProps.evaluationCriteria} evaluationIndicators={restProps.evaluationIndicators} />,

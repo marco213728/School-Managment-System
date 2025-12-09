@@ -1,4 +1,5 @@
-import { User, Role, Student, Class, Activity, ActivityType, AttendanceRecord, AttendanceStatus, Notification, SupportContact, Intervention, InterventionType, OvpActivity, OvpAxis, HealthRecord, Institution, OcrSubmission, OcrSubmissionStatus, ScheduleEntry, MedicalVisit, Shift, TimeSlot, Subject, Room, Timetable, ViccIntervention, ViccInterventionType, ExitPass, Citacion, CitacionStatus, AcademicCalendarEvent, LeccionarioEntry, MicroPlan, CurricularPlanStatus, GradeLevel, GRADE_LEVELS, Dcd, EvaluationCriterion, EvaluationIndicator, Competency, COMPETENCIES, CURRICULAR_INSERTIONS, AREAS_OF_KNOWLEDGE, SUBJECT_LEVELS, Gradebook, TrimesterRecord, StudentGradebook, GradeEntry, EVALUATION_CATEGORIES, ClassroomObservation, TrainingSession, InstitutionalDocument, MeetingRecord, DisciplinaryAction, DisciplinarySeverity, InspectionVisit, ConflictMediation, QualityMetric, ClassroomVisit, RubricCriterion, ReinforcementPlan, StaffAttendanceRecord, FormalRequestStatus, FormalRequestType, FormalRequestRecipient, TrainingPlan, Rubric, ResourceRepositoryItem   } from './types';
+
+import { User, Role, Student, Class, Activity, ActivityType, AttendanceRecord, AttendanceStatus, Notification, SupportContact, Intervention, InterventionType, OvpActivity, OvpAxis, HealthRecord, Institution, OcrSubmission, OcrSubmissionStatus, ScheduleEntry, MedicalVisit, Shift, TimeSlot, Subject, Room, Timetable, ViccIntervention, ViccInterventionType, ExitPass, Citacion, CitacionStatus, AcademicCalendarEvent, LeccionarioEntry, MicroPlan, CurricularPlanStatus, GradeLevel, GRADE_LEVELS, Dcd, EvaluationCriterion, EvaluationIndicator, Competency, COMPETENCIES, CURRICULAR_INSERTIONS, AREAS_OF_KNOWLEDGE, SUBJECT_LEVELS, Gradebook, TrimesterRecord, StudentGradebook, GradeEntry, EVALUATION_CATEGORIES, ClassroomObservation, TrainingSession, InstitutionalDocument, MeetingRecord, DisciplinaryAction, DisciplinarySeverity, InspectionVisit, ConflictMediation, QualityMetric, ClassroomVisit, RubricCriterion, ReinforcementPlan, StaffAttendanceRecord, FormalRequestStatus, FormalRequestType, FormalRequestRecipient, TrainingPlan, Rubric, ResourceRepositoryItem, FormalRequest } from './types';
 
 export { GRADE_LEVELS, COMPETENCIES, CURRICULAR_INSERTIONS, AREAS_OF_KNOWLEDGE, SUBJECT_LEVELS, EVALUATION_CATEGORIES };
 
@@ -416,12 +417,6 @@ export const MOCK_REINFORCEMENT_PLANS: ReinforcementPlan[] = [
     { id: 'rp2', institutionId: 'uemol', studentId: 'student3', subjectId: 'subj-ll', teacherId: 'teacher2', tutorId: 'teacher2', academicYear: '2025-2026', status: 'Nominated', nominationDate: '2024-10-01', nominationObservations: 'Bajo rendimiento...', topics: [], sessions: [], parentConsented: false }
 ];
 
-// ... existing imports
-import { FormalRequest, Role } from './types';
-
-// ... existing constants
-
-// FIX: Add MOCK_FORMAL_REQUESTS
 export const MOCK_FORMAL_REQUESTS: FormalRequest[] = [
     {
         id: 'req1',
@@ -452,7 +447,6 @@ export const MOCK_FORMAL_REQUESTS: FormalRequest[] = [
     },
 ];
 
-// FIX: Ensure MOCK_STAFF_ATTENDANCE structure matches the new type
 export const MOCK_STAFF_ATTENDANCE: StaffAttendanceRecord[] = [
     { id: 'sa1', institutionId: 'uemol', userId: 'teacher1', date: '2024-10-20', punches: [{ time: '07:55:00', type: 'in', method: 'Biometric' }] },
     { id: 'sa2', institutionId: 'uemol', userId: 'teacher1', date: '2024-10-21', punches: [{ time: '08:05:00', type: 'in', method: 'Biometric', location: { latitude: -0.2111, longitude: -78.4891 } }] },
@@ -612,7 +606,7 @@ export const MOCK_REPOSITORY_ITEMS: ResourceRepositoryItem[] = [
         isInterdisciplinary: true,
         generativeTopic: 'Soberanía Alimentaria y Vida Saludable',
         finalProduct: 'Cosecha y Feria de Platos Saludables',
-        curricularInsertions: ['Educación para el Desarrollo Sostenible', 'Educación para la Salud'],
+        curricularInsertions: ['Educación para el Desarrollo Sostenible'],
         competencies: ['Comunicacional', 'Lógico-Matemática', 'Digital'],
         dcdIds: ['dcd-cn-1', 'dcd-m-1'], // Mock IDs
         phases: [

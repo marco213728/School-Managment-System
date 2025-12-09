@@ -1,21 +1,18 @@
+
 import React, { useState, useMemo, useEffect } from 'react';
-// FIX: Import PunchType and StaffAttendanceRecord
-import { User, Institution, Role, Class, Student, ScheduleEntry, Notification, SupportContact, HealthRecord, MedicalVisit, Subject, TimeSlot, Room, Timetable, ViccIntervention, AttendanceRecord, ExitPass, Citacion, AcademicCalendarEvent, LeccionarioEntry, MicroPlan, Dcd, EvaluationCriterion, EvaluationIndicator, Gradebook, Activity, ReinforcementPlan, StaffAttendanceRecord, PunchType, FormalRequest, TrainingPlan } from './types';
-import { MOCK_USERS, MOCK_INSTITUTIONS, MOCK_CLASSES, MOCK_STUDENTS, MOCK_SCHEDULE_ENTRIES, MOCK_NOTIFICATIONS, MOCK_SUPPORT_CONTACTS, MOCK_HEALTH_RECORDS, MOCK_MEDICAL_VISITS, MOCK_SUBJECTS, MOCK_TIME_SLOTS, MOCK_ROOMS, MOCK_TIMETABLES, MOCK_VICC_INTERVENTIONS, MOCK_ATTENDANCE, MOCK_EXIT_PASSES, MOCK_CITACIONES, MOCK_ACADEMIC_CALENDAR_EVENTS, MOCK_LECCIONARIO_ENTRIES, MOCK_MICRO_PLANS, MOCK_DCDS, MOCK_EVALUATION_CRITERIA, MOCK_EVALUATION_INDICATORS, MOCK_GRADEBOOKS, MOCK_ACTIVITIES, MOCK_REINFORCEMENT_PLANS, MOCK_STAFF_ATTENDANCE, MOCK_FORMAL_REQUESTS, MOCK_TRAINING_PLANS } from './constants';
+import { User, Institution, Role, Class, Student, ScheduleEntry, Notification, SupportContact, HealthRecord, MedicalVisit, Subject, TimeSlot, Room, Timetable, ViccIntervention, AttendanceRecord, ExitPass, Citacion, AcademicCalendarEvent, LeccionarioEntry, MicroPlan, Dcd, EvaluationCriterion, EvaluationIndicator, Gradebook, Activity, ReinforcementPlan, StaffAttendanceRecord, PunchType, FormalRequest, TrainingPlan, InstitutionalDocument, MeetingRecord, Rubric, ConflictMediation } from './types';
+import { MOCK_USERS, MOCK_INSTITUTIONS, MOCK_CLASSES, MOCK_STUDENTS, MOCK_SCHEDULE_ENTRIES, MOCK_NOTIFICATIONS, MOCK_SUPPORT_CONTACTS, MOCK_HEALTH_RECORDS, MOCK_MEDICAL_VISITS, MOCK_SUBJECTS, MOCK_TIME_SLOTS, MOCK_ROOMS, MOCK_TIMETABLES, MOCK_VICC_INTERVENTIONS, MOCK_ATTENDANCE, MOCK_EXIT_PASSES, MOCK_CITACIONES, MOCK_ACADEMIC_CALENDAR_EVENTS, MOCK_LECCIONARIO_ENTRIES, MOCK_MICRO_PLANS, MOCK_DCDS, MOCK_EVALUATION_CRITERIA, MOCK_EVALUATION_INDICATORS, MOCK_GRADEBOOKS, MOCK_ACTIVITIES, MOCK_REINFORCEMENT_PLANS, MOCK_STAFF_ATTENDANCE, MOCK_FORMAL_REQUESTS, MOCK_TRAINING_PLANS, MOCK_INSTITUTIONAL_DOCUMENTS, MOCK_MEETING_RECORDS, MOCK_RUBRICS, MOCK_CONFLICT_MEDIATIONS } from './constants';
 import LoginPage from './pages/LoginPage';
 import DashboardLayout from './components/layout/DashboardLayout';
 import { UserContext, InstitutionContext } from './contexts/UserContext';
 import SuperAdminPage from './pages/SuperAdminPage';
 import PlatformAdminLayout from './components/layout/PlatformAdminLayout';
 import { AMAUTA_LOGO } from './branding';
-import { MOCK_INSTITUTIONAL_DOCUMENTS, MOCK_MEETING_RECORDS } from './constants';
-import { InstitutionalDocument, MeetingRecord } from './types';
 
 export default function App() {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [currentInstitution, setCurrentInstitution] = useState<Institution | null>(null);
 
-  // In a real app, this would be fetched, but for the prototype, we manage it in state.
   const [institutionalDocuments, setInstitutionalDocuments] = useState<InstitutionalDocument[]>(MOCK_INSTITUTIONAL_DOCUMENTS);
   const [meetingRecords, setMeetingRecords] = useState<MeetingRecord[]>(MOCK_MEETING_RECORDS);
   const [users, setUsers] = useState<User[]>(MOCK_USERS);
@@ -47,8 +44,9 @@ export default function App() {
   const [reinforcementPlans, setReinforcementPlans] = useState<ReinforcementPlan[]>(MOCK_REINFORCEMENT_PLANS || []);
   const [staffAttendanceRecords, setStaffAttendanceRecords] = useState<StaffAttendanceRecord[]>(MOCK_STAFF_ATTENDANCE || []);
   const [formalRequests, setFormalRequests] = useState<FormalRequest[]>(MOCK_FORMAL_REQUESTS || []); 
-  // FIX: Centralize Training Plans State
   const [trainingPlans, setTrainingPlans] = useState<TrainingPlan[]>(MOCK_TRAINING_PLANS || []);
+  const [rubrics, setRubrics] = useState<Rubric[]>(MOCK_RUBRICS || []);
+  const [conflictMediations, setConflictMediations] = useState<ConflictMediation[]>(MOCK_CONFLICT_MEDIATIONS || []);
 
   const handleLogin = (email: string, password: string): boolean => {
     const user = users.find(u => u.email.toLowerCase() === email.toLowerCase());
@@ -60,9 +58,9 @@ export default function App() {
       } else {
         setCurrentInstitution(null);
       }
-      return true; // Login successful
+      return true;
     }
-    return false; // Login failed
+    return false;
   };
 
   const handleLogout = () => {
@@ -77,7 +75,6 @@ export default function App() {
 
   const handleUpdateDocuments = (docs: InstitutionalDocument[]) => setInstitutionalDocuments(docs);
   const handleUpdateMeetings = (meetings: MeetingRecord[]) => setMeetingRecords(meetings);
-  
   const handleUpdateUsers = (updatedUsers: User[]) => setUsers(updatedUsers);
   const handleUpdateClasses = (updatedClasses: Class[]) => setClasses(updatedClasses);
   const handleUpdateSchedule = (updatedSchedule: ScheduleEntry[]) => setSchedule(updatedSchedule);
@@ -97,15 +94,16 @@ export default function App() {
   const handleUpdateAcademicCalendarEvents = (updatedEvents: AcademicCalendarEvent[]) => setAcademicCalendarEvents(updatedEvents);
   const handleUpdateLeccionarioEntries = (updatedEntries: LeccionarioEntry[]) => setLeccionarioEntries(updatedEntries);
   const handleUpdateMicroPlans = (updatedPlans: MicroPlan[]) => setMicroPlans(updatedPlans);
-  const handleUpdateDcds = (newDcds: Dcd[]) => setDcds(prev => [...prev, ...newDcds]);
-  const handleUpdateEvaluationCriteria = (newCriteria: EvaluationCriterion[]) => setEvaluationCriteria(prev => [...prev, ...newCriteria]);
-  const handleUpdateEvaluationIndicators = (newIndicators: EvaluationIndicator[]) => setEvaluationIndicators(prev => [...prev, ...newIndicators]);
+  const handleUpdateDcds = (newDcds: Dcd[]) => setDcds(newDcds); 
+  const handleUpdateEvaluationCriteria = (newCriteria: EvaluationCriterion[]) => setEvaluationCriteria(newCriteria);
+  const handleUpdateEvaluationIndicators = (newIndicators: EvaluationIndicator[]) => setEvaluationIndicators(newIndicators);
   const handleUpdateGradebooks = (updatedGradebooks: Gradebook[]) => setGradebooks(updatedGradebooks);
   const handleUpdateActivities = (updatedActivities: Activity[]) => setActivities(updatedActivities);
   const handleUpdateReinforcementPlans = (updatedPlans: ReinforcementPlan[]) => setReinforcementPlans(updatedPlans);
   const handleUpdateFormalRequests = (updatedRequests: FormalRequest[]) => setFormalRequests(updatedRequests);
-  // FIX: Add handler for Training Plans
   const handleUpdateTrainingPlans = (updatedPlans: TrainingPlan[]) => setTrainingPlans(updatedPlans);
+  const handleUpdateRubrics = (newRubrics: Rubric[]) => setRubrics(newRubrics);
+  const handleUpdateConflictMediations = (conflicts: ConflictMediation[]) => setConflictMediations(conflicts);
   
   const handleUpdateStaffAttendance = (userId: string, method: 'Biometric' | 'Manual' | 'Facial', location?: { latitude: number; longitude: number; }) => {
     setStaffAttendanceRecords(prev => {
@@ -215,12 +213,15 @@ export default function App() {
             reinforcementPlans={reinforcementPlans}
             staffAttendanceRecords={staffAttendanceRecords}
             formalRequests={formalRequests}
-            // FIX: Pass new props
             trainingPlans={trainingPlans} 
             institutionalDocuments={institutionalDocuments}
             onUpdateDocuments={handleUpdateDocuments}
             meetingRecords={meetingRecords}
             onUpdateMeetings={handleUpdateMeetings}
+            rubrics={rubrics}
+            onUpdateRubrics={handleUpdateRubrics}
+            conflictMediations={conflictMediations}
+            onUpdateConflictMediations={handleUpdateConflictMediations}
 
             onUpdateUsers={handleUpdateUsers}
             onUpdateClasses={handleUpdateClasses}
@@ -249,7 +250,6 @@ export default function App() {
             onUpdateReinforcementPlans={handleUpdateReinforcementPlans}
             onUpdateStaffAttendance={handleUpdateStaffAttendance}
             onUpdateFormalRequests={handleUpdateFormalRequests}
-            // FIX: Pass new handler
             onUpdateTrainingPlans={handleUpdateTrainingPlans}
           />
         )}

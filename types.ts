@@ -1,3 +1,4 @@
+
 export enum Role {
   SuperAdmin = 'Super Administrador',
   InstitutionAdmin = 'Administrador de Institución',
@@ -359,6 +360,7 @@ export interface ConflictMediation {
   description: string;
   status: 'Pendiente' | 'En Mediación' | 'Resuelto';
   agreements: string;
+  derivedToDece?: boolean; // Indicates if the case has been referred to DECE
 }
 
 export interface QualityMetric {

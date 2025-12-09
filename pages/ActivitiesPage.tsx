@@ -1,12 +1,12 @@
 import React, { useState, useContext, useMemo, useEffect } from 'react';
 import { UserContext } from '../contexts/UserContext';
-import { MOCK_CLASSES, MOCK_USERS, EVALUATION_CATEGORIES, MOCK_GRADEBOOKS, MOCK_RUBRICS, MOCK_REPOSITORY_ITEMS } from '../constants';
+import { MOCK_CLASSES, MOCK_USERS, EVALUATION_CATEGORIES, MOCK_REPOSITORY_ITEMS } from '../constants';
 import { Role, Activity, ActivityType, Class, Subject, Student, Gradebook, StudentGradebook, GradeEntry, TrimesterRecord, EvaluationCategory, User, MicroPlan, Dcd, Rubric, ResourceRepositoryItem } from '../types';
 import { EditIcon, TrashIcon, PlusIcon, CloseIcon, CheckCircleIcon, SearchIcon, ArchiveBoxIcon } from '../components/icons/Icons';
 import RubricManager from '../components/rubrics/RubricManager';
 import RubricEvaluator from '../components/rubrics/RubricEvaluator';
 
-// --- NEW COMPONENT: Resource Selector Modal ---
+// ... (ResourceSelectorModal code remains the same)
 interface ResourceSelectorModalProps {
     isOpen: boolean;
     onClose: () => void;
@@ -67,9 +67,8 @@ const ResourceSelectorModal: React.FC<ResourceSelectorModalProps> = ({ isOpen, o
         </div>
     );
 };
-// ----------------------------------------------
 
-
+// ... (ActivityForm code remains the same)
 interface ActivityFormProps {
     isOpen: boolean;
     onClose: () => void;
@@ -79,9 +78,12 @@ interface ActivityFormProps {
     subjects: Subject[];
     microPlans: MicroPlan[];
     dcds: Dcd[];
+    rubrics: Rubric[];
+    onUpdateRubrics: (rubrics: Rubric[]) => void;
 }
 
-const ActivityForm: React.FC<ActivityFormProps> = ({ isOpen, onClose, onSave, activityToEdit, classes, subjects, microPlans, dcds }) => {
+const ActivityForm: React.FC<ActivityFormProps> = ({ isOpen, onClose, onSave, activityToEdit, classes, subjects, microPlans, dcds, rubrics, onUpdateRubrics }) => {
+    // ... (same as existing ActivityForm implementation)
     const { user } = useContext(UserContext);
     const [formData, setFormData] = useState({
         classId: '', subjectId: '', title: '', description: '', type: ActivityType.Homework,
@@ -239,7 +241,7 @@ const ActivityForm: React.FC<ActivityFormProps> = ({ isOpen, onClose, onSave, ac
                                 className="w-full p-2 border rounded bg-white"
                             >
                                 <option value="">-- Sin Rúbrica (Calificación Manual) --</option>
-                                {MOCK_RUBRICS.map(r => <option key={r.id} value={r.id}>{r.title}</option>)}
+                                {rubrics.map(r => <option key={r.id} value={r.id}>{r.title}</option>)}
                             </select>
                             <button type="button" onClick={() => setIsRubricManagerOpen(true)} className="text-xs bg-purple-600 text-white px-3 py-2 rounded font-semibold whitespace-nowrap">Gestionar Rúbricas</button>
                         </div>
@@ -257,15 +259,20 @@ const ActivityForm: React.FC<ActivityFormProps> = ({ isOpen, onClose, onSave, ac
                 </form>
             </div>
             
-            <RubricManager 
-                isOpen={isRubricManagerOpen} 
-                onClose={() => setIsRubricManagerOpen(false)} 
-                onSave={(newRubric) => { 
-                    MOCK_RUBRICS.push(newRubric); 
-                    setFormData(p => ({...p, rubricId: newRubric.id}));
-                }}
-                institutionId={user?.institutionId || ''}
-            />
+            {/* UPDATED RUBRIC MANAGER USAGE */}
+            {isRubricManagerOpen && (
+                <RubricManager 
+                    isOpen={isRubricManagerOpen} 
+                    onClose={() => setIsRubricManagerOpen(false)} 
+                    rubrics={rubrics}
+                    onUpdateRubrics={onUpdateRubrics}
+                    currentUser={user}
+                    onSave={(newRubric) => { 
+                       // Optional: select the newly created rubric automatically
+                       setFormData(p => ({...p, rubricId: newRubric.id}));
+                    }}
+                />
+            )}
 
             <ResourceSelectorModal 
                 isOpen={isResourceSelectorOpen}
@@ -313,6 +320,7 @@ const ActivityCard: React.FC<{ activity: Activity; classInfo?: Class; grade?: Gr
     );
 };
 
+// ... (createEmptyGradebook function remains the same)
 const createEmptyGradebook = (institutionId: string, classId: string, subjectId: string, studentIds: string[]): Gradebook => {
     const createEmptyTrimester = (): TrimesterRecord => ({
         actividades: Array(5).fill(null).map(() => ({ promedio: 0, activityId: undefined })),
@@ -352,6 +360,8 @@ interface ActivitiesPageProps {
     users: User[];
     microPlans: MicroPlan[];
     dcds: Dcd[];
+    rubrics: Rubric[];
+    onUpdateRubrics: (rubrics: Rubric[]) => void;
 }
 
 interface ActivityGradebookModalProps {
@@ -361,12 +371,14 @@ interface ActivityGradebookModalProps {
     students: Student[];
     gradebook: Gradebook | undefined;
     onSaveGrades: (updatedGradebook: Gradebook) => void;
+    rubrics: Rubric[];
 }
 
-const ActivityGradebookModal: React.FC<ActivityGradebookModalProps> = ({ isOpen, onClose, activity, students, gradebook, onSaveGrades }) => {
+const ActivityGradebookModal: React.FC<ActivityGradebookModalProps> = ({ isOpen, onClose, activity, students, gradebook, onSaveGrades, rubrics }) => {
     const [localGrades, setLocalGrades] = useState<Record<string, Partial<GradeEntry>>>({});
     const [studentForRubric, setStudentForRubric] = useState<string | null>(null);
-    const selectedRubric = MOCK_RUBRICS.find(r => r.id === activity.rubricId);
+    const [currentRubricScore, setCurrentRubricScore] = useState<number>(0); // NEW STATE to hold temporary rubric score
+    const selectedRubric = rubrics.find(r => r.id === activity.rubricId);
 
     useEffect(() => {
         if (isOpen && gradebook) {
@@ -409,6 +421,14 @@ const ActivityGradebookModal: React.FC<ActivityGradebookModalProps> = ({ isOpen,
         }));
     };
 
+    // New handler for confirming rubric score
+    const handleConfirmRubricScore = () => {
+        if (studentForRubric) {
+            handleGradeChange(studentForRubric, 'nota', currentRubricScore.toString());
+            setStudentForRubric(null);
+        }
+    };
+
     const handleSave = () => {
         if (!gradebook) return;
 
@@ -449,31 +469,30 @@ const ActivityGradebookModal: React.FC<ActivityGradebookModalProps> = ({ isOpen,
 
     return (
         <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-center items-center p-4" onClick={onClose}>
-            <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-3xl max-h-[90vh] flex flex-col" onClick={e => e.stopPropagation()}>
+            <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-[95vw] h-[90vh] flex flex-col" onClick={e => e.stopPropagation()}>
                 {studentForRubric && selectedRubric ? (
                      <div className="flex flex-col h-full">
-                         <div className="mb-4 flex justify-between items-center border-b pb-2">
+                         <div className="mb-4 flex justify-between items-center border-b pb-2 shrink-0">
                              <div>
                                  <h3 className="font-bold text-lg text-gray-800">Evaluando a: {students.find(s => s.id === studentForRubric)?.name}</h3>
                                  <p className="text-xs text-gray-500">Usando rúbrica: {selectedRubric.title}</p>
                              </div>
                              <button onClick={() => setStudentForRubric(null)} className="text-sm text-gray-500 hover:text-gray-800">Cancelar / Volver</button>
                          </div>
-                         <div className="overflow-y-auto flex-grow">
-                             <RubricEvaluator 
-                                rubric={selectedRubric} 
-                                onCalculate={(score) => {
-                                    handleGradeChange(studentForRubric, 'nota', score.toString());
-                                }} 
-                             />
+                         {/* Removed redundant scroll wrapper here to let RubricEvaluator handle its own scroll */}
+                         <div className="flex-grow overflow-hidden min-h-0">
+                                <RubricEvaluator 
+                                    rubric={selectedRubric} 
+                                    onCalculate={(score) => setCurrentRubricScore(score)} 
+                                />
                          </div>
-                         <div className="mt-4 pt-4 border-t text-right">
-                            <button onClick={() => setStudentForRubric(null)} className="px-6 py-2 bg-green-600 text-white rounded font-bold hover:bg-green-700">Confirmar Nota</button>
+                         <div className="mt-4 pt-4 border-t text-right shrink-0">
+                            <button onClick={handleConfirmRubricScore} className="px-6 py-2 bg-green-600 text-white rounded font-bold hover:bg-green-700">Confirmar Nota: {currentRubricScore}</button>
                          </div>
                     </div>
                 ) : (
                     <>
-                        <header className="flex justify-between items-center mb-4">
+                        <header className="flex justify-between items-center mb-4 shrink-0">
                             <div>
                                 <h2 className="text-xl font-bold">Calificar Actividad</h2>
                                 <p className="text-sm text-gray-500">{activity.title}</p>
@@ -515,7 +534,7 @@ const ActivityGradebookModal: React.FC<ActivityGradebookModalProps> = ({ isOpen,
                                 </tbody>
                             </table>
                         </main>
-                        <footer className="flex justify-end gap-2 pt-4 mt-auto border-t">
+                        <footer className="flex justify-end gap-2 pt-4 mt-auto border-t shrink-0">
                             <button type="button" onClick={onClose} className="px-4 py-2 bg-gray-200 rounded">Cancelar</button>
                             <button type="button" onClick={handleSave} className="px-4 py-2 bg-primary-600 text-white rounded">Guardar Calificaciones</button>
                         </footer>
@@ -527,6 +546,7 @@ const ActivityGradebookModal: React.FC<ActivityGradebookModalProps> = ({ isOpen,
 };
 
 const TeacherActivities: React.FC<ActivitiesPageProps> = (props) => {
+    // ... (same as existing TeacherActivities implementation)
     const { user } = useContext(UserContext);
     const [isFormOpen, setIsFormOpen] = useState(false);
     const [activityToEdit, setActivityToEdit] = useState<Activity | null>(null);
@@ -623,7 +643,20 @@ const TeacherActivities: React.FC<ActivitiesPageProps> = (props) => {
                     </div>
                 ))}
             </div>
-            {isFormOpen && <ActivityForm isOpen={isFormOpen} onClose={() => setIsFormOpen(false)} onSave={handleSave} activityToEdit={activityToEdit} classes={institutionClasses} subjects={teacherSubjects} microPlans={props.microPlans} dcds={props.dcds} />}
+            {isFormOpen && (
+                <ActivityForm 
+                    isOpen={isFormOpen} 
+                    onClose={() => setIsFormOpen(false)} 
+                    onSave={handleSave} 
+                    activityToEdit={activityToEdit} 
+                    classes={institutionClasses} 
+                    subjects={teacherSubjects} 
+                    microPlans={props.microPlans} 
+                    dcds={props.dcds} 
+                    rubrics={props.rubrics} 
+                    onUpdateRubrics={props.onUpdateRubrics} 
+                />
+            )}
             {gradingActivity && (
                 <ActivityGradebookModal
                     isOpen={!!gradingActivity}
@@ -632,6 +665,7 @@ const TeacherActivities: React.FC<ActivitiesPageProps> = (props) => {
                     students={props.students.filter(s => s.classId === gradingActivity.classId)}
                     gradebook={props.gradebooks.find(gb => gb.classId === gradingActivity.classId && gb.subjectId === gradingActivity.subjectId)}
                     onSaveGrades={handleSaveGrades}
+                    rubrics={props.rubrics}
                 />
             )}
         </div>
@@ -639,6 +673,7 @@ const TeacherActivities: React.FC<ActivitiesPageProps> = (props) => {
 };
 
 const StudentParentActivities: React.FC<ActivitiesPageProps> = (props) => {
+    // ... (same as existing StudentParentActivities implementation)
     const { user } = useContext(UserContext);
 
     const institutionClasses = useMemo(() => props.classes.filter(c => c.institutionId === user?.institutionId), [props.classes, user]);

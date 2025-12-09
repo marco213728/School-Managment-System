@@ -1,6 +1,6 @@
 import React, { useContext, useState, useMemo } from 'react';
 import { UserContext } from '../contexts/UserContext';
-import { Role, Student, User, Class, ActivityType, AttendanceStatus, ScheduleEntry, Subject, TimeSlot, Room, Timetable, ViccIntervention } from '../types';
+import { Role, Student, User, Class, ActivityType, AttendanceStatus, ScheduleEntry, Subject, TimeSlot, Room, Timetable, ViccIntervention, FormalRequest } from '../types';
 import StudentProfileCard from '../components/student/StudentProfileCard';
 import { MOCK_ATTENDANCE, MOCK_ACTIVITIES } from '../constants';
 import { UsersIcon, GraduationCapIcon, AttendanceIcon, ReportIcon, CalendarIcon, ChatBubbleIcon, ManageIcon, ClipboardListIcon, ClockIcon } from '../components/icons/Icons';
@@ -19,6 +19,8 @@ interface DashboardPageProps {
     viccInterventions: ViccIntervention[];
     onUpdateViccInterventions: (interventions: ViccIntervention[]) => void;
     onNavigate?: (page: any) => void;
+    formalRequests: FormalRequest[];
+    [key: string]: any;
 }
 
 const StatCard: React.FC<{ icon: React.ReactNode, label: string, value: string | number, color: string }> = ({ icon, label, value, color }) => (
