@@ -3,14 +3,16 @@ import { ResourceRepositoryItem, Dcd, Rubric, Subject, User } from '../types';
 import { MOCK_REPOSITORY_ITEMS } from '../constants';
 import { UserContext } from '../contexts/UserContext';
 import ResourceForm from '../components/repository/ResourceForm';
-import { PlusIcon, SearchIcon, EditIcon, UsersIcon, CheckCircleIcon, SparklesIcon, ArchiveBoxIcon } from '../components/icons/Icons';
+import { PlusIcon, SearchIcon, EditIcon, UsersIcon, CheckCircleIcon, SparklesIcon, ArchiveBoxIcon, TicketIcon, AssessmentIcon } from '../components/icons/Icons';
 import LessonPlanAssistant from '../components/repository/LessonPlanAssistant';
-import RubricGeneratorAssistant from '../components/repository/RubricGeneratorAssistant'; // Import
+import RubricGeneratorAssistant from '../components/repository/RubricGeneratorAssistant';
+import ExitTicketGenerator from '../components/repository/ExitTicketGenerator'; 
+import AssessmentGenerator from '../components/repository/AssessmentGenerator'; // Import new component
 
 interface ResourceRepositoryPageProps {
     dcds: Dcd[];
     rubrics: Rubric[];
-    onUpdateRubrics: (rubrics: Rubric[]) => void; // Add this prop
+    onUpdateRubrics: (rubrics: Rubric[]) => void;
     subjects: Subject[];
 }
 
@@ -24,7 +26,9 @@ const ResourceRepositoryPage: React.FC<ResourceRepositoryPageProps> = ({ dcds, r
     
     // AI Modal States
     const [isAiPlanOpen, setIsAiPlanOpen] = useState(false);
-    const [isAiRubricOpen, setIsAiRubricOpen] = useState(false); // State for Rubric Generator
+    const [isAiRubricOpen, setIsAiRubricOpen] = useState(false);
+    const [isAiTicketOpen, setIsAiTicketOpen] = useState(false);
+    const [isAiAssessmentOpen, setIsAiAssessmentOpen] = useState(false); // State for Assessment Generator
 
     const [viewMode, setViewMode] = useState<'resources' | 'ai_tools'>('resources');
 
@@ -57,7 +61,6 @@ const ResourceRepositoryPage: React.FC<ResourceRepositoryPageProps> = ({ dcds, r
     const handleSaveNewRubric = (newRubric: Rubric) => {
         onUpdateRubrics([...rubrics, newRubric]);
         alert('Rúbrica guardada exitosamente. Ahora está disponible para asignar a actividades.');
-        // Optionally switch view or do something else
     };
 
     const filteredResources = useMemo(() => {
@@ -183,9 +186,39 @@ const ResourceRepositoryPage: React.FC<ResourceRepositoryPageProps> = ({ dcds, r
                             Potenciado por Gemini AI
                         </div>
                     </div>
-                     <div className="bg-white border-2 border-dashed border-gray-300 rounded-xl p-6 flex flex-col items-center justify-center text-center text-gray-400">
-                        <span className="text-2xl font-bold mb-2">Creador de Evaluaciones</span>
-                        <span className="text-xs">Próximamente</span>
+
+                    {/* Exit Ticket Generator Card */}
+                    <div 
+                        onClick={() => setIsAiTicketOpen(true)}
+                        className="bg-gradient-to-br from-purple-400 to-purple-600 rounded-xl shadow-lg p-6 text-white cursor-pointer hover:scale-105 transition-transform"
+                    >
+                        <div className="bg-white/20 w-12 h-12 rounded-full flex items-center justify-center mb-4">
+                            <TicketIcon className="h-7 w-7" />
+                        </div>
+                        <h3 className="text-xl font-bold mb-2">Generador de Boletos de salida</h3>
+                        <p className="text-purple-100 text-sm">
+                            Crea evaluaciones rápidas al final de la lección para verificar la comprensión de los estudiantes.
+                        </p>
+                        <div className="mt-4 text-xs font-semibold bg-white/20 inline-block px-2 py-1 rounded">
+                            Potenciado por Gemini AI
+                        </div>
+                    </div>
+
+                    {/* Assessment Generator Card */}
+                    <div 
+                        onClick={() => setIsAiAssessmentOpen(true)}
+                        className="bg-gradient-to-br from-indigo-500 to-blue-600 rounded-xl shadow-lg p-6 text-white cursor-pointer hover:scale-105 transition-transform"
+                    >
+                        <div className="bg-white/20 w-12 h-12 rounded-full flex items-center justify-center mb-4">
+                            <AssessmentIcon className="h-7 w-7" />
+                        </div>
+                        <h3 className="text-xl font-bold mb-2">Creador de Evaluaciones</h3>
+                        <p className="text-indigo-100 text-sm">
+                            Diseña pruebas diagnósticas, formativas o sumativas alineadas a DCDs, con soporte DUA y NEE.
+                        </p>
+                        <div className="mt-4 text-xs font-semibold bg-white/20 inline-block px-2 py-1 rounded">
+                            Potenciado por Gemini AI
+                        </div>
                     </div>
                 </div>
             )}
@@ -221,6 +254,32 @@ const ResourceRepositoryPage: React.FC<ResourceRepositoryPageProps> = ({ dcds, r
                     onClose={() => setIsAiRubricOpen(false)}
                     onSaveRubric={handleSaveNewRubric}
                     currentUser={user}
+                />
+            )}
+
+            {isAiTicketOpen && (
+                <ExitTicketGenerator
+                    isOpen={isAiTicketOpen}
+                    onClose={() => setIsAiTicketOpen(false)}
+                    onSave={(res) => {
+                        handleSave(res);
+                        setViewMode('resources');
+                    }}
+                    currentUser={user}
+                />
+            )}
+
+            {isAiAssessmentOpen && (
+                <AssessmentGenerator
+                    isOpen={isAiAssessmentOpen}
+                    onClose={() => setIsAiAssessmentOpen(false)}
+                    onSave={(res) => {
+                        handleSave(res);
+                        setViewMode('resources');
+                    }}
+                    currentUser={user}
+                    dcds={dcds}
+                    subjects={subjects}
                 />
             )}
         </div>
