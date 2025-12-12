@@ -270,7 +270,16 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = (props) => {
                 'health': <HealthPage {...restProps} users={users} classes={classes} schedule={schedule} subjects={subjects} timeSlots={timeSlots} students={students} onUpdateStudents={restProps.onUpdateStudents} viccInterventions={restProps.viccInterventions} onUpdateViccInterventions={restProps.onUpdateViccInterventions} />,
                 'students': <StudentManagementPage {...restProps} users={users} classes={classes} schedule={schedule} subjects={subjects} timeSlots={timeSlots} rooms={restProps.rooms} timetables={restProps.timetables} students={students} onUpdateStudents={restProps.onUpdateStudents} />,
                 'schedule': <SchedulePage {...restProps} schedule={schedule} subjects={subjects} timeSlots={timeSlots} users={users} classes={classes} students={students} />,
-                'inspection': <InspectionPage {...restProps} classes={classes} users={users} students={students} conflictMediations={conflictMediations} onUpdateConflictMediations={onUpdateConflictMediations} />,
+                'inspection': <InspectionPage 
+                    {...restProps} 
+                    classes={classes} 
+                    users={users} 
+                    students={students} 
+                    conflictMediations={conflictMediations} 
+                    onUpdateConflictMediations={onUpdateConflictMediations} 
+                    gradebooks={gradebooks} 
+                    subjects={subjects} 
+                />,
                 'citaciones': <CitacionesPage {...restProps} users={users} students={students} />,
                 'leccionario': <LeccionarioPage leccionarioEntries={leccionarioEntries} onUpdateLeccionarioEntries={onUpdateLeccionarioEntries} schedule={schedule} classes={classes} subjects={subjects} users={users} timeSlots={timeSlots} microPlans={microPlans} />,
                 'curricular_planning': <CurricularPlanningPage microPlans={microPlans} onUpdateMicroPlans={onUpdateMicroPlans} classes={classes} subjects={subjects} students={students} users={users} dcds={dcds} evaluationCriteria={restProps.evaluationCriteria} evaluationIndicators={restProps.evaluationIndicators} />,

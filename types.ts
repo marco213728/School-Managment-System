@@ -1,3 +1,4 @@
+
 export enum Role {
   SuperAdmin = 'Super Administrador',
   InstitutionAdmin = 'Administrador de Institución',
@@ -411,6 +412,29 @@ export interface QualityMetric {
   metric: string;
   value: number;
   target: number;
+}
+
+// --- QUALITY & EVALUATION MODULE ---
+
+export interface QualityGoal {
+    id: string;
+    institutionId: string;
+    category: 'Rendimiento' | 'Asistencia' | 'Retención' | 'Comportamiento';
+    metricName: string; // e.g. "Promedio General", "Tasa de Asistencia"
+    targetValue: number; // e.g. 8.0 or 95
+    academicYear: string;
+}
+
+export interface ImprovementPlan {
+    id: string;
+    institutionId: string;
+    dateCreated: string;
+    problemDetected: string; // e.g. "Bajo rendimiento en Matemáticas 8vo"
+    proposedIntervention: string; // e.g. "Clases de refuerzo vespertinas"
+    responsibleId: string; // User ID (Vicerrector/Area Coordinator)
+    deadline: string;
+    status: 'Not Started' | 'In Progress' | 'Completed';
+    progressNotes?: string;
 }
 
 

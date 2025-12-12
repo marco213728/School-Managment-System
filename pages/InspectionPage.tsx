@@ -1,6 +1,6 @@
 
 import React, { useState, useMemo, useContext } from 'react';
-import { AttendanceRecord, Student, Class, ExitPass, Notification, User, DisciplinaryAction, InspectionVisit, ConflictMediation, QualityMetric, DisciplinarySeverity } from '../types';
+import { AttendanceRecord, Student, Class, ExitPass, Notification, User, DisciplinaryAction, InspectionVisit, ConflictMediation, QualityMetric, DisciplinarySeverity, Gradebook, Subject } from '../types';
 import { UserContext } from '../contexts/UserContext';
 import { MOCK_DISCIPLINARY_ACTIONS, MOCK_INSPECTION_VISITS, MOCK_QUALITY_METRICS } from '../constants';
 import JustificationManagement from '../components/inspection/JustificationManagement';
@@ -8,6 +8,7 @@ import ExitPassManagement from '../components/inspection/ExitPassManagement';
 import { InspectionIcon, AlertTriangleIcon, CheckCircleIcon, UsersIcon, ClipboardListIcon, ChartBarIcon, EditIcon } from '../components/icons/Icons';
 import ProtocolManagement from '../components/inspection/ProtocolManagement';
 import InspectionVisitForm from '../components/inspection/InspectionVisitForm';
+import QualityDashboard from '../components/inspection/QualityDashboard';
 
 interface InspectionPageProps {
     attendanceRecords: AttendanceRecord[];
@@ -21,13 +22,22 @@ interface InspectionPageProps {
     users: User[];
     conflictMediations?: ConflictMediation[];
     onUpdateConflictMediations?: (conflicts: ConflictMediation[]) => void;
+    // New props for Quality Module
+    gradebooks?: Gradebook[];
+    subjects?: Subject[];
 }
 
 type InspectionView = 'dashboard' | 'justifications' | 'exit_passes';
 type DashboardTab = 'compliance' | 'quality' | 'coexistence';
 
 const InspectionPage: React.FC<InspectionPageProps> = (props) => {
-    const { attendanceRecords, onUpdateAttendance, students, classes, exitPasses, onUpdateExitPasses, notifications, onUpdateNotifications, users, conflictMediations = [], onUpdateConflictMediations } = props;
+    const { 
+        attendanceRecords, onUpdateAttendance, students, classes, exitPasses, 
+        onUpdateExitPasses, notifications, onUpdateNotifications, users, 
+        conflictMediations = [], onUpdateConflictMediations,
+        gradebooks = [], subjects = [] // Defaults
+    } = props;
+
     const { user: currentUser } = useContext(UserContext);
     const [currentView, setCurrentView] = useState<InspectionView>('dashboard');
     const [activeTab, setActiveTab] = useState<DashboardTab>('compliance');
@@ -35,7 +45,6 @@ const InspectionPage: React.FC<InspectionPageProps> = (props) => {
     // Mock data states
     const [disciplinaryActions, setDisciplinaryActions] = useState<DisciplinaryAction[]>(MOCK_DISCIPLINARY_ACTIONS);
     const [inspectionVisits, setInspectionVisits] = useState<InspectionVisit[]>(MOCK_INSPECTION_VISITS);
-    const [metrics, setMetrics] = useState<QualityMetric[]>(MOCK_QUALITY_METRICS);
 
     // Form States for Inspection Visits
     const [isVisitFormOpen, setIsVisitFormOpen] = useState(false);
@@ -191,29 +200,6 @@ const InspectionPage: React.FC<InspectionPageProps> = (props) => {
         </div>
     );
 
-    const renderQualityTab = () => (
-        <div className="space-y-6 animate-fade-in">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {metrics.map(metric => (
-                    <div key={metric.id} className="bg-white p-6 rounded-xl shadow-sm border border-gray-200 flex flex-col items-center justify-center text-center">
-                        <h4 className="text-gray-500 font-medium text-sm uppercase tracking-wide">{metric.metric}</h4>
-                        <div className="my-4 relative w-32 h-32 flex items-center justify-center rounded-full border-8 border-gray-100">
-                            <span className={`absolute top-0 left-0 h-full w-full rounded-full border-8 ${metric.value >= metric.target ? 'border-green-500' : 'border-yellow-500'}`} style={{ clipPath: 'polygon(0 0, 100% 0, 100% 50%, 0 50%)', transform: `rotate(${(metric.value / 100) * 360}deg)` }}></span>
-                            <span className="text-3xl font-bold text-gray-800">{metric.value}%</span>
-                        </div>
-                        <p className="text-xs text-gray-500">Meta: {metric.target}%</p>
-                    </div>
-                ))}
-            </div>
-            <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200 text-center py-12">
-                <ChartBarIcon className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-                <h3 className="text-lg font-semibold text-gray-600">Análisis de Calidad Educativa</h3>
-                <p className="text-gray-500">Herramientas de evaluación del sistema y planes de mejora institucional.</p>
-                <button className="mt-4 px-4 py-2 bg-primary-600 text-white rounded hover:bg-primary-700">Generar Reporte de Calidad</button>
-            </div>
-        </div>
-    );
-
     const handleDeriveToDece = (conflictId: string) => {
         if (!onUpdateConflictMediations) return;
         const updatedConflicts = conflictMediations.map(c => 
@@ -344,7 +330,21 @@ const InspectionPage: React.FC<InspectionPageProps> = (props) => {
             </div>
 
             {activeTab === 'compliance' && renderComplianceTab()}
-            {activeTab === 'quality' && renderQualityTab()}
+            
+            {/* Replace static quality tab with QualityDashboard */}
+            {activeTab === 'quality' && (
+                <div className="animate-fade-in">
+                    <QualityDashboard 
+                        gradebooks={gradebooks}
+                        attendanceRecords={attendanceRecords}
+                        students={students}
+                        subjects={subjects}
+                        classes={classes}
+                        users={users}
+                    />
+                </div>
+            )}
+            
             {activeTab === 'coexistence' && renderCoexistenceTab()}
 
             {isVisitFormOpen && (
