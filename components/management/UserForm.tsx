@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { User, Role, Class, Student } from '../../types';
 import { CloseIcon, ClockIcon } from '../icons/Icons';
@@ -21,7 +22,7 @@ const UserForm: React.FC<UserFormProps> = ({ isOpen, onClose, onSave, userToEdit
     password: '',
     role: Role.Student,
     classIds: [],
-    childId: '',
+    childIds: [],
     phone: '',
     address: '',
     maxMonthlyHours: undefined,
@@ -37,7 +38,7 @@ const UserForm: React.FC<UserFormProps> = ({ isOpen, onClose, onSave, userToEdit
         password: '', 
         role: userToEdit.role,
         classIds: userToEdit.classIds || [],
-        childId: userToEdit.childId || '',
+        childIds: userToEdit.childIds || [],
         phone: userToEdit.phone || '',
         address: userToEdit.address || '',
         maxMonthlyHours: userToEdit.maxMonthlyHours,
@@ -51,7 +52,7 @@ const UserForm: React.FC<UserFormProps> = ({ isOpen, onClose, onSave, userToEdit
         password: '',
         role: Role.Student,
         classIds: [],
-        childId: '',
+        childIds: [],
         phone: '',
         address: '',
         maxMonthlyHours: undefined,
@@ -69,6 +70,11 @@ const UserForm: React.FC<UserFormProps> = ({ isOpen, onClose, onSave, userToEdit
   const handleClassIdsChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const values = Array.from(e.currentTarget.selectedOptions, (option: HTMLOptionElement) => option.value);
     setFormData(prev => ({ ...prev, classIds: values }));
+  }
+
+  const handleChildIdsChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const values = Array.from(e.currentTarget.selectedOptions, (option: HTMLOptionElement) => option.value);
+    setFormData(prev => ({ ...prev, childIds: values }));
   }
 
   const handleScheduleChange = (day: string, field: 'startTime' | 'endTime', value: string) => {
@@ -195,9 +201,8 @@ const UserForm: React.FC<UserFormProps> = ({ isOpen, onClose, onSave, userToEdit
 
           {formData.role === Role.Parent && (
              <div className="mt-4">
-                <label className="block text-sm font-medium text-gray-700">Hijo/a</label>
-                <select name="childId" value={formData.childId || ''} onChange={handleChange} className="mt-1 block w-full px-3 py-2 border border-gray-300 bg-white rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500">
-                  <option value="">-- Seleccionar Alumno --</option>
+                <label className="block text-sm font-medium text-gray-700">Hijos (mantener Ctrl para selección múltiple)</label>
+                <select multiple name="childIds" value={formData.childIds} onChange={handleChildIdsChange} className="mt-1 block w-full h-24 px-3 py-2 border border-gray-300 bg-white rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500">
                   {allStudents.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                 </select>
             </div>

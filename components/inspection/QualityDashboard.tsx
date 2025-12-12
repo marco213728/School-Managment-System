@@ -1,8 +1,9 @@
 
 import React, { useState, useMemo, useContext } from 'react';
-import { ChartBarIcon, CheckCircleIcon, AlertTriangleIcon, PlusIcon, PrinterIcon, EditIcon, TrashIcon } from '../icons/Icons';
+import { ChartBarIcon, CheckCircleIcon, AlertTriangleIcon, PlusIcon, PrinterIcon, EditIcon, TrashIcon, CloseIcon } from '../icons/Icons';
 import { Gradebook, AttendanceRecord, Student, Subject, Class, QualityGoal, ImprovementPlan, User, AttendanceStatus, Role } from '../../types';
 import { UserContext } from '../../contexts/UserContext';
+import PrintableQualityReport from '../reports/PrintableQualityReport';
 
 // --- SUB-COMPONENTS ---
 
@@ -209,12 +210,20 @@ const QualityDashboard: React.FC<QualityDashboardProps> = ({ gradebooks, attenda
     const [isGoalModalOpen, setIsGoalModalOpen] = useState(false);
     const [isPlanModalOpen, setIsPlanModalOpen] = useState(false);
     const [editingPlan, setEditingPlan] = useState<ImprovementPlan | null>(null);
+    const [isReportOpen, setIsReportOpen] = useState(false);
 
-    // --- LOGIC A: Academic Indicators ---
+    // --- LOGIC A: Academic Indicators & Performance Levels ---
     const academicStats = useMemo(() => {
         let totalSum = 0;
         let totalCount = 0;
+        let passCount = 0;
         const subjectAverages: Record<string, { sum: number, count: number, name: string }> = {};
+        
+        // Counters for Performance Levels
+        let domina = 0; // 9-10
+        let alcanza = 0; // 7-8.99
+        let proximo = 0; // 4.01-6.99
+        let noAlcanza = 0; // <= 4
 
         gradebooks.forEach(gb => {
             const subject = subjects.find(s => s.id === gb.subjectId);
@@ -226,12 +235,21 @@ const QualityDashboard: React.FC<QualityDashboardProps> = ({ gradebooks, attenda
 
             gb.records.forEach(rec => {
                 // Using notaFinal100 or projected average
-                const grade = rec.notaFinal100 || rec.promedioTrimestralFinal; // Fallback if year not over
+                const grade = rec.notaFinal100 || rec.promedioTrimestralFinal; 
                 if (grade > 0) {
                     totalSum += grade;
                     totalCount++;
                     subjectAverages[gb.subjectId].sum += grade;
                     subjectAverages[gb.subjectId].count++;
+
+                    // Efficiency: Pass Rate
+                    if (grade >= 7) passCount++;
+
+                    // Performance Levels
+                    if (grade >= 9) domina++;
+                    else if (grade >= 7) alcanza++;
+                    else if (grade > 4) proximo++;
+                    else noAlcanza++;
                 }
             });
         });
@@ -241,24 +259,27 @@ const QualityDashboard: React.FC<QualityDashboardProps> = ({ gradebooks, attenda
         const subjectStats = Object.values(subjectAverages).map(s => ({
             name: s.name,
             average: s.count > 0 ? s.sum / s.count : 0
-        })).sort((a,b) => a.average - b.average); // Sort low to high to highlight issues
+        })).sort((a,b) => a.average - b.average);
 
-        return { generalAverage, subjectStats };
+        const performanceLevels = [
+            { level: 'Domina los Aprendizajes (DAR)', description: 'Supera el estándar (9.00 - 10.00)', range: '9-10', count: domina, percentage: totalCount > 0 ? (domina/totalCount)*100 : 0 },
+            { level: 'Alcanza los Aprendizajes (AAR)', description: 'Cumple el estándar (7.00 - 8.99)', range: '7-8.99', count: alcanza, percentage: totalCount > 0 ? (alcanza/totalCount)*100 : 0 },
+            { level: 'Próximo a Alcanzar (PAR)', description: 'Cerca del estándar (4.01 - 6.99)', range: '4.01-6.99', count: proximo, percentage: totalCount > 0 ? (proximo/totalCount)*100 : 0 },
+            { level: 'No Alcanza (NAR)', description: 'No cumple estándar (<= 4.00)', range: '<= 4', count: noAlcanza, percentage: totalCount > 0 ? (noAlcanza/totalCount)*100 : 0 },
+        ];
+
+        return { generalAverage, subjectStats, performanceLevels, totalCount, passCount };
     }, [gradebooks, subjects]);
 
     // --- LOGIC B: Retention & Attendance ---
-    const attendanceStats = useMemo(() => {
-        if (attendanceRecords.length === 0) return { attendanceRate: 0, retentionRate: 100 };
+    const efficiencyStats = useMemo(() => {
+        if (attendanceRecords.length === 0) return { attendanceRate: 0, retentionRate: 100, passRate: 0 };
 
         const totalRecords = attendanceRecords.length;
         const presentRecords = attendanceRecords.filter(r => r.status === AttendanceStatus.Present || r.status === AttendanceStatus.Tardy).length;
-        const attendanceRate = (presentRecords / totalRecords) * 100;
+        const attendanceRate = totalRecords > 0 ? (presentRecords / totalRecords) * 100 : 0;
 
-        // Retention Rate Calculation (Simplified)
-        // Active students vs Total students ever registered (simplified here to just active count for now, 
-        // as we don't have a 'withdrawn' status in the Student type explicitly in this mock context easily accessible)
-        // Let's assume retention is based on attendance consistency for this logic: students with > 80% attendance are "retained"
-        
+        // Retention Rate Calculation (Simplified logic for demo)
         const studentAttendanceCounts: Record<string, { total: number, present: number }> = {};
         attendanceRecords.forEach(r => {
             if (!studentAttendanceCounts[r.studentId]) studentAttendanceCounts[r.studentId] = { total: 0, present: 0 };
@@ -268,12 +289,14 @@ const QualityDashboard: React.FC<QualityDashboardProps> = ({ gradebooks, attenda
             }
         });
 
-        const retainedStudents = Object.values(studentAttendanceCounts).filter(s => (s.present / s.total) >= 0.8).length;
+        const retainedStudents = Object.values(studentAttendanceCounts).filter(s => (s.present / s.total) >= 0.8).length; // < 20% absenteeism as proxy
         const totalActiveStudents = Object.keys(studentAttendanceCounts).length;
         const retentionRate = totalActiveStudents > 0 ? (retainedStudents / totalActiveStudents) * 100 : 100;
 
-        return { attendanceRate, retentionRate };
-    }, [attendanceRecords]);
+        const passRate = academicStats.totalCount > 0 ? (academicStats.passCount / academicStats.totalCount) * 100 : 0;
+
+        return { attendanceRate, retentionRate, passRate };
+    }, [attendanceRecords, academicStats.totalCount, academicStats.passCount]);
 
     // --- TRAFFIC LIGHT UTILS ---
     const getTrafficLight = (value: number, target: number) => {
@@ -304,8 +327,7 @@ const QualityDashboard: React.FC<QualityDashboardProps> = ({ gradebooks, attenda
     };
 
     const handleGenerateReport = () => {
-        // Simple alert for prototype; in production this would generate a PDF
-        alert("Generando Informe Anual de Calidad Educativa...\n\nIncluye:\n- Promedios por asignatura\n- Tasa de Retención y Asistencia\n- Estado de Planes de Mejora\n- Comparativo con Metas PEI");
+        setIsReportOpen(true);
     };
 
     // Find goals
@@ -313,7 +335,7 @@ const QualityDashboard: React.FC<QualityDashboardProps> = ({ gradebooks, attenda
     const attendanceGoal = goals.find(g => g.category === 'Asistencia')?.targetValue || 90;
 
     const gradeStatus = getTrafficLight(academicStats.generalAverage, gradeGoal);
-    const attendanceStatus = getTrafficLight(attendanceStats.attendanceRate, attendanceGoal);
+    const attendanceStatus = getTrafficLight(efficiencyStats.attendanceRate, attendanceGoal);
 
     return (
         <div className="space-y-6">
@@ -358,10 +380,10 @@ const QualityDashboard: React.FC<QualityDashboardProps> = ({ gradebooks, attenda
                     </div>
                     <h3 className="text-gray-500 text-sm font-bold uppercase tracking-wider mb-2">Tasa Global de Asistencia</h3>
                     <div className="flex items-end gap-2">
-                        <span className="text-4xl font-black text-gray-800">{attendanceStats.attendanceRate.toFixed(1)}%</span>
+                        <span className="text-4xl font-black text-gray-800">{efficiencyStats.attendanceRate.toFixed(1)}%</span>
                     </div>
                     <div className="mt-4 w-full bg-gray-200 rounded-full h-1.5">
-                        <div className="bg-green-500 h-1.5 rounded-full" style={{ width: `${attendanceStats.attendanceRate}%` }}></div>
+                        <div className="bg-green-500 h-1.5 rounded-full" style={{ width: `${efficiencyStats.attendanceRate}%` }}></div>
                     </div>
                     <p className="text-xs text-gray-500 mt-2">Meta Institucional: <strong>{attendanceGoal}%</strong></p>
                 </div>
@@ -370,7 +392,7 @@ const QualityDashboard: React.FC<QualityDashboardProps> = ({ gradebooks, attenda
                 <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
                     <h3 className="text-gray-500 text-sm font-bold uppercase tracking-wider mb-2">Tasa de Retención Escolar</h3>
                     <div className="flex items-end gap-2">
-                        <span className="text-4xl font-black text-gray-800">{attendanceStats.retentionRate.toFixed(1)}%</span>
+                        <span className="text-4xl font-black text-gray-800">{efficiencyStats.retentionRate.toFixed(1)}%</span>
                     </div>
                     <p className="text-xs text-gray-500 mt-4">Estudiantes activos y regulares en el sistema.</p>
                 </div>
@@ -445,6 +467,30 @@ const QualityDashboard: React.FC<QualityDashboardProps> = ({ gradebooks, attenda
                 planToEdit={editingPlan}
                 users={users}
             />
+
+            {isReportOpen && (
+                <div className="fixed inset-0 bg-black bg-opacity-60 z-[90] flex justify-center items-center p-4">
+                    <div className="bg-white rounded-lg shadow-xl w-full max-w-5xl max-h-[90vh] flex flex-col">
+                        <header className="p-4 flex justify-between items-center bg-gray-50 border-b no-print sticky top-0 z-10">
+                            <h3 className="text-lg font-semibold text-gray-700">Vista Previa del Informe</h3>
+                            <div className="flex items-center gap-2">
+                                <button onClick={() => setIsReportOpen(false)} className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 text-sm font-semibold">Cerrar</button>
+                                <button onClick={() => window.print()} className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white font-semibold rounded-md hover:bg-primary-700 text-sm">
+                                    <PrinterIcon className="h-5 w-5" /> Imprimir / PDF
+                                </button>
+                            </div>
+                        </header>
+                        <div className="overflow-y-auto bg-gray-100 p-4">
+                            <PrintableQualityReport 
+                                academicStats={academicStats}
+                                efficiencyStats={efficiencyStats}
+                                plans={plans}
+                                goals={goals}
+                            />
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

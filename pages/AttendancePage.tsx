@@ -1,4 +1,5 @@
-import React, { useState, useContext, useMemo } from 'react';
+
+import React, { useState, useContext, useMemo, useEffect } from 'react';
 import { UserContext } from '../contexts/UserContext';
 import { MOCK_STUDENTS, MOCK_OCR_SUBMISSIONS, ATTENDANCE_OBSERVATIONS } from '../constants';
 import { AttendanceStatus, Role, OcrSubmission, OcrSubmissionStatus, Class, TimeSlot, Timetable, AttendanceRecord } from '../types';
@@ -161,7 +162,6 @@ const TakeAttendanceManual: React.FC<AttendancePageProps> = ({ classes, timeSlot
             if (studentData) {
                 const existingRecord = existingRecordMap.get(student.id);
                 if (existingRecord) {
-                    // FIX: Replaced Object.assign with the more modern and type-safe spread syntax.
                     const updatedRecord: AttendanceRecord = {
                         ...existingRecord,
                         status: studentData.status,
@@ -391,18 +391,32 @@ const TeacherAttendance: React.FC<AttendancePageProps> = ({ classes, timeSlots, 
 const ViewAttendance: React.FC<Pick<AttendancePageProps, 'attendanceRecords' | 'onUpdateAttendance'>> = ({ attendanceRecords, onUpdateAttendance }) => {
     const { user } = useContext(UserContext);
     const [justifyingRecord, setJustifyingRecord] = useState<AttendanceRecord | null>(null);
+    const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
 
-    const studentId = user?.role === Role.Student ? user.id : user?.childId;
+    const availableStudents = useMemo(() => {
+        if (user?.role === Role.Student) {
+            return MOCK_STUDENTS.filter(s => s.id === user.id);
+        } else if (user?.role === Role.Parent && user.childIds) {
+            return MOCK_STUDENTS.filter(s => user.childIds?.includes(s.id));
+        }
+        return [];
+    }, [user]);
+
+    useEffect(() => {
+        if (availableStudents.length > 0 && !selectedStudentId) {
+            setSelectedStudentId(availableStudents[0].id);
+        }
+    }, [availableStudents, selectedStudentId]);
 
     const studentData = useMemo(() => 
-        MOCK_STUDENTS.find(s => s.id === studentId && s.institutionId === user?.institutionId),
-        [studentId, user]
+        availableStudents.find(s => s.id === selectedStudentId && s.institutionId === user?.institutionId),
+        [selectedStudentId, user, availableStudents]
     );
 
     const studentAttendance = useMemo(() => 
-        attendanceRecords.filter(att => att.studentId === studentId && att.institutionId === user?.institutionId)
+        attendanceRecords.filter(att => att.studentId === selectedStudentId && att.institutionId === user?.institutionId)
         .sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()),
-        [studentId, user, attendanceRecords]
+        [selectedStudentId, user, attendanceRecords]
     );
 
     const handleSaveJustification = (notes: string, documentUrl?: string) => {
@@ -423,9 +437,23 @@ const ViewAttendance: React.FC<Pick<AttendancePageProps, 'attendanceRecords' | '
         setJustifyingRecord(null);
     };
 
+    if (!selectedStudentId) return <p>Cargando...</p>;
+
     return (
          <>
             <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                {availableStudents.length > 1 && (
+                    <div className="mb-4">
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Seleccionar Estudiante:</label>
+                        <select 
+                            value={selectedStudentId || ''} 
+                            onChange={(e) => setSelectedStudentId(e.target.value)}
+                            className="p-2 border rounded-md"
+                        >
+                            {availableStudents.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                        </select>
+                    </div>
+                )}
                 <h2 className="text-xl font-bold text-gray-800 mb-4">Historial de Asistencia de {studentData?.name}</h2>
                 <div className="overflow-x-auto">
                     <table className="min-w-full divide-y divide-gray-200">

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useContext } from 'react';
 import { Student, User, Class, Role } from '../../types';
 import { UserContext } from '../../contexts/UserContext';
@@ -85,7 +86,7 @@ const StudentForm: React.FC<StudentFormProps> = ({ isOpen, onClose, onSave, stud
                 id: newParentId,
                 ...parentData,
                 role: Role.Parent,
-                childId: newStudentId,
+                childIds: [newStudentId], // Initialize as array
                 institutionId,
                 password: 'password', // Default password for prototype
             };

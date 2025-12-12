@@ -1,3 +1,4 @@
+
 import React, { useState, useContext, useMemo, useEffect } from 'react';
 import { UserContext } from '../contexts/UserContext';
 import { MOCK_CLASSES, MOCK_USERS, EVALUATION_CATEGORIES, MOCK_REPOSITORY_ITEMS } from '../constants';
@@ -673,17 +674,34 @@ const TeacherActivities: React.FC<ActivitiesPageProps> = (props) => {
 };
 
 const StudentParentActivities: React.FC<ActivitiesPageProps> = (props) => {
-    // ... (same as existing StudentParentActivities implementation)
     const { user } = useContext(UserContext);
+    const [selectedChildId, setSelectedChildId] = useState<string | null>(null);
 
     const institutionClasses = useMemo(() => props.classes.filter(c => c.institutionId === user?.institutionId), [props.classes, user]);
-    const studentId = user?.role === Role.Student ? user.id : user?.childId;
+
+    // Handle Multiple Children
+    const availableStudents = useMemo(() => {
+        if (user?.role === Role.Student) {
+            return props.students.filter(s => s.id === user.id);
+        } else if (user?.role === Role.Parent && user.childIds) {
+            return props.students.filter(s => user.childIds?.includes(s.id));
+        }
+        return [];
+    }, [user, props.students]);
+
+    useEffect(() => {
+        if (availableStudents.length > 0 && !selectedChildId) {
+            setSelectedChildId(availableStudents[0].id);
+        }
+    }, [availableStudents, selectedChildId]);
+
+    const studentId = selectedChildId;
 
     const relevantClassIds = useMemo(() => {
-        if (!user || !studentId) return [];
+        if (!studentId) return [];
         const studentUser = props.students.find(u => u.id === studentId);
         return studentUser ? [studentUser.classId] : [];
-    }, [user, studentId, props.students]);
+    }, [studentId, props.students]);
 
     const activities = useMemo(() =>
         props.activities.filter(act => act.institutionId === user?.institutionId && relevantClassIds.includes(act.classId)),
@@ -712,15 +730,32 @@ const StudentParentActivities: React.FC<ActivitiesPageProps> = (props) => {
 
     return (
         <div>
-            <h2 className="text-xl font-bold text-gray-800 mb-6">Próximas Actividades y Calificaciones</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {activities.map(activity => {
-                    const classInfo = institutionClasses.find(c => c.id === activity.classId);
-                    const grade = studentGradebookRecords.get(activity.id);
-                    const dcd = props.dcds.find(d => d.id === activity.dcdId);
-                    return <ActivityCard key={activity.id} activity={activity} classInfo={classInfo} grade={grade} dcd={dcd} />
-                })}
+            <div className="flex justify-between items-center mb-6">
+                <h2 className="text-xl font-bold text-gray-800">Próximas Actividades y Calificaciones</h2>
+                {/* Child Selector if multiple */}
+                {availableStudents.length > 1 && (
+                     <select 
+                        value={selectedChildId || ''} 
+                        onChange={(e) => setSelectedChildId(e.target.value)}
+                        className="p-2 border rounded-md"
+                    >
+                        {availableStudents.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                    </select>
+                )}
             </div>
+
+            {activities.length === 0 ? (
+                <p className="text-gray-500">No hay actividades registradas.</p>
+            ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {activities.map(activity => {
+                        const classInfo = institutionClasses.find(c => c.id === activity.classId);
+                        const grade = studentGradebookRecords.get(activity.id);
+                        const dcd = props.dcds.find(d => d.id === activity.dcdId);
+                        return <ActivityCard key={activity.id} activity={activity} classInfo={classInfo} grade={grade} dcd={dcd} />
+                    })}
+                </div>
+            )}
         </div>
     );
 };

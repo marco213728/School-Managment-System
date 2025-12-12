@@ -1,3 +1,4 @@
+
 import React, { useContext, useState, useMemo } from 'react';
 import { UserContext } from '../contexts/UserContext';
 import { Role, Student, User, Class, ActivityType, AttendanceStatus, ScheduleEntry, Subject, TimeSlot, Room, Timetable, ViccIntervention, FormalRequest } from '../types';
@@ -186,52 +187,84 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ schedule, subjects,
 
 const ParentDashboard: React.FC<DashboardPageProps> = ({ students, onUpdateStudents, users, classes, schedule, subjects, timeSlots, rooms, timetables, viccInterventions, onUpdateViccInterventions }) => {
     const { user } = useContext(UserContext);
-    const [isProfileOpen, setProfileOpen] = useState(false);
+    const [selectedChildId, setSelectedChildId] = useState<string | null>(null);
 
-    const child = useMemo(() => {
-        if (!user?.childId) return null;
-        return students.find(s => s.id === user.childId);
+    const myChildren = useMemo(() => {
+        if (!user || !user.childIds || user.childIds.length === 0) return [];
+        return students.filter(s => user.childIds?.includes(s.id));
     }, [user, students]);
 
+    const child = useMemo(() => {
+        if (!selectedChildId && myChildren.length > 0) return myChildren[0];
+        return myChildren.find(s => s.id === selectedChildId);
+    }, [myChildren, selectedChildId]);
+    
+    // Auto-select first child if not selected
+    if (myChildren.length > 0 && !selectedChildId) {
+         setSelectedChildId(myChildren[0].id);
+    }
+
+    if (!child) return <div className="text-gray-500">No tiene estudiantes asociados.</div>;
 
     return (
         <>
+             {myChildren.length > 1 && (
+                <div className="mb-6 flex gap-2 overflow-x-auto pb-2">
+                    {myChildren.map(c => (
+                        <button
+                            key={c.id}
+                            onClick={() => setSelectedChildId(c.id)}
+                            className={`px-4 py-2 rounded-full text-sm font-semibold transition-colors ${
+                                selectedChildId === c.id 
+                                ? 'bg-primary-600 text-white' 
+                                : 'bg-white text-gray-600 hover:bg-gray-100 border'
+                            }`}
+                        >
+                            {c.name}
+                        </button>
+                    ))}
+                </div>
+            )}
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                  <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
-                    <h3 className="text-lg font-semibold text-slate-800 mb-4">Asistencia Reciente de {child?.name.split(' ')[0]}</h3>
-                    <p className="text-rose-500 font-semibold">Falta registrada hoy a las 8:30.</p>
+                    <h3 className="text-lg font-semibold text-slate-800 mb-4">Información de {child.name.split(' ')[0]}</h3>
+                    <p className="text-gray-600 mb-2">Clase: {classes.find(c => c.id === child.classId)?.name}</p>
+                    {/* Add summary attendance data here if available */}
                 </div>
-                 <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex flex-col">
-                    <h3 className="text-lg font-semibold text-slate-800 mb-4">Próximas Actividades</h3>
-                     <div className="flex flex-col justify-between h-full flex-grow">
-                        <p><strong>Examen de Álgebra</strong> - 15 de Agosto</p>
-                        <button 
-                            onClick={() => setProfileOpen(true)}
-                            className="mt-4 w-full text-center px-4 py-2 bg-primary-600 text-white font-semibold rounded-lg hover:bg-primary-700"
-                        >
-                            Ver Perfil Completo del Estudiante
-                        </button>
-                    </div>
+                 <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex flex-col items-center justify-center">
+                    <button 
+                        onClick={() => setSelectedChildId(child.id)} // Trigger modal re-open if needed or just use this state to show details below
+                        className="mt-4 w-full text-center px-4 py-2 bg-primary-600 text-white font-semibold rounded-lg hover:bg-primary-700"
+                    >
+                         {/* We are reusing the modal component, but rendering it conditionally below */}
+                         Ver Perfil Completo
+                    </button>
                 </div>
             </div>
-            {isProfileOpen && user?.childId && (
-                <StudentProfileCard 
-                    studentId={user.childId} 
-                    onClose={() => setProfileOpen(false)}
-                    isEditable={false}
-                    allStudents={students}
-                    onUpdateStudents={onUpdateStudents}
-                    allUsers={users}
-                    allClasses={classes}
-                    schedule={schedule}
-                    subjects={subjects}
-                    timeSlots={timeSlots}
-                    rooms={rooms}
-                    timetables={timetables}
-                    viccInterventions={viccInterventions}
-                    onUpdateViccInterventions={onUpdateViccInterventions}
-                    isModal={true}
-                />
+
+            {/* Always Render Profile Card Modal if a child is selected (and triggered via state if we want modal behavior, or inline) */}
+            {/* For this dashboard, let's keep it simple: clicking the button opens the modal */}
+             {selectedChildId && (
+                <div className="mt-6">
+                     <StudentProfileCard 
+                        studentId={selectedChildId} 
+                        onClose={() => {}} // No close needed if inline, or manage open state
+                        isEditable={false}
+                        allStudents={students}
+                        onUpdateStudents={onUpdateStudents}
+                        allUsers={users}
+                        allClasses={classes}
+                        schedule={schedule}
+                        subjects={subjects}
+                        timeSlots={timeSlots}
+                        rooms={rooms}
+                        timetables={timetables}
+                        viccInterventions={viccInterventions}
+                        onUpdateViccInterventions={onUpdateViccInterventions}
+                        isModal={false} // Render inline for dashboard overview
+                    />
+                </div>
             )}
         </>
     );

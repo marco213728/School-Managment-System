@@ -22,7 +22,7 @@ export interface User {
   role: Role;
   institutionId?: string; // Optional for SuperAdmin
   classIds?: string[]; // For teachers and students
-  childId?: string; // For parents
+  childIds?: string[]; // For parents (Changed from childId to childIds)
   phone?: string;
   address?: string;
   maxMonthlyHours?: number;

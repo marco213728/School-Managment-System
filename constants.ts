@@ -1,4 +1,5 @@
 
+
 import { User, Role, Student, Class, Activity, ActivityType, AttendanceRecord, AttendanceStatus, Notification, SupportContact, Intervention, InterventionType, OvpActivity, OvpAxis, HealthRecord, Institution, OcrSubmission, OcrSubmissionStatus, ScheduleEntry, MedicalVisit, Shift, TimeSlot, Subject, Room, Timetable, ViccIntervention, ViccInterventionType, ExitPass, Citacion, CitacionStatus, AcademicCalendarEvent, LeccionarioEntry, MicroPlan, CurricularPlanStatus, GradeLevel, GRADE_LEVELS, Dcd, EvaluationCriterion, EvaluationIndicator, Competency, COMPETENCIES, CURRICULAR_INSERTIONS, AREAS_OF_KNOWLEDGE, SUBJECT_LEVELS, Gradebook, TrimesterRecord, StudentGradebook, GradeEntry, EVALUATION_CATEGORIES, ClassroomObservation, TrainingSession, InstitutionalDocument, MeetingRecord, DisciplinaryAction, DisciplinarySeverity, InspectionVisit, ConflictMediation, QualityMetric, ClassroomVisit, RubricCriterion, ReinforcementPlan, StaffAttendanceRecord, FormalRequestStatus, FormalRequestType, FormalRequestRecipient, TrainingPlan, Rubric, ResourceRepositoryItem, FormalRequest, SubjectReport, JuntaDeCurso, ProtocolCase } from './types';
 
 export { GRADE_LEVELS, COMPETENCIES, CURRICULAR_INSERTIONS, AREAS_OF_KNOWLEDGE, SUBJECT_LEVELS, EVALUATION_CATEGORIES };
@@ -166,12 +167,12 @@ export const MOCK_USERS: User[] = [
   { id: 'admin1', name: 'Admin Director (UEMOL)', email: 'marco213728@gmail.com', password: 'password', role: Role.InstitutionAdmin, institutionId: 'uemol', phone: '600111222', address: 'Calle Principal 1, 28001 Madrid' },
   { id: 'teacher1', name: 'Prof. García', email: 'garcia@school.com', password: 'password', role: Role.Teacher, classIds: ['class1'], institutionId: 'uemol', phone: '611222333', maxMonthlyHours: 80, biometricRegistered: true, accessPin: '1234', workSchedule: { Lunes: { startTime: '08:00', endTime: '16:00' }, Martes: { startTime: '08:00', endTime: '16:00' }, Miércoles: { startTime: '08:00', endTime: '16:00' }, Jueves: { startTime: '08:00', endTime: '16:00' }, Viernes: { startTime: '08:00', endTime: '16:00' } } },
   { id: 'teacher2', name: 'Prof. López', email: 'lopez@school.com', password: 'password', role: Role.Teacher, classIds: ['class2'], institutionId: 'uemol', maxMonthlyHours: 75, biometricRegistered: false, accessPin: '5678', workSchedule: { Lunes: { startTime: '08:30', endTime: '16:30' }, Martes: { startTime: '08:30', endTime: '16:30' }, Miércoles: { startTime: '08:30', endTime: '16:30' }, Jueves: { startTime: '08:30', endTime: '16:30' }, Viernes: { startTime: '08:30', endTime: '16:30' } } },
-  { id: 'parent1', name: 'Sr. Martinez', email: 'martinez@family.com', password: 'password', role: Role.Parent, childId: 'student1', institutionId: 'uemol', phone: '622333444', address: 'Avenida del Sol 4, 28002 Madrid' },
-  { id: 'parent2', name: 'Sra. Diaz', email: 'diaz@family.com', password: 'password', role: Role.Parent, childId: 'student2', institutionId: 'uemol' },
-  { id: 'parent3', name: 'Sr. Sanchez', email: 'sanchez@family.com', password: 'password', role: Role.Parent, childId: 'student3', institutionId: 'uemol' },
-  { id: 'parent4', name: 'Sra. Fernandez', email: 'fernandez@family.com', password: 'password', role: Role.Parent, childId: 'student4', institutionId: 'uemol' },
-  { id: 'parent5', name: 'Sr. Gomez', email: 'gomez@family.com', password: 'password', role: Role.Parent, childId: 'student5', institutionId: 'uemol' },
-  { id: 'parent6', name: 'Sra. Rodriguez', email: 'rodriguez@family.com', password: 'password', role: Role.Parent, childId: 'student6', institutionId: 'uemol' },
+  { id: 'parent1', name: 'Sr. Martinez', email: 'martinez@family.com', password: 'password', role: Role.Parent, childIds: ['student1', 'student3'], institutionId: 'uemol', phone: '622333444', address: 'Avenida del Sol 4, 28002 Madrid' },
+  { id: 'parent2', name: 'Sra. Diaz', email: 'diaz@family.com', password: 'password', role: Role.Parent, childIds: ['student2'], institutionId: 'uemol' },
+  { id: 'parent3', name: 'Sr. Sanchez', email: 'sanchez@family.com', password: 'password', role: Role.Parent, childIds: ['student3'], institutionId: 'uemol' },
+  { id: 'parent4', name: 'Sra. Fernandez', email: 'fernandez@family.com', password: 'password', role: Role.Parent, childIds: ['student4'], institutionId: 'uemol' },
+  { id: 'parent5', name: 'Sr. Gomez', email: 'gomez@family.com', password: 'password', role: Role.Parent, childIds: ['student5'], institutionId: 'uemol' },
+  { id: 'parent6', name: 'Sra. Rodriguez', email: 'rodriguez@family.com', password: 'password', role: Role.Parent, childIds: ['student6'], institutionId: 'uemol' },
   { id: 'student1', name: 'ARAUJO SANGUCHO ADELE CONSUELO', email: 'juan@student.com', password: 'password', role: Role.Student, classIds: ['class1'], institutionId: 'uemol' },
   { id: 'student2', name: 'Ana Diaz', email: 'ana@student.com', password: 'password', role: Role.Student, classIds: ['class2'], institutionId: 'uemol' },
   { id: 'student3', name: 'Pedro Sanchez', email: 'pedro@student.com', password: 'password', role: Role.Student, classIds: ['class1'], institutionId: 'uemol'},
@@ -190,7 +191,7 @@ export const MOCK_USERS: User[] = [
   { id: 'admin2', name: 'Directora Pérez (XYZ)', email: 'perez@xyz.com', password: 'password', role: Role.InstitutionAdmin, institutionId: 'colegio-xyz' },
   { id: 'teacher3', name: 'Prof. Vera', email: 'vera@xyz.com', password: 'password', role: Role.Teacher, classIds: ['class3'], institutionId: 'colegio-xyz', maxMonthlyHours: 90 },
   { id: 'student7', name: 'Maria Solis', email: 'maria@xyz.com', password: 'password', role: Role.Student, classIds: ['class3'], institutionId: 'colegio-xyz'},
-  { id: 'parent7', name: 'Sr. Solis', email: 'solis@family.com', password: 'password', role: Role.Parent, childId: 'student7', institutionId: 'colegio-xyz'},
+  { id: 'parent7', name: 'Sr. Solis', email: 'solis@family.com', password: 'password', role: Role.Parent, childIds: ['student7'], institutionId: 'colegio-xyz'},
 ];
 
 export const MOCK_TIMETABLES: Timetable[] = [
@@ -256,7 +257,7 @@ export const MOCK_STUDENTS: Student[] = [
     ]
   },
   { id: 'student2', institutionId: 'uemol', name: 'Ana Diaz', classId: 'class2', parentId: 'parent2', phone: '687654321', address: 'Avenida Siempre Viva 742, Madrid', photoUrl: 'https://placehold.co/200x200/ec4899/white?text=AD' },
-  { id: 'student3', institutionId: 'uemol', name: 'Pedro Sanchez', classId: 'class1', parentId: 'parent3', photoUrl: 'https://placehold.co/200x200/f97316/white?text=PS' },
+  { id: 'student3', institutionId: 'uemol', name: 'Pedro Sanchez', classId: 'class1', parentId: 'parent1', photoUrl: 'https://placehold.co/200x200/f97316/white?text=PS' }, // Changed parentId to parent1
   { id: 'student4', institutionId: 'uemol', name: 'Lucia Fernandez', classId: 'class2', parentId: 'parent4' },
   { id: 'student5', institutionId: 'uemol', name: 'Carlos Gomez', classId: 'class1', parentId: 'parent5' },
   { id: 'student6', institutionId: 'uemol', name: 'Sofia Rodriguez', classId: 'class2', parentId: 'parent6' },
