@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo, useEffect } from 'react';
 import { User, Institution, Role, Class, Student, ScheduleEntry, Notification, SupportContact, HealthRecord, MedicalVisit, Subject, TimeSlot, Room, Timetable, ViccIntervention, AttendanceRecord, ExitPass, Citacion, AcademicCalendarEvent, LeccionarioEntry, MicroPlan, Dcd, EvaluationCriterion, EvaluationIndicator, Gradebook, Activity, ReinforcementPlan, StaffAttendanceRecord, PunchType, FormalRequest, TrainingPlan, InstitutionalDocument, MeetingRecord, Rubric, ConflictMediation } from './types';
 import { MOCK_USERS, MOCK_INSTITUTIONS, MOCK_CLASSES, MOCK_STUDENTS, MOCK_SCHEDULE_ENTRIES, MOCK_NOTIFICATIONS, MOCK_SUPPORT_CONTACTS, MOCK_HEALTH_RECORDS, MOCK_MEDICAL_VISITS, MOCK_SUBJECTS, MOCK_TIME_SLOTS, MOCK_ROOMS, MOCK_TIMETABLES, MOCK_VICC_INTERVENTIONS, MOCK_ATTENDANCE, MOCK_EXIT_PASSES, MOCK_CITACIONES, MOCK_ACADEMIC_CALENDAR_EVENTS, MOCK_LECCIONARIO_ENTRIES, MOCK_MICRO_PLANS, MOCK_DCDS, MOCK_EVALUATION_CRITERIA, MOCK_EVALUATION_INDICATORS, MOCK_GRADEBOOKS, MOCK_ACTIVITIES, MOCK_REINFORCEMENT_PLANS, MOCK_STAFF_ATTENDANCE, MOCK_FORMAL_REQUESTS, MOCK_TRAINING_PLANS, MOCK_INSTITUTIONAL_DOCUMENTS, MOCK_MEETING_RECORDS, MOCK_RUBRICS, MOCK_CONFLICT_MEDIATIONS } from './constants';
@@ -8,6 +7,25 @@ import { UserContext, InstitutionContext } from './contexts/UserContext';
 import SuperAdminPage from './pages/SuperAdminPage';
 import PlatformAdminLayout from './components/layout/PlatformAdminLayout';
 import { AMAUTA_LOGO } from './branding';
+
+// Helper for Geofencing
+function getDistanceFromLatLonInM(lat1: number, lon1: number, lat2: number, lon2: number) {
+  var R = 6371; // Radius of the earth in km
+  var dLat = deg2rad(lat2-lat1);  // deg2rad below
+  var dLon = deg2rad(lon2-lon1); 
+  var a = 
+    Math.sin(dLat/2) * Math.sin(dLat/2) +
+    Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) * 
+    Math.sin(dLon/2) * Math.sin(dLon/2)
+    ; 
+  var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)); 
+  var d = R * c; // Distance in km
+  return d * 1000; // Distance in meters
+}
+
+function deg2rad(deg: number) {
+  return deg * (Math.PI/180)
+}
 
 export default function App() {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
@@ -106,11 +124,54 @@ export default function App() {
   const handleUpdateConflictMediations = (conflicts: ConflictMediation[]) => setConflictMediations(conflicts);
   
   const handleUpdateStaffAttendance = (userId: string, method: 'Biometric' | 'Manual' | 'Facial', location?: { latitude: number; longitude: number; }) => {
+    
+    // --- GEOFENCE LOGIC START ---
+    let verificationStatus: 'Success' | 'Failed' | 'Pending' = 'Pending';
+    let distance = 0;
+    const user = users.find(u => u.id === userId);
+
+    if (currentInstitution?.geofenceConfig && currentInstitution.geofenceConfig.latitude && location) {
+        distance = getDistanceFromLatLonInM(
+            location.latitude, 
+            location.longitude, 
+            currentInstitution.geofenceConfig.latitude, 
+            currentInstitution.geofenceConfig.longitude
+        );
+
+        if (distance <= currentInstitution.geofenceConfig.radius) {
+            verificationStatus = 'Success';
+        } else {
+            verificationStatus = 'Failed';
+            
+            // ALERT GENERATION
+            const adminUsers = users.filter(u => 
+                u.institutionId === currentInstitution.id && 
+                (u.role === Role.InstitutionAdmin || u.role === Role.InspectorGeneral || u.role === Role.Rector)
+            );
+            
+            const newAlerts: Notification[] = adminUsers.map(admin => ({
+                id: `alert-geo-${Date.now()}-${admin.id}`,
+                institutionId: currentInstitution.id,
+                userId: admin.id,
+                title: 'Alerta de Seguridad: Asistencia Fuera de Rango',
+                message: `El usuario ${user?.name} ha registrado asistencia a ${Math.round(distance)}m de la institución (Radio permitido: ${currentInstitution.geofenceConfig?.radius}m).`,
+                date: new Date().toISOString(),
+                read: false
+            }));
+            
+            setNotifications(prev => [...prev, ...newAlerts]);
+        }
+    } else {
+        // Fallback if no config
+        verificationStatus = 'Success'; 
+    }
+    // --- GEOFENCE LOGIC END ---
+
     setStaffAttendanceRecords(prev => {
         const now = new Date();
         const today = now.toISOString().split('T')[0];
         const currentTime = now.toTimeString().split(' ')[0].substring(0, 8);
-        const user = users.find(u => u.id === userId);
+        
         if (!user) return prev;
 
         const existingRecordIndex = prev.findIndex(r => r.userId === userId && r.date === today);
@@ -133,7 +194,7 @@ export default function App() {
 
             recordToUpdate.punches = [
                 ...recordToUpdate.punches,
-                { time: currentTime, type: newPunchType, method, location },
+                { time: currentTime, type: newPunchType, method, location, verificationStatus, distanceFromInstitution: Math.round(distance) },
             ];
             updatedRecords[existingRecordIndex] = recordToUpdate;
             return updatedRecords;
@@ -143,7 +204,7 @@ export default function App() {
                 institutionId: user.institutionId!,
                 userId: userId,
                 date: today,
-                punches: [{ time: currentTime, type: 'in', method, location }],
+                punches: [{ time: currentTime, type: 'in', method, location, verificationStatus, distanceFromInstitution: Math.round(distance) }],
             };
             return [newRecord, ...prev];
         }

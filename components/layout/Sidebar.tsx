@@ -1,3 +1,4 @@
+
 import React, { useContext } from 'react';
 import { Role } from '../../types';
 import { UserContext, InstitutionContext } from '../../contexts/UserContext';
@@ -63,6 +64,8 @@ const Sidebar: React.FC<SidebarProps> = ({ currentPage, setCurrentPage, isSideba
       { page: 'attendance', icon: <AttendanceIcon className="h-6 w-6" />, text: 'Pase de Lista' },
       { page: 'activities', icon: <ActivityIcon className="h-6 w-6" />, text: 'Actividades' },
       { page: 'reinforcement', icon: <GraduationCapIcon className="h-6 w-6" />, text: 'Refuerzo Académico' },
+      // Added Juntas de Curso Link for Teachers
+      { page: 'juntas', icon: <UsersIcon className="h-6 w-6" />, text: 'Juntas de Curso' },
       { page: 'reports', icon: <ReportIcon className="h-6 w-6" />, text: 'Informes de Clase' },
       { page: 'citaciones', icon: <CitacionIcon className="h-6 w-6" />, text: 'Citaciones' },
       { page: 'teacher_training', icon: <ArchiveBoxIcon className="h-6 w-6" />, text: 'Capacitación' },

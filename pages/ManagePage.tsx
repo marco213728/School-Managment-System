@@ -40,7 +40,7 @@ interface ManagePageProps {
   onUpdateRooms: (rooms: Room[]) => void;
   onUpdateTimetables: (timetables: Timetable[]) => void;
   onUpdateAcademicCalendarEvents: (events: AcademicCalendarEvent[]) => void;
-  onUpdateStaffAttendance: (userId: string, method: 'Biometric' | 'Manual', location?: { latitude: number; longitude: number; }) => void;
+  onUpdateStaffAttendance: (userId: string, method: 'Biometric' | 'Manual' | 'Facial', location?: { latitude: number; longitude: number; }) => void;
 }
 
 interface ManageCardProps {
@@ -145,6 +145,16 @@ const ManagePage: React.FC<ManagePageProps> = ({
 
     const renderStaffControl = () => (
         <div className="space-y-8">
+            {/* Added: Kiosk for Testing */}
+            <div className="bg-white p-6 rounded-xl shadow-md border-l-4 border-blue-500">
+                <h3 className="text-lg font-bold text-slate-800 mb-4">Terminal de Asistencia (Modo Prueba)</h3>
+                <p className="text-sm text-slate-600 mb-4">Utilice este terminal para simular el registro de asistencia como cualquier usuario de la institución.</p>
+                <StaffAttendanceKiosk 
+                    users={institutionData.users}
+                    onRecordAttendance={onUpdateStaffAttendance}
+                />
+            </div>
+
             <div className="bg-white p-6 rounded-xl shadow-md">
                 <h3 className="text-lg font-bold text-slate-800 mb-4">Inscripción Biométrica del Personal</h3>
                 <p className="text-sm text-slate-500 mb-4">Seleccione un miembro del personal para registrar o actualizar su huella dactilar.</p>

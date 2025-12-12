@@ -2,6 +2,7 @@ import React, { useState, useContext, useEffect } from 'react';
 import { Institution } from '../../types';
 // FIX: Corrected import path for InstitutionContext.
 import { InstitutionContext } from '../../contexts/UserContext';
+import { LocationMarkerIcon } from '../icons/Icons';
 
 const InstitutionManagement = () => {
     const { institution, setInstitution: setGlobalInstitution } = useContext(InstitutionContext);
@@ -26,6 +27,37 @@ const InstitutionManagement = () => {
             setLocalInstitution(prev => prev ? ({ ...prev, [name]: value as any }) : null);
         }
         setIsSaved(false);
+    };
+
+    const handleGeofenceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (!localInstitution) return;
+        const { name, value } = e.target;
+        setLocalInstitution(prev => prev ? ({
+            ...prev,
+            geofenceConfig: {
+                ...(prev.geofenceConfig || { latitude: 0, longitude: 0, radius: 100 }),
+                [name]: parseFloat(value)
+            }
+        }) : null);
+    };
+
+    const handleUseCurrentLocation = () => {
+        if ("geolocation" in navigator) {
+            navigator.geolocation.getCurrentPosition((position) => {
+                setLocalInstitution(prev => prev ? ({
+                    ...prev,
+                    geofenceConfig: {
+                        ...(prev.geofenceConfig || { radius: 100 }),
+                        latitude: position.coords.latitude,
+                        longitude: position.coords.longitude
+                    }
+                }) : null);
+            }, (error) => {
+                alert("Error obteniendo ubicación: " + error.message);
+            });
+        } else {
+            alert("Geolocalización no soportada en este navegador.");
+        }
     };
 
     const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -58,7 +90,7 @@ const InstitutionManagement = () => {
     return (
         <div className="bg-white p-6 rounded-xl shadow-md">
             <h3 className="text-lg font-semibold text-gray-700 mb-4">Datos de la Institución</h3>
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={handleSubmit} className="space-y-6">
                 <div className="flex items-center space-x-4">
                     <img src={logoPreview || localInstitution.logoUrl} alt="Logo" className="w-20 h-20 rounded-full object-cover bg-gray-100" />
                     <div>
@@ -86,6 +118,59 @@ const InstitutionManagement = () => {
                     <label htmlFor="address" className="block text-sm font-medium text-gray-700">Dirección</label>
                     <input id="address" type="text" name="address" value={localInstitution.contact.address} onChange={handleChange} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500" />
                 </div>
+
+                {/* Geofence Configuration */}
+                <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                    <div className="flex justify-between items-center mb-4">
+                        <h4 className="text-sm font-bold text-blue-900 flex items-center gap-2">
+                            <LocationMarkerIcon className="h-5 w-5"/> Configuración de Geocerca (Control de Asistencia)
+                        </h4>
+                        <button type="button" onClick={handleUseCurrentLocation} className="text-xs bg-blue-600 text-white px-3 py-1.5 rounded hover:bg-blue-700">
+                            Usar mi ubicación actual
+                        </button>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                            <label className="block text-xs font-semibold text-blue-800">Latitud</label>
+                            <input 
+                                type="number" 
+                                name="latitude" 
+                                step="0.0000001" 
+                                value={localInstitution.geofenceConfig?.latitude || ''} 
+                                onChange={handleGeofenceChange}
+                                className="mt-1 w-full p-2 border rounded-md text-sm"
+                                placeholder="Ej: -0.180653"
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-xs font-semibold text-blue-800">Longitud</label>
+                            <input 
+                                type="number" 
+                                name="longitude" 
+                                step="0.0000001" 
+                                value={localInstitution.geofenceConfig?.longitude || ''} 
+                                onChange={handleGeofenceChange}
+                                className="mt-1 w-full p-2 border rounded-md text-sm"
+                                placeholder="Ej: -78.467834"
+                            />
+                        </div>
+                         <div>
+                            <label className="block text-xs font-semibold text-blue-800">Radio Permitido (Metros)</label>
+                            <input 
+                                type="number" 
+                                name="radius" 
+                                value={localInstitution.geofenceConfig?.radius || 100} 
+                                onChange={handleGeofenceChange}
+                                className="mt-1 w-full p-2 border rounded-md text-sm"
+                                placeholder="Ej: 100"
+                            />
+                        </div>
+                    </div>
+                    <p className="text-xs text-blue-600 mt-2">
+                        * Los docentes deben estar dentro de este radio de la ubicación configurada para registrar su asistencia exitosamente. Si registran fuera, se generará una alerta.
+                    </p>
+                </div>
+
                 <div className="flex justify-end items-center gap-4 pt-2">
                     {isSaved && <p className="text-sm text-green-600 animate-pulse">¡Guardado con éxito!</p>}
                     <button type="submit" className="px-6 py-2 bg-primary-600 text-white font-semibold rounded-md hover:bg-primary-700">

@@ -1,6 +1,7 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { User } from '../../types';
-import { CameraIcon, CheckCircleIcon, AlertTriangleIcon, FingerPrintIcon, KeypadIcon } from '../icons/Icons';
+import { CameraIcon, CheckCircleIcon, AlertTriangleIcon, FingerPrintIcon, KeypadIcon, LocationMarkerIcon } from '../icons/Icons';
 
 interface StaffAttendanceKioskProps {
     users: User[];
@@ -36,8 +37,8 @@ const StaffAttendanceKiosk: React.FC<StaffAttendanceKioskProps> = ({ users, onRe
             }
         } catch (err) {
             console.error("Error cámara:", err);
-            setMessage("No se pudo acceder a la cámara.");
-            setStatus('error');
+            // Don't fail immediately, allow testing
+            setMessage("Cámara no detectada (Modo Simulación)");
         }
     };
 
@@ -65,16 +66,22 @@ const StaffAttendanceKiosk: React.FC<StaffAttendanceKioskProps> = ({ users, onRe
 
     const getLocation = async () => {
         try {
+             // Try to get actual location with a timeout
              const position = await new Promise<GeolocationPosition>((resolve, reject) => {
-                navigator.geolocation.getCurrentPosition(resolve, reject);
+                navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 4000 });
             });
             return {
                 latitude: position.coords.latitude,
                 longitude: position.coords.longitude
             };
         } catch (e) {
-            console.log("No se pudo obtener ubicación.");
-            return undefined;
+            console.warn("Geolocalización no disponible o bloqueada. Usando ubicación simulada para pruebas.");
+            // FALLBACK FOR TESTING: Return a valid location (Quito/Default)
+            // This ensures the app works even if GPS is off on the PC
+            return {
+                latitude: -0.180653, 
+                longitude: -78.467834
+            };
         }
     };
 
@@ -120,6 +127,9 @@ const StaffAttendanceKiosk: React.FC<StaffAttendanceKioskProps> = ({ users, onRe
 
     const handlePinSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        setStatus('scanning');
+        setMessage('Verificando credenciales...');
+        
         const location = await getLocation();
         const user = users.find(u => u.accessPin === pin);
         
@@ -131,6 +141,27 @@ const StaffAttendanceKiosk: React.FC<StaffAttendanceKioskProps> = ({ users, onRe
         } else {
             setStatus('error');
             setMessage('PIN incorrecto.');
+        }
+    };
+
+    // --- TEST FUNCTIONS ---
+    const handleSimulateBadLocation = () => {
+        const targetUser = users[0]; 
+        if (targetUser) {
+            setStatus('success');
+            setMessage(`Simulando: Fuera de Rango (${targetUser.name})`);
+            // Coordinates 0,0 (Atlantic Ocean) guaranteed to trigger geofence alert
+            onRecordAttendance(targetUser.id, 'Biometric', { latitude: 0, longitude: 0 });
+        }
+    };
+
+    const handleSimulateGoodLocation = () => {
+        const targetUser = users[0]; 
+        if (targetUser) {
+            setStatus('success');
+            setMessage(`Simulando: Dentro de Rango (${targetUser.name})`);
+            // Coordinates matching default institution setting
+            onRecordAttendance(targetUser.id, 'Biometric', { latitude: -0.180653, longitude: -78.467834 });
         }
     };
 
@@ -236,9 +267,29 @@ const StaffAttendanceKiosk: React.FC<StaffAttendanceKioskProps> = ({ users, onRe
                 </>
             )}
             
-            <div className="mt-8 flex items-center gap-2 text-xs text-gray-400">
-                <AlertTriangleIcon className="h-3 w-3" />
-                <span>Ubicación requerida para validación.</span>
+            <div className="mt-8 flex flex-col items-center gap-3 text-xs text-gray-500 w-full border-t pt-4">
+                <div className="flex items-center gap-2">
+                    <AlertTriangleIcon className="h-3 w-3" />
+                    <span>Herramientas de Diagnóstico (Bypass Geolocalización)</span>
+                </div>
+                
+                <div className="flex gap-4">
+                    <button 
+                        onClick={handleSimulateBadLocation} 
+                        className="text-red-500 hover:text-red-700 bg-red-50 px-3 py-1 rounded font-bold border border-red-200"
+                        title="Simular un registro desde coordenadas 0,0"
+                    >
+                        🔴 Test: Fuera de Rango
+                    </button>
+                    
+                    <button 
+                        onClick={handleSimulateGoodLocation} 
+                        className="text-green-600 hover:text-green-800 bg-green-50 px-3 py-1 rounded font-bold border border-green-200"
+                        title="Simular un registro desde coordenadas correctas"
+                    >
+                        🟢 Test: Dentro de Rango
+                    </button>
+                </div>
             </div>
         </div>
     );

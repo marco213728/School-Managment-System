@@ -1,10 +1,13 @@
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useContext } from 'react';
 import { AttendanceRecord, Student, Class, ExitPass, Notification, User, DisciplinaryAction, InspectionVisit, ConflictMediation, QualityMetric, DisciplinarySeverity } from '../types';
+import { UserContext } from '../contexts/UserContext';
 import { MOCK_DISCIPLINARY_ACTIONS, MOCK_INSPECTION_VISITS, MOCK_QUALITY_METRICS } from '../constants';
 import JustificationManagement from '../components/inspection/JustificationManagement';
 import ExitPassManagement from '../components/inspection/ExitPassManagement';
-import { InspectionIcon, AlertTriangleIcon, CheckCircleIcon, UsersIcon, ClipboardListIcon, ChartBarIcon } from '../components/icons/Icons';
+import { InspectionIcon, AlertTriangleIcon, CheckCircleIcon, UsersIcon, ClipboardListIcon, ChartBarIcon, EditIcon } from '../components/icons/Icons';
+import ProtocolManagement from '../components/inspection/ProtocolManagement';
+import InspectionVisitForm from '../components/inspection/InspectionVisitForm';
 
 interface InspectionPageProps {
     attendanceRecords: AttendanceRecord[];
@@ -25,15 +28,44 @@ type DashboardTab = 'compliance' | 'quality' | 'coexistence';
 
 const InspectionPage: React.FC<InspectionPageProps> = (props) => {
     const { attendanceRecords, onUpdateAttendance, students, classes, exitPasses, onUpdateExitPasses, notifications, onUpdateNotifications, users, conflictMediations = [], onUpdateConflictMediations } = props;
+    const { user: currentUser } = useContext(UserContext);
     const [currentView, setCurrentView] = useState<InspectionView>('dashboard');
     const [activeTab, setActiveTab] = useState<DashboardTab>('compliance');
 
-    // Mock data states (in a real app, these would be props or fetched)
+    // Mock data states
     const [disciplinaryActions, setDisciplinaryActions] = useState<DisciplinaryAction[]>(MOCK_DISCIPLINARY_ACTIONS);
     const [inspectionVisits, setInspectionVisits] = useState<InspectionVisit[]>(MOCK_INSPECTION_VISITS);
     const [metrics, setMetrics] = useState<QualityMetric[]>(MOCK_QUALITY_METRICS);
 
+    // Form States for Inspection Visits
+    const [isVisitFormOpen, setIsVisitFormOpen] = useState(false);
+    const [editingVisit, setEditingVisit] = useState<InspectionVisit | null>(null);
+
     const studentMap = useMemo(() => new Map(students.map(s => [s.id, s.name])), [students]);
+
+    // Handle saving an inspection visit (Create or Update)
+    const handleSaveVisit = (visitData: Omit<InspectionVisit, 'id' | 'institutionId' | 'inspectorId'> & { id?: string }) => {
+        if (visitData.id) {
+            // Edit existing
+            setInspectionVisits(prev => prev.map(v => v.id === visitData.id ? { ...v, ...visitData } : v));
+        } else {
+            // Create new
+            const newVisit: InspectionVisit = {
+                ...visitData,
+                id: `iv-${Date.now()}`,
+                institutionId: currentUser?.institutionId || '',
+                inspectorId: currentUser?.id || '',
+            };
+            setInspectionVisits(prev => [newVisit, ...prev]);
+        }
+        setIsVisitFormOpen(false);
+        setEditingVisit(null);
+    };
+
+    const handleEditVisit = (visit: InspectionVisit) => {
+        setEditingVisit(visit);
+        setIsVisitFormOpen(true);
+    };
 
     if (currentView === 'justifications') {
         return <JustificationManagement 
@@ -83,19 +115,34 @@ const InspectionPage: React.FC<InspectionPageProps> = (props) => {
                             <ClipboardListIcon className="h-5 w-5 text-purple-600" />
                             Supervisión e Inspecciones
                         </h3>
-                        <button className="text-xs bg-purple-600 text-white px-3 py-1 rounded hover:bg-purple-700">Nueva Visita</button>
+                        <button 
+                            onClick={() => { setEditingVisit(null); setIsVisitFormOpen(true); }}
+                            className="text-xs bg-purple-600 text-white px-3 py-1 rounded hover:bg-purple-700 transition-colors"
+                        >
+                            Nueva Visita
+                        </button>
                     </div>
                     <div className="space-y-2 max-h-64 overflow-y-auto">
-                        {inspectionVisits.map(visit => (
-                            <div key={visit.id} className="p-3 border rounded-lg text-sm">
+                        {inspectionVisits.length > 0 ? inspectionVisits.map(visit => (
+                            <div key={visit.id} className="p-3 border rounded-lg text-sm group hover:border-purple-300 transition-colors relative">
                                 <div className="flex justify-between font-semibold text-gray-700">
                                     <span>{visit.target}</span>
                                     <span className={`text-xs px-2 py-0.5 rounded-full ${visit.status === 'Realizada' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>{visit.status}</span>
                                 </div>
                                 <p className="text-xs text-gray-500 mt-1">{new Date(visit.date).toLocaleDateString()} - {visit.type}</p>
-                                <p className="text-gray-600 mt-1 line-clamp-2">{visit.findings}</p>
+                                <p className="text-gray-600 mt-1 line-clamp-2">{visit.findings || 'Sin observaciones.'}</p>
+                                
+                                <button 
+                                    onClick={() => handleEditVisit(visit)}
+                                    className="absolute top-2 right-2 p-1 text-gray-400 hover:text-purple-600 bg-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-sm border border-gray-200"
+                                    title="Editar"
+                                >
+                                    <EditIcon className="h-4 w-4" />
+                                </button>
                             </div>
-                        ))}
+                        )) : (
+                            <p className="text-sm text-gray-500 text-center py-4">No hay visitas de inspección registradas.</p>
+                        )}
                     </div>
                 </div>
             </div>
@@ -178,13 +225,17 @@ const InspectionPage: React.FC<InspectionPageProps> = (props) => {
 
     const renderCoexistenceTab = () => (
         <div className="space-y-6 animate-fade-in">
+            
+            {/* New Protocol Management Component */}
+            <ProtocolManagement students={students} users={users} />
+
             <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
                 <div className="flex justify-between items-center mb-4">
                     <h3 className="font-bold text-gray-800 flex items-center gap-2">
                         <UsersIcon className="h-5 w-5 text-teal-600" />
-                        Mediación y Resolución de Conflictos
+                        Mediación de Conflictos (Leves)
                     </h3>
-                    <button className="text-xs bg-teal-600 text-white px-3 py-1 rounded hover:bg-teal-700">Registrar Caso</button>
+                    <button className="text-xs bg-teal-600 text-white px-3 py-1 rounded hover:bg-teal-700">Registrar Conflicto</button>
                 </div>
                 <div className="overflow-x-auto">
                     <table className="w-full text-sm text-left">
@@ -295,6 +346,15 @@ const InspectionPage: React.FC<InspectionPageProps> = (props) => {
             {activeTab === 'compliance' && renderComplianceTab()}
             {activeTab === 'quality' && renderQualityTab()}
             {activeTab === 'coexistence' && renderCoexistenceTab()}
+
+            {isVisitFormOpen && (
+                <InspectionVisitForm
+                    isOpen={isVisitFormOpen}
+                    onClose={() => setIsVisitFormOpen(false)}
+                    onSave={handleSaveVisit}
+                    visitToEdit={editingVisit}
+                />
+            )}
         </div>
     );
 };

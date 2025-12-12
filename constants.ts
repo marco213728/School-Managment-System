@@ -1,5 +1,5 @@
 
-import { User, Role, Student, Class, Activity, ActivityType, AttendanceRecord, AttendanceStatus, Notification, SupportContact, Intervention, InterventionType, OvpActivity, OvpAxis, HealthRecord, Institution, OcrSubmission, OcrSubmissionStatus, ScheduleEntry, MedicalVisit, Shift, TimeSlot, Subject, Room, Timetable, ViccIntervention, ViccInterventionType, ExitPass, Citacion, CitacionStatus, AcademicCalendarEvent, LeccionarioEntry, MicroPlan, CurricularPlanStatus, GradeLevel, GRADE_LEVELS, Dcd, EvaluationCriterion, EvaluationIndicator, Competency, COMPETENCIES, CURRICULAR_INSERTIONS, AREAS_OF_KNOWLEDGE, SUBJECT_LEVELS, Gradebook, TrimesterRecord, StudentGradebook, GradeEntry, EVALUATION_CATEGORIES, ClassroomObservation, TrainingSession, InstitutionalDocument, MeetingRecord, DisciplinaryAction, DisciplinarySeverity, InspectionVisit, ConflictMediation, QualityMetric, ClassroomVisit, RubricCriterion, ReinforcementPlan, StaffAttendanceRecord, FormalRequestStatus, FormalRequestType, FormalRequestRecipient, TrainingPlan, Rubric, ResourceRepositoryItem, FormalRequest } from './types';
+import { User, Role, Student, Class, Activity, ActivityType, AttendanceRecord, AttendanceStatus, Notification, SupportContact, Intervention, InterventionType, OvpActivity, OvpAxis, HealthRecord, Institution, OcrSubmission, OcrSubmissionStatus, ScheduleEntry, MedicalVisit, Shift, TimeSlot, Subject, Room, Timetable, ViccIntervention, ViccInterventionType, ExitPass, Citacion, CitacionStatus, AcademicCalendarEvent, LeccionarioEntry, MicroPlan, CurricularPlanStatus, GradeLevel, GRADE_LEVELS, Dcd, EvaluationCriterion, EvaluationIndicator, Competency, COMPETENCIES, CURRICULAR_INSERTIONS, AREAS_OF_KNOWLEDGE, SUBJECT_LEVELS, Gradebook, TrimesterRecord, StudentGradebook, GradeEntry, EVALUATION_CATEGORIES, ClassroomObservation, TrainingSession, InstitutionalDocument, MeetingRecord, DisciplinaryAction, DisciplinarySeverity, InspectionVisit, ConflictMediation, QualityMetric, ClassroomVisit, RubricCriterion, ReinforcementPlan, StaffAttendanceRecord, FormalRequestStatus, FormalRequestType, FormalRequestRecipient, TrainingPlan, Rubric, ResourceRepositoryItem, FormalRequest, SubjectReport, JuntaDeCurso, ProtocolCase } from './types';
 
 export { GRADE_LEVELS, COMPETENCIES, CURRICULAR_INSERTIONS, AREAS_OF_KNOWLEDGE, SUBJECT_LEVELS, EVALUATION_CATEGORIES };
 
@@ -200,8 +200,8 @@ export const MOCK_TIMETABLES: Timetable[] = [
 ];
 
 export const MOCK_CLASSES: Class[] = [
-    { id: 'class1', institutionId: 'uemol', name: 'ESO 1ºA', studentIds: ['student1', 'student3', 'student5'], timetableId: 'tt1' },
-    { id: 'class2', institutionId: 'uemol', name: 'ESO 1ºB', studentIds: ['student2', 'student4', 'student6'], timetableId: 'tt1' },
+    { id: 'class1', institutionId: 'uemol', name: 'ESO 1ºA', studentIds: ['student1', 'student3', 'student5'], timetableId: 'tt1', tutorId: 'teacher1' },
+    { id: 'class2', institutionId: 'uemol', name: 'ESO 1ºB', studentIds: ['student2', 'student4', 'student6'], timetableId: 'tt1', tutorId: 'teacher2' },
     { id: 'class3', institutionId: 'colegio-xyz', name: 'Ciencias 8ºA', studentIds: ['student7'], timetableId: 'tt3' },
 ];
 
@@ -617,5 +617,86 @@ export const MOCK_REPOSITORY_ITEMS: ResourceRepositoryItem[] = [
         duaEngagement: 'Aprendizaje basado en la naturaleza y trabajo colaborativo al aire libre.',
         shared: true,
         creationDate: '2024-08-15T09:00:00Z',
+    }
+];
+
+export const MOCK_SUBJECT_REPORTS: SubjectReport[] = [
+    {
+        id: 'sr1',
+        institutionId: 'uemol',
+        classId: 'class1',
+        subjectId: 'subj1',
+        teacherId: 'teacher1',
+        trimester: 1,
+        academicYear: '2025-2026',
+        status: 'Submitted',
+        dcdsCovered: ['M.3.1.4.', 'M.3.1.14.', 'M.3.1.30.', 'M.3.2.11.'],
+        difficulties: [
+            {
+                studentId: 'student1',
+                difficulty: 'Dificultad en operaciones básicas',
+                cause: 'Vacíos de años anteriores',
+                measure: 'Refuerzo en clase',
+                results: 'Mejora parcial',
+                minGrade: 6,
+                improvedGrade: 7.5
+            }
+        ],
+        conclusions: 'El rendimiento general es satisfactorio. Se ha cubierto el 80% de lo planificado.',
+        recommendations: 'Continuar con el refuerzo académico para estudiantes con rezago.',
+        submissionDate: '2024-11-20'
+    }
+];
+
+export const MOCK_JUNTAS: JuntaDeCurso[] = [
+    {
+        id: 'junta1',
+        institutionId: 'uemol',
+        classId: 'class1',
+        trimester: 1,
+        academicYear: '2025-2026',
+        status: 'Planned',
+        date: '2024-11-25',
+        reportIds: ['sr1'],
+    }
+];
+
+// --- MOCK PROTOCOL CASES ---
+
+export const MOCK_PROTOCOL_CASES: ProtocolCase[] = [
+    {
+        id: 'case-001',
+        institutionId: 'uemol',
+        studentId: 'student1',
+        dateDetected: '2024-10-25',
+        detectedBy: 'teacher1',
+        detectionMethod: 'Observación Directa',
+        violenceType: 'Física',
+        scope: 'Entre Pares',
+        severity: 'Conflicto Escolar',
+        isSexualViolence: false,
+        denunciaFiled: false,
+        status: 'Intervención',
+        description: 'Pelea en el recreo con otro estudiante. Hematomas leves.',
+        indicators: ['Marcas físicas'],
+        actionsTaken: 'Separación inmediata, diálogo con ambos estudiantes.',
+    },
+    {
+        id: 'case-002',
+        institutionId: 'uemol',
+        studentId: 'student2',
+        dateDetected: '2024-10-26', // Recent
+        detectedBy: 'teacher2',
+        detectionMethod: 'Relato',
+        violenceType: 'Sexual',
+        scope: 'Intrafamiliar',
+        severity: 'Vulneración de Derechos/Delito',
+        isSexualViolence: true,
+        denunciaFiled: false,
+        denunciaDeadline: '2024-10-27T10:00:00Z', // 24h deadline
+        status: 'Detección',
+        description: 'Estudiante relata situación de abuso en el hogar.',
+        indicators: ['Cambios de conducta', 'Relato espontáneo'],
+        actionsTaken: 'Escucha activa, contención emocional inicial.',
     }
 ];

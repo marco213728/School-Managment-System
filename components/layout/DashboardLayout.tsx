@@ -24,10 +24,11 @@ import TeacherReinforcementPage from '../../pages/TeacherReinforcementPage';
 import StaffAttendanceModal from '../staff/StaffAttendanceModal';
 import TeacherTrainingPage from '../../pages/TeacherTrainingPage'; 
 import ResourceRepositoryPage from '../../pages/ResourceRepositoryPage';
+import JuntaManager from '../vicerrectorado/JuntaManager'; // Import JuntaManager
 import { UserContext } from '../../contexts/UserContext';
 import { MOCK_RUBRICS } from '../../constants'; // Import MOCK_RUBRICS for fallback
 
-type Page = 'dashboard' | 'attendance' | 'activities' | 'reports' | 'manage' | 'dece' | 'health' | 'students' | 'communications' | 'schedule' | 'inspection' | 'citaciones' | 'leccionario' | 'curricular_planning' | 'curriculum_repository' | 'gradebook' | 'vicerrector_dashboard' | 'reinforcement' | 'teacher_training' | 'resource_bank';
+type Page = 'dashboard' | 'attendance' | 'activities' | 'reports' | 'manage' | 'dece' | 'health' | 'students' | 'communications' | 'schedule' | 'inspection' | 'citaciones' | 'leccionario' | 'curricular_planning' | 'curriculum_repository' | 'gradebook' | 'vicerrector_dashboard' | 'reinforcement' | 'teacher_training' | 'resource_bank' | 'juntas'; // Added 'juntas'
 
 interface DashboardLayoutProps {
   users: User[];
@@ -125,6 +126,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = (props) => {
     onUpdateMeetings,
     conflictMediations,
     onUpdateConflictMediations,
+    gradebooks,
     ...restProps
   } = props;
 
@@ -196,7 +198,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = (props) => {
             return <VicerrectoradoPage
                 microPlans={microPlans}
                 viccInterventions={restProps.viccInterventions}
-                gradebooks={restProps.gradebooks}
+                gradebooks={gradebooks}
                 users={users}
                 subjects={subjects}
                 classes={classes}
@@ -231,6 +233,21 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = (props) => {
                 onUpdateRubrics={handleUpdateRubrics}
                 subjects={subjects}
             />;
+        case 'juntas':
+            return (
+                <div className="bg-white p-6 rounded-xl shadow-md">
+                    <h2 className="text-2xl font-bold text-gray-800 mb-6">Juntas de Curso y Entrega de Informes</h2>
+                    <JuntaManager 
+                        classes={classes}
+                        subjects={subjects}
+                        users={users}
+                        students={students}
+                        gradebooks={gradebooks}
+                        microPlans={microPlans}
+                        reinforcementPlans={reinforcementPlans}
+                    />
+                </div>
+            );
         default:
              const AllOtherPages = {
                 'attendance': <AttendancePage classes={classes} timeSlots={timeSlots} timetables={restProps.timetables} attendanceRecords={restProps.attendanceRecords} onUpdateAttendance={restProps.onUpdateAttendance} />,
@@ -240,7 +257,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = (props) => {
                     classes={classes} 
                     subjects={subjects} 
                     students={students} 
-                    gradebooks={restProps.gradebooks} 
+                    gradebooks={gradebooks} 
                     onUpdateGradebooks={restProps.onUpdateGradebooks} 
                     users={users} 
                     microPlans={microPlans} 
@@ -248,7 +265,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = (props) => {
                     rubrics={rubrics} // Pass rubrics
                     onUpdateRubrics={handleUpdateRubrics} // Pass update handler
                 />,
-                'reports': <ReportsPage attendanceRecords={restProps.attendanceRecords} academicCalendarEvents={restProps.academicCalendarEvents} students={students} classes={classes} schedule={schedule} timeSlots={timeSlots} timetables={restProps.timetables} users={users} subjects={subjects} gradebooks={restProps.gradebooks} />,
+                'reports': <ReportsPage attendanceRecords={restProps.attendanceRecords} academicCalendarEvents={restProps.academicCalendarEvents} students={students} classes={classes} schedule={schedule} timeSlots={timeSlots} timetables={restProps.timetables} users={users} subjects={subjects} gradebooks={gradebooks} />,
                 'dece': <DecePage {...restProps} users={users} classes={classes} schedule={schedule} subjects={subjects} timeSlots={timeSlots} students={students} onUpdateStudents={restProps.onUpdateStudents} viccInterventions={restProps.viccInterventions} onUpdateViccInterventions={restProps.onUpdateViccInterventions} conflictMediations={conflictMediations} onUpdateConflictMediations={onUpdateConflictMediations} />,
                 'health': <HealthPage {...restProps} users={users} classes={classes} schedule={schedule} subjects={subjects} timeSlots={timeSlots} students={students} onUpdateStudents={restProps.onUpdateStudents} viccInterventions={restProps.viccInterventions} onUpdateViccInterventions={restProps.onUpdateViccInterventions} />,
                 'students': <StudentManagementPage {...restProps} users={users} classes={classes} schedule={schedule} subjects={subjects} timeSlots={timeSlots} rooms={restProps.rooms} timetables={restProps.timetables} students={students} onUpdateStudents={restProps.onUpdateStudents} />,
@@ -258,7 +275,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = (props) => {
                 'leccionario': <LeccionarioPage leccionarioEntries={leccionarioEntries} onUpdateLeccionarioEntries={onUpdateLeccionarioEntries} schedule={schedule} classes={classes} subjects={subjects} users={users} timeSlots={timeSlots} microPlans={microPlans} />,
                 'curricular_planning': <CurricularPlanningPage microPlans={microPlans} onUpdateMicroPlans={onUpdateMicroPlans} classes={classes} subjects={subjects} students={students} users={users} dcds={dcds} evaluationCriteria={restProps.evaluationCriteria} evaluationIndicators={restProps.evaluationIndicators} />,
                 'curriculum_repository': <CurriculumRepositoryPage dcds={dcds} onUpdateDcds={restProps.onUpdateDcds} subjects={subjects} evaluationCriteria={restProps.evaluationCriteria} onUpdateEvaluationCriteria={restProps.onUpdateEvaluationCriteria} evaluationIndicators={restProps.evaluationIndicators} onUpdateEvaluationIndicators={restProps.onUpdateEvaluationIndicators} />,
-                'gradebook': <GradebookPage gradebooks={restProps.gradebooks} onUpdateGradebooks={restProps.onUpdateGradebooks} classes={classes} subjects={subjects} students={students} users={users} schedule={schedule} activities={restProps.activities} />,
+                'gradebook': <GradebookPage gradebooks={gradebooks} onUpdateGradebooks={restProps.onUpdateGradebooks} classes={classes} subjects={subjects} students={students} users={users} schedule={schedule} activities={restProps.activities} />,
             };
             return AllOtherPages[currentPage] || <DashboardPage {...restProps} schedule={schedule} classes={classes} subjects={subjects} timeSlots={timeSlots} rooms={restProps.rooms} timetables={restProps.timetables} users={users} onNavigate={setCurrentPage} students={students} formalRequests={formalRequests} />;
     }

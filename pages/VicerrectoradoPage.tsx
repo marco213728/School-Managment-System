@@ -1,3 +1,4 @@
+
 import React, { useState, useContext, useMemo } from 'react';
 import { UserContext } from '../contexts/UserContext';
 import { MicroPlan, ViccIntervention, Gradebook, User, Subject, Class, Student, ClassroomVisit, TrainingSession, InstitutionalDocument, MeetingRecord, Role, Notification, ReinforcementPlan, TrainingPlan } from '../types';
@@ -10,6 +11,7 @@ import ClassroomVisitPrintable from '../components/vicerrectorado/ClassroomVisit
 import TrainingPlanManager from '../components/vicerrectorado/TrainingPlanManager';
 import InstitutionalDocumentManager from '../components/vicerrectorado/InstitutionalDocumentManager'; // Import
 import MeetingManager from '../components/vicerrectorado/MeetingManager'; // Import
+import JuntaManager from '../components/vicerrectorado/JuntaManager'; // NEW IMPORT
 
 interface VicerrectoradoPageProps {
     microPlans: MicroPlan[];
@@ -306,6 +308,19 @@ const VicerrectoradoPage: React.FC<VicerrectoradoPageProps> = ({ microPlans, vic
 
     const renderInstitutionalModule = () => (
          <div className="space-y-6 animate-fade-in">
+            {/* Junta Manager Component */}
+            <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+                <JuntaManager 
+                    classes={classes}
+                    subjects={subjects}
+                    users={users}
+                    students={students}
+                    gradebooks={gradebooks}
+                    microPlans={microPlans}
+                    reinforcementPlans={reinforcementPlans}
+                />
+            </div>
+
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {/* Document Manager Component */}
                 <InstitutionalDocumentManager 
@@ -336,7 +351,7 @@ const VicerrectoradoPage: React.FC<VicerrectoradoPageProps> = ({ microPlans, vic
                 <nav className="-mb-px flex space-x-8 overflow-x-auto">
                     <TabButton tab="pedagogical" label="Gestión Curricular y Pedagógica" icon={<ClipboardDocumentCheckIcon className="h-5 w-5"/>} />
                     <TabButton tab="student_support" label="Rendimiento y Apoyo Estudiantil" icon={<UsersIcon className="h-5 w-5"/>} />
-                    <TabButton tab="institutional" label="Gestión Institucional" icon={<ArchiveBoxIcon className="h-5 w-5"/>} />
+                    <TabButton tab="institutional" label="Gestión Institucional (Juntas)" icon={<ArchiveBoxIcon className="h-5 w-5"/>} />
                 </nav>
             </div>
 
