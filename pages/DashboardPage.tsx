@@ -1,11 +1,12 @@
 
 import React, { useContext, useState, useMemo } from 'react';
 import { UserContext } from '../contexts/UserContext';
-import { Role, Student, User, Class, ActivityType, AttendanceStatus, ScheduleEntry, Subject, TimeSlot, Room, Timetable, ViccIntervention, FormalRequest } from '../types';
+import { Role, Student, User, Class, ActivityType, AttendanceStatus, ScheduleEntry, Subject, TimeSlot, Room, Timetable, ViccIntervention, FormalRequest, CronogramaEvent } from '../types';
 import StudentProfileCard from '../components/student/StudentProfileCard';
 import { MOCK_ATTENDANCE, MOCK_ACTIVITIES } from '../constants';
 import { UsersIcon, GraduationCapIcon, AttendanceIcon, ReportIcon, CalendarIcon, ChatBubbleIcon, ManageIcon, ClipboardListIcon, ClockIcon } from '../components/icons/Icons';
 import ScheduleView from '../components/schedule/ScheduleView';
+import CronogramaWidget from '../components/dashboard/CronogramaWidget';
 
 interface DashboardPageProps {
     students: Student[];
@@ -21,6 +22,8 @@ interface DashboardPageProps {
     onUpdateViccInterventions: (interventions: ViccIntervention[]) => void;
     onNavigate?: (page: any) => void;
     formalRequests: FormalRequest[];
+    cronogramaEvents: CronogramaEvent[];
+    onUpdateCronogramaEvents: (events: CronogramaEvent[]) => void;
     [key: string]: any;
 }
 
@@ -50,9 +53,11 @@ interface AdminDashboardProps {
     students: Student[];
     classes: Class[];
     onNavigate?: (page: any) => void;
+    cronogramaEvents: CronogramaEvent[];
+    onUpdateCronogramaEvents: (events: CronogramaEvent[]) => void;
 }
 
-const AdminDashboard: React.FC<AdminDashboardProps> = ({ users, students, classes, onNavigate }) => {
+const AdminDashboard: React.FC<AdminDashboardProps> = ({ users, students, classes, onNavigate, cronogramaEvents, onUpdateCronogramaEvents }) => {
     const { user: currentUser } = useContext(UserContext);
 
     const stats = useMemo(() => {
@@ -76,6 +81,24 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ users, students, classe
         return { teacherCount, studentCount, todayTardies, todayAbsences, upcomingExams };
     }, [currentUser, users, students, classes]);
 
+    const handleAddEvent = (event: Omit<CronogramaEvent, 'id' | 'status' | 'institutionId'>) => {
+        const newEvent: CronogramaEvent = {
+            ...event,
+            id: `ce-${Date.now()}`,
+            institutionId: currentUser!.institutionId!,
+            status: 'Pending'
+        };
+        onUpdateCronogramaEvents([...cronogramaEvents, newEvent]);
+    };
+
+    const handleUpdateStatus = (id: string, status: 'Approved' | 'Rejected') => {
+        onUpdateCronogramaEvents(cronogramaEvents.map(e => e.id === id ? { ...e, status } : e));
+    };
+
+    const handleEditEvent = (event: CronogramaEvent) => {
+        onUpdateCronogramaEvents(cronogramaEvents.map(e => e.id === event.id ? event : e));
+    };
+
     return (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {/* Stats Cards */}
@@ -92,8 +115,28 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ users, students, classe
                 <QuickLinkCard icon={<ManageIcon className="h-8 w-8 text-primary-600"/>} label="Gestión" onClick={() => onNavigate && onNavigate('manage')} />
             </div>
 
-            {/* Upcoming Exams */}
-            <div className="md:col-span-2 lg:col-span-2 bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+            {/* Cronograma Widget - Takes 2 columns on large screens */}
+            <div className="md:col-span-2 lg:col-span-2 row-span-2">
+                <CronogramaWidget 
+                    events={cronogramaEvents}
+                    onAddEvent={handleAddEvent}
+                    onUpdateStatus={handleUpdateStatus}
+                    onEditEvent={handleEditEvent}
+                />
+            </div>
+
+            {/* Recent Notifications/Communications */}
+            <div className="md:col-span-2 lg:col-span-2 bg-white p-6 rounded-xl border border-slate-200 shadow-sm h-min">
+                 <h3 className="text-lg font-semibold text-slate-800 mb-4">Actividad Reciente</h3>
+                 <div className="text-center py-8">
+                    <ChatBubbleIcon className="h-12 w-12 text-slate-300 mx-auto" />
+                    <p className="mt-2 text-slate-500">No hay comunicaciones recientes.</p>
+                    <button onClick={() => onNavigate && onNavigate('communications')} className="mt-4 text-sm font-semibold text-primary-600 hover:underline">Enviar Comunicación</button>
+                 </div>
+            </div>
+
+             {/* Upcoming Exams - Moved to fill remaining space if needed */}
+             <div className="md:col-span-2 lg:col-span-2 bg-white p-6 rounded-xl border border-slate-200 shadow-sm h-min">
                 <h3 className="text-lg font-semibold text-slate-800 mb-4">Próximas Evaluaciones</h3>
                 <div className="space-y-4">
                     {stats.upcomingExams.length > 0 ? (
@@ -114,16 +157,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ users, students, classe
                     )}
                 </div>
             </div>
-
-            {/* Recent Notifications/Communications */}
-            <div className="md:col-span-2 lg:col-span-2 bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
-                 <h3 className="text-lg font-semibold text-slate-800 mb-4">Actividad Reciente</h3>
-                 <div className="text-center py-8">
-                    <ChatBubbleIcon className="h-12 w-12 text-slate-300 mx-auto" />
-                    <p className="mt-2 text-slate-500">No hay comunicaciones recientes.</p>
-                    <button onClick={() => onNavigate && onNavigate('communications')} className="mt-4 text-sm font-semibold text-primary-600 hover:underline">Enviar Comunicación</button>
-                 </div>
-            </div>
         </div>
     );
 };
@@ -136,9 +169,11 @@ interface TeacherDashboardProps {
     timetables: Timetable[];
     users: User[];
     classes: Class[];
+    cronogramaEvents: CronogramaEvent[];
+    onUpdateCronogramaEvents: (events: CronogramaEvent[]) => void;
 }
 
-const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ schedule, subjects, timeSlots, rooms, timetables, users, classes }) => {
+const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ schedule, subjects, timeSlots, rooms, timetables, users, classes, cronogramaEvents, onUpdateCronogramaEvents }) => {
     const { user: currentUser } = useContext(UserContext);
 
     const teacherData = useMemo(() => {
@@ -167,25 +202,45 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ schedule, subjects,
         };
     }, [currentUser, schedule, subjects, classes, timeSlots]);
     
+    const handleAddEvent = (event: Omit<CronogramaEvent, 'id' | 'status' | 'institutionId'>) => {
+        const newEvent: CronogramaEvent = {
+            ...event,
+            id: `ce-${Date.now()}`,
+            institutionId: currentUser!.institutionId!,
+            status: 'Pending'
+        };
+        onUpdateCronogramaEvents([...cronogramaEvents, newEvent]);
+    };
+
     if (!teacherData) return <p>Cargando horario...</p>;
     
     return (
-        <div className="space-y-6">
-            <ScheduleView
-                title="Mi Horario Semanal"
-                scheduleEntries={teacherData.teacherScheduleEntries}
-                timeSlots={teacherData.relevantTimeSlots}
-                subjects={subjects}
-                classes={classes}
-                rooms={rooms}
-                users={users}
-                viewType="teacher"
-            />
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="lg:col-span-2 space-y-6">
+                <ScheduleView
+                    title="Mi Horario Semanal"
+                    scheduleEntries={teacherData.teacherScheduleEntries}
+                    timeSlots={teacherData.relevantTimeSlots}
+                    subjects={subjects}
+                    classes={classes}
+                    rooms={rooms}
+                    users={users}
+                    viewType="teacher"
+                />
+            </div>
+            <div>
+                 <CronogramaWidget 
+                    events={cronogramaEvents}
+                    onAddEvent={handleAddEvent}
+                    onUpdateStatus={() => {}} // Teachers cannot approve
+                    onEditEvent={() => {}} // Teachers cannot edit directly, only propose
+                />
+            </div>
         </div>
     );
 };
 
-const ParentDashboard: React.FC<DashboardPageProps> = ({ students, onUpdateStudents, users, classes, schedule, subjects, timeSlots, rooms, timetables, viccInterventions, onUpdateViccInterventions }) => {
+const ParentDashboard: React.FC<DashboardPageProps> = ({ students, onUpdateStudents, users, classes, schedule, subjects, timeSlots, rooms, timetables, viccInterventions, onUpdateViccInterventions, cronogramaEvents }) => {
     const { user } = useContext(UserContext);
     const [selectedChildId, setSelectedChildId] = useState<string | null>(null);
 
@@ -226,20 +281,30 @@ const ParentDashboard: React.FC<DashboardPageProps> = ({ students, onUpdateStude
                 </div>
             )}
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                 <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
-                    <h3 className="text-lg font-semibold text-slate-800 mb-4">Información de {child.name.split(' ')[0]}</h3>
-                    <p className="text-gray-600 mb-2">Clase: {classes.find(c => c.id === child.classId)?.name}</p>
-                    {/* Add summary attendance data here if available */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div className="lg:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+                        <h3 className="text-lg font-semibold text-slate-800 mb-4">Información de {child.name.split(' ')[0]}</h3>
+                        <p className="text-gray-600 mb-2">Clase: {classes.find(c => c.id === child.classId)?.name}</p>
+                        {/* Add summary attendance data here if available */}
+                    </div>
+                    <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex flex-col items-center justify-center">
+                        <button 
+                            onClick={() => setSelectedChildId(child.id)} // Trigger modal re-open if needed or just use this state to show details below
+                            className="mt-4 w-full text-center px-4 py-2 bg-primary-600 text-white font-semibold rounded-lg hover:bg-primary-700"
+                        >
+                            {/* We are reusing the modal component, but rendering it conditionally below */}
+                            Ver Perfil Completo
+                        </button>
+                    </div>
                 </div>
-                 <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex flex-col items-center justify-center">
-                    <button 
-                        onClick={() => setSelectedChildId(child.id)} // Trigger modal re-open if needed or just use this state to show details below
-                        className="mt-4 w-full text-center px-4 py-2 bg-primary-600 text-white font-semibold rounded-lg hover:bg-primary-700"
-                    >
-                         {/* We are reusing the modal component, but rendering it conditionally below */}
-                         Ver Perfil Completo
-                    </button>
+                <div>
+                     <CronogramaWidget 
+                        events={cronogramaEvents}
+                        onAddEvent={() => {}} // Parents cannot add
+                        onUpdateStatus={() => {}} // Parents cannot approve
+                        onEditEvent={() => {}}
+                    />
                 </div>
             </div>
 
@@ -282,30 +347,40 @@ const StudentDashboard: React.FC<DashboardPageProps> = (props) => {
     }, [user]);
 
     return (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
-                <h3 className="text-lg font-semibold text-slate-800 mb-4">Próximas Actividades</h3>
-                {studentActivities.length > 0 ? (
-                    <ul className="space-y-3">
-                        {studentActivities.map(act => (
-                            <li key={act.id}>
-                                <p className="font-semibold text-slate-800">{act.title}</p>
-                                <p className="text-sm text-slate-500">{act.type} - Entrega: {act.deliveryDate}</p>
-                            </li>
-                        ))}
-                    </ul>
-                ) : (
-                    <div className="text-center py-8">
-                        <CalendarIcon className="h-12 w-12 text-slate-300 mx-auto" />
-                        <p className="mt-2 text-slate-500">No tienes actividades próximas.</p>
-                    </div>
-                )}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="lg:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+                    <h3 className="text-lg font-semibold text-slate-800 mb-4">Próximas Actividades</h3>
+                    {studentActivities.length > 0 ? (
+                        <ul className="space-y-3">
+                            {studentActivities.map(act => (
+                                <li key={act.id}>
+                                    <p className="font-semibold text-slate-800">{act.title}</p>
+                                    <p className="text-sm text-slate-500">{act.type} - Entrega: {act.deliveryDate}</p>
+                                </li>
+                            ))}
+                        </ul>
+                    ) : (
+                        <div className="text-center py-8">
+                            <CalendarIcon className="h-12 w-12 text-slate-300 mx-auto" />
+                            <p className="mt-2 text-slate-500">No tienes actividades próximas.</p>
+                        </div>
+                    )}
+                </div>
+                <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+                    <h3 className="text-lg font-semibold text-slate-800 mb-4">Accesos Rápidos</h3>
+                    <p className="text-sm text-slate-600">
+                        Usa el menú de la izquierda para navegar a tu horario, asistencia y lista de actividades.
+                    </p>
+                </div>
             </div>
-            <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
-                <h3 className="text-lg font-semibold text-slate-800 mb-4">Accesos Rápidos</h3>
-                <p className="text-sm text-slate-600">
-                    Usa el menú de la izquierda para navegar a tu horario, asistencia y lista de actividades.
-                </p>
+            <div>
+                 <CronogramaWidget 
+                    events={props.cronogramaEvents}
+                    onAddEvent={() => {}} // Students cannot add
+                    onUpdateStatus={() => {}} // Students cannot approve
+                    onEditEvent={() => {}}
+                />
             </div>
         </div>
     );
@@ -320,9 +395,25 @@ const DashboardPage: React.FC<DashboardPageProps> = (props) => {
             case Role.InstitutionAdmin:
             case Role.Vicerrector:
             case Role.InspectorGeneral:
-                return <AdminDashboard users={props.users} students={props.students} classes={props.classes} onNavigate={props.onNavigate} />;
+            case Role.Rector:
+            case Role.JefeDECE:
+            case Role.PsicologoEducativo:
+            case Role.TrabajadorSocial:
+            case Role.HealthProfessional:
+                return <AdminDashboard 
+                        users={props.users} 
+                        students={props.students} 
+                        classes={props.classes} 
+                        onNavigate={props.onNavigate} 
+                        cronogramaEvents={props.cronogramaEvents}
+                        onUpdateCronogramaEvents={props.onUpdateCronogramaEvents}
+                       />;
             case Role.Teacher:
-                return <TeacherDashboard {...props} />;
+                return <TeacherDashboard 
+                        {...props} 
+                        cronogramaEvents={props.cronogramaEvents}
+                        onUpdateCronogramaEvents={props.onUpdateCronogramaEvents}
+                       />;
             case Role.Parent:
                 return <ParentDashboard {...props} />;
             case Role.Student:

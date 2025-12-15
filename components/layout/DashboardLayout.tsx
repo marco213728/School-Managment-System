@@ -9,7 +9,7 @@ import ReportsPage from '../../pages/ReportsPage';
 import ManagePage from '../../pages/ManagePage';
 import DecePage from '../../pages/DecePage';
 import HealthPage from '../../pages/HealthPage';
-import { User, Class, Student, ScheduleEntry, Notification, SupportContact, HealthRecord, MedicalVisit, Subject, TimeSlot, Room, Timetable, ViccIntervention, AttendanceRecord, ExitPass, Citacion, AcademicCalendarEvent, LeccionarioEntry, MicroPlan, Dcd, EvaluationCriterion, EvaluationIndicator, Gradebook, Activity, ReinforcementPlan, StaffAttendanceRecord, FormalRequest, TrainingPlan, InstitutionalDocument, MeetingRecord, Rubric, ConflictMediation } from '../../types';
+import { User, Class, Student, ScheduleEntry, Notification, SupportContact, HealthRecord, MedicalVisit, Subject, TimeSlot, Room, Timetable, ViccIntervention, AttendanceRecord, ExitPass, Citacion, AcademicCalendarEvent, LeccionarioEntry, MicroPlan, Dcd, EvaluationCriterion, EvaluationIndicator, Gradebook, Activity, ReinforcementPlan, StaffAttendanceRecord, FormalRequest, TrainingPlan, InstitutionalDocument, MeetingRecord, Rubric, ConflictMediation, CronogramaEvent } from '../../types';
 import StudentManagementPage from '../../pages/StudentManagementPage';
 import CommunicationsPage from '../../pages/CommunicationsPage';
 import SchedulePage from '../../pages/SchedulePage';
@@ -63,6 +63,7 @@ interface DashboardLayoutProps {
   meetingRecords: MeetingRecord[];
   rubrics?: Rubric[]; // Optional rubrics prop
   conflictMediations?: ConflictMediation[];
+  cronogramaEvents?: CronogramaEvent[];
   
   onUpdateUsers: (users: User[]) => void;
   onUpdateClasses: (classes: Class[]) => void;
@@ -96,6 +97,7 @@ interface DashboardLayoutProps {
   onUpdateMeetings: (meetings: MeetingRecord[]) => void;
   onUpdateRubrics?: (rubrics: Rubric[]) => void; // Optional updater
   onUpdateConflictMediations?: (conflicts: ConflictMediation[]) => void;
+  onUpdateCronogramaEvents?: (events: CronogramaEvent[]) => void;
 }
 
 const DashboardLayout: React.FC<DashboardLayoutProps> = (props) => {
@@ -127,6 +129,8 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = (props) => {
     conflictMediations,
     onUpdateConflictMediations,
     gradebooks,
+    cronogramaEvents,
+    onUpdateCronogramaEvents,
     ...restProps
   } = props;
 
@@ -153,6 +157,8 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = (props) => {
               onNavigate={setCurrentPage}
               students={students}
               formalRequests={formalRequests}
+              cronogramaEvents={cronogramaEvents || []}
+              onUpdateCronogramaEvents={onUpdateCronogramaEvents || (() => {})}
           />;
         case 'manage':
           return <ManagePage 

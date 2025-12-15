@@ -1,6 +1,6 @@
 
 
-import { User, Role, Student, Class, Activity, ActivityType, AttendanceRecord, AttendanceStatus, Notification, SupportContact, Intervention, InterventionType, OvpActivity, OvpAxis, HealthRecord, Institution, OcrSubmission, OcrSubmissionStatus, ScheduleEntry, MedicalVisit, Shift, TimeSlot, Subject, Room, Timetable, ViccIntervention, ViccInterventionType, ExitPass, Citacion, CitacionStatus, AcademicCalendarEvent, LeccionarioEntry, MicroPlan, CurricularPlanStatus, GradeLevel, GRADE_LEVELS, Dcd, EvaluationCriterion, EvaluationIndicator, Competency, COMPETENCIES, CURRICULAR_INSERTIONS, AREAS_OF_KNOWLEDGE, SUBJECT_LEVELS, Gradebook, TrimesterRecord, StudentGradebook, GradeEntry, EVALUATION_CATEGORIES, ClassroomObservation, TrainingSession, InstitutionalDocument, MeetingRecord, DisciplinaryAction, DisciplinarySeverity, InspectionVisit, ConflictMediation, QualityMetric, ClassroomVisit, RubricCriterion, ReinforcementPlan, StaffAttendanceRecord, FormalRequestStatus, FormalRequestType, FormalRequestRecipient, TrainingPlan, Rubric, ResourceRepositoryItem, FormalRequest, SubjectReport, JuntaDeCurso, ProtocolCase } from './types';
+import { User, Role, Student, Class, Activity, ActivityType, AttendanceRecord, AttendanceStatus, Notification, SupportContact, Intervention, InterventionType, OvpActivity, OvpAxis, HealthRecord, Institution, OcrSubmission, OcrSubmissionStatus, ScheduleEntry, MedicalVisit, Shift, TimeSlot, Subject, Room, Timetable, ViccIntervention, ViccInterventionType, ExitPass, Citacion, CitacionStatus, AcademicCalendarEvent, LeccionarioEntry, MicroPlan, CurricularPlanStatus, GradeLevel, GRADE_LEVELS, Dcd, EvaluationCriterion, EvaluationIndicator, Competency, COMPETENCIES, CURRICULAR_INSERTIONS, AREAS_OF_KNOWLEDGE, SUBJECT_LEVELS, Gradebook, TrimesterRecord, StudentGradebook, GradeEntry, EVALUATION_CATEGORIES, ClassroomObservation, TrainingSession, InstitutionalDocument, MeetingRecord, DisciplinaryAction, DisciplinarySeverity, InspectionVisit, ConflictMediation, QualityMetric, ClassroomVisit, RubricCriterion, ReinforcementPlan, StaffAttendanceRecord, FormalRequestStatus, FormalRequestType, FormalRequestRecipient, TrainingPlan, Rubric, ResourceRepositoryItem, FormalRequest, SubjectReport, JuntaDeCurso, ProtocolCase, CronogramaEvent } from './types';
 
 export { GRADE_LEVELS, COMPETENCIES, CURRICULAR_INSERTIONS, AREAS_OF_KNOWLEDGE, SUBJECT_LEVELS, EVALUATION_CATEGORIES };
 
@@ -699,5 +699,81 @@ export const MOCK_PROTOCOL_CASES: ProtocolCase[] = [
         description: 'Estudiante relata situación de abuso en el hogar.',
         indicators: ['Cambios de conducta', 'Relato espontáneo'],
         actionsTaken: 'Escucha activa, contención emocional inicial.',
+    }
+];
+
+export const MOCK_CRONOGRAMA_EVENTS: CronogramaEvent[] = [
+    {
+        id: 'ce1',
+        institutionId: 'uemol',
+        date: '2025-12-01',
+        startTime: '07:00',
+        endTime: '12:05',
+        location: 'Aula de Clase',
+        title: 'REFUERZO Y NIVELACIÓN ACADÉMICA',
+        responsible: 'Todos los Docentes',
+        proposedBy: 'vicerrector1',
+        status: 'Approved'
+    },
+    {
+        id: 'ce2',
+        institutionId: 'uemol',
+        date: '2025-12-01',
+        startTime: '07:00',
+        endTime: '13:00',
+        location: 'Dentro y fuera de la Institución',
+        title: 'REGISTRO DE NOTAS (SISTEMA SIGECEM)',
+        responsible: 'Todos los Docentes',
+        proposedBy: 'admin1',
+        status: 'Approved'
+    },
+    {
+        id: 'ce3',
+        institutionId: 'uemol',
+        date: '2025-12-01',
+        startTime: '07:00',
+        endTime: '13:00', // Jornada
+        location: 'Aula de Clase',
+        title: 'Taller de Empoderamiento para Estudiantes de 8vo, y 9no',
+        responsible: 'Secretaría de Salud',
+        proposedBy: 'health1',
+        status: 'Approved'
+    },
+     {
+        id: 'ce4',
+        institutionId: 'uemol',
+        date: '2025-12-01',
+        startTime: '07:00',
+        endTime: '08:00',
+        location: 'Patio Central',
+        title: 'Conmemoraciones por la Resolución "Victimas de Siniestros de Tránsito"',
+        responsible: 'Sub Inspección',
+        proposedBy: 'inspector1',
+        status: 'Approved'
+    },
+    {
+        id: 'ce5',
+        institutionId: 'uemol',
+        date: '2025-12-02',
+        startTime: '10:00',
+        endTime: '11:00',
+        location: 'Auditorio',
+        title: 'CAPACITACIÓN SERD (MANEJO Y USO DE PANTALLAS DIGITALES JV',
+        responsible: 'PERSONAL SERD',
+        proposedBy: 'admin1',
+        status: 'Approved'
+    },
+    // Example of a Pending event proposed by a teacher
+    {
+        id: 'ce_pending_1',
+        institutionId: 'uemol',
+        date: '2025-12-10',
+        startTime: '09:00',
+        endTime: '10:00',
+        location: 'Laboratorio 1',
+        title: 'Muestra de Proyectos de Ciencias',
+        responsible: 'Prof. García',
+        proposedBy: 'teacher1',
+        status: 'Pending'
     }
 ];

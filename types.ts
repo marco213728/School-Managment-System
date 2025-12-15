@@ -39,6 +39,21 @@ export interface User {
   };
 }
 
+export type CronogramaStatus = 'Pending' | 'Approved' | 'Rejected';
+
+export interface CronogramaEvent {
+  id: string;
+  institutionId: string;
+  title: string; // Actividad
+  date: string; // YYYY-MM-DD
+  startTime: string;
+  endTime: string;
+  location: string; // Lugar
+  responsible: string; // Text field for responsibility (e.g. "Todos los Docentes")
+  proposedBy: string; // User ID
+  status: CronogramaStatus;
+}
+
 export interface Timetable {
   id: string;
   institutionId: string;
