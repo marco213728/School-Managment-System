@@ -1,7 +1,8 @@
+
 import React, { useState, useEffect, useMemo } from 'react';
-import { ResourceRepositoryItem, ResourceType, SubjectLevel, GradeLevel, CurricularInsertion, Competency, Dcd, Rubric, Subject } from '../../types';
-import { SUBJECT_LEVELS, GRADE_LEVELS, CURRICULAR_INSERTIONS, COMPETENCIES } from '../../constants';
-import { CloseIcon, PlusIcon, TrashIcon } from '../icons/Icons';
+import { ResourceRepositoryItem, ResourceType, SubjectLevel, GradeLevel, CurricularInsertion, Competency, Dcd, Rubric, Subject, AreaOfKnowledge, ResourceAttachment } from '../../types';
+import { SUBJECT_LEVELS, GRADE_LEVELS, CURRICULAR_INSERTIONS, COMPETENCIES, AREAS_OF_KNOWLEDGE } from '../../constants';
+import { CloseIcon, PlusIcon, TrashIcon, UploadIcon, DownloadIcon } from '../icons/Icons';
 
 interface ResourceFormProps {
     isOpen: boolean;
@@ -23,12 +24,16 @@ const ResourceForm: React.FC<ResourceFormProps> = ({ isOpen, onClose, onSave, re
         curricularInsertions: [],
         competencies: [],
         phases: [],
-        resourceLinks: []
+        attachments: [],
+        coverImageUrl: ''
     });
     
     // Helper state for DCD search
     const [dcdSearch, setDcdSearch] = useState('');
     
+    // Helper for new attachment
+    const [newAttachment, setNewAttachment] = useState<{name: string, url: string}>({ name: '', url: '' });
+
     useEffect(() => {
         if (resourceToEdit) {
             setFormData(JSON.parse(JSON.stringify(resourceToEdit)));
@@ -59,6 +64,25 @@ const ResourceForm: React.FC<ResourceFormProps> = ({ isOpen, onClose, onSave, re
     };
     
     const removePhase = (index: number) => setFormData(p => ({...p, phases: p.phases?.filter((_, i) => i !== index)}));
+
+    // Attachments Logic
+    const addAttachment = () => {
+        if(!newAttachment.name || !newAttachment.url) return;
+        setFormData(p => ({
+            ...p,
+            attachments: [...(p.attachments || []), { 
+                id: `att-${Date.now()}`, 
+                name: newAttachment.name, 
+                url: newAttachment.url, 
+                type: 'document' 
+            }]
+        }));
+        setNewAttachment({ name: '', url: '' });
+    };
+
+    const removeAttachment = (id: string) => {
+        setFormData(p => ({ ...p, attachments: p.attachments?.filter(a => a.id !== id) }));
+    }
 
     const filteredDcds = useMemo(() => {
         if (!dcdSearch) return [];
@@ -103,14 +127,77 @@ const ResourceForm: React.FC<ResourceFormProps> = ({ isOpen, onClose, onSave, re
                             </select>
                         </div>
                         <div>
+                            <label className="block text-sm font-medium text-gray-700">Área de Conocimiento</label>
+                            <select name="areaOfKnowledge" value={formData.areaOfKnowledge || ''} onChange={handleChange} className="w-full p-2 border rounded">
+                                <option value="">-- Seleccionar Área --</option>
+                                {AREAS_OF_KNOWLEDGE.map(area => <option key={area} value={area}>{area}</option>)}
+                            </select>
+                        </div>
+                        <div>
                             <label className="block text-sm font-medium text-gray-700">Nivel</label>
                             <select name="level" value={formData.level} onChange={handleChange} className="w-full p-2 border rounded">
                                 {SUBJECT_LEVELS.map(l => <option key={l} value={l}>{l}</option>)}
                             </select>
                         </div>
+                         <div>
+                            <label className="block text-sm font-medium text-gray-700">Grado/Curso</label>
+                            <select name="gradeLevel" value={formData.gradeLevel || ''} onChange={handleChange} className="w-full p-2 border rounded">
+                                <option value="">-- Todos --</option>
+                                {GRADE_LEVELS.map(l => <option key={l} value={l}>{l}</option>)}
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <label className="block text-sm font-bold text-gray-700">Imagen de Portada (URL)</label>
+                        <input type="text" name="coverImageUrl" value={formData.coverImageUrl || ''} onChange={handleChange} className="w-full p-2 border rounded" placeholder="https://ejemplo.com/imagen.jpg" />
+                        {formData.coverImageUrl && (
+                            <img src={formData.coverImageUrl} alt="Preview" className="mt-2 h-32 w-auto object-cover rounded border" />
+                        )}
                     </div>
 
-                    <textarea name="description" value={formData.description || ''} onChange={handleChange} rows={2} className="w-full p-2 border rounded" placeholder="Descripción general..." required></textarea>
+                    <textarea name="description" value={formData.description || ''} onChange={handleChange} rows={3} className="w-full p-2 border rounded" placeholder="Descripción general, objetivos y contexto..." required></textarea>
+
+                    {/* ATTACHMENTS SECTION */}
+                    <div className="border p-4 rounded bg-gray-50">
+                        <label className="block text-sm font-bold text-gray-700 mb-2">Adjuntos y Material de Trabajo</label>
+                        
+                        <div className="flex gap-2 mb-3">
+                            <input 
+                                type="text" 
+                                placeholder="Nombre del archivo (Ej. Guía PDF)" 
+                                value={newAttachment.name}
+                                onChange={e => setNewAttachment({...newAttachment, name: e.target.value})}
+                                className="flex-1 p-2 border rounded text-sm"
+                            />
+                            <input 
+                                type="text" 
+                                placeholder="URL del documento" 
+                                value={newAttachment.url}
+                                onChange={e => setNewAttachment({...newAttachment, url: e.target.value})}
+                                className="flex-1 p-2 border rounded text-sm"
+                            />
+                            <button type="button" onClick={addAttachment} className="px-3 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm font-bold">
+                                <PlusIcon className="h-4 w-4"/>
+                            </button>
+                        </div>
+
+                        {formData.attachments && formData.attachments.length > 0 && (
+                            <div className="space-y-2">
+                                {formData.attachments.map(att => (
+                                    <div key={att.id} className="flex justify-between items-center bg-white p-2 rounded border">
+                                        <div className="flex items-center gap-2">
+                                            <span className="p-1 bg-gray-200 rounded text-gray-600"><DownloadIcon className="h-4 w-4"/></span>
+                                            <a href={att.url} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-600 hover:underline font-medium">{att.name}</a>
+                                        </div>
+                                        <button type="button" onClick={() => removeAttachment(att.id)} className="text-red-500 hover:text-red-700">
+                                            <TrashIcon className="h-4 w-4"/>
+                                        </button>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
 
                     {/* DUA Section */}
                     <div className="bg-blue-50 p-4 rounded border border-blue-100">

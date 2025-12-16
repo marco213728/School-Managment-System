@@ -69,7 +69,7 @@ const LessonPlanAssistant: React.FC<LessonPlanAssistantProps> = ({ isOpen, onClo
             authorId: currentUser.id,
             title: `Plan de Clase: ${topic}`,
             description: generatedPlan, // Store the markdown content
-            level: 'EGB', // Default, user can edit later
+            level: 'Todos', // Default, user can edit later
             type: 'Activity',
             dcdIds: [],
             curricularInsertions: [],

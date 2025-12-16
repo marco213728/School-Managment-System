@@ -64,7 +64,7 @@ const ExitTicketGenerator: React.FC<ExitTicketGeneratorProps> = ({ isOpen, onClo
             authorId: currentUser.id,
             title: `Exit Ticket: ${topic}`,
             description: generatedContent,
-            level: 'EGB', // Default generic level
+            level: 'Todos', // Default generic level
             gradeLevel: undefined, // Specific grade level string from dropdown if mapped
             type: 'Activity',
             dcdIds: [],

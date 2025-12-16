@@ -145,7 +145,7 @@ const AssessmentGenerator: React.FC<AssessmentGeneratorProps> = ({ isOpen, onClo
             authorId: currentUser.id,
             title: `Evaluación: ${topic} (${assessmentType})`,
             description: `Evaluación generada automáticamente sobre ${topic}. Formato HTML.`, // Note it's HTML
-            level: 'EGB', 
+            level: 'Todos', 
             type: 'Activity',
             dcdIds: [], 
             curricularInsertions: curricularInsertions as any,

@@ -1,7 +1,7 @@
 
 import React, { useState, useContext, useMemo } from 'react';
 import { UserContext } from '../contexts/UserContext';
-import { Role, User, Class, Student, ScheduleEntry, SupportContact, Subject, TimeSlot, Room, Timetable, AcademicCalendarEvent, StaffAttendanceRecord } from '../types';
+import { Role, User, Class, Student, ScheduleEntry, SupportContact, Subject, TimeSlot, Room, Timetable, AcademicCalendarEvent, StaffAttendanceRecord, Gradebook } from '../types';
 import UserManagement from '../components/management/UserManagement';
 import InstitutionManagement from '../components/management/InstitutionManagement';
 import ClassManagement from '../components/management/ClassManagement';
@@ -16,7 +16,8 @@ import AcademicCalendarManagement from '../components/management/AcademicCalenda
 import StaffAttendanceKiosk from '../components/staff/StaffAttendanceKiosk';
 import StaffAttendanceReport from '../components/staff/StaffAttendanceReport';
 import BiometricEnrollmentModal from '../components/staff/BiometricEnrollmentModal';
-import { FingerPrintIcon, UsersIcon, ClipboardListIcon, CalendarIcon, ManageIcon } from '../components/icons/Icons';
+import PromotionWizard from '../components/management/PromotionWizard';
+import { FingerPrintIcon, UsersIcon, ClipboardListIcon, CalendarIcon, ManageIcon, GraduationCapIcon } from '../components/icons/Icons';
 
 interface ManagePageProps {
   allUsers: User[];
@@ -30,6 +31,9 @@ interface ManagePageProps {
   timetables: Timetable[];
   academicCalendarEvents: AcademicCalendarEvent[];
   staffAttendanceRecords: StaffAttendanceRecord[];
+  // Added Gradebooks for promotion logic
+  gradebooks?: Gradebook[]; 
+  
   onUpdateUsers: (users: User[]) => void;
   onUpdateClasses: (classes: Class[]) => void;
   onUpdateSchedule: (schedule: ScheduleEntry[]) => void;
@@ -57,7 +61,7 @@ const ManageCard: React.FC<ManageCardProps> = ({ title, children }) => (
 
 const ManagePage: React.FC<ManagePageProps> = ({ 
   allUsers, allClasses, allStudents, schedule, supportContacts, subjects, timeSlots, rooms, timetables, academicCalendarEvents,
-  staffAttendanceRecords,
+  staffAttendanceRecords, gradebooks = [],
   onUpdateUsers, onUpdateClasses, onUpdateSchedule, onUpdateStudents, onUpdateSupportContacts, onUpdateSubjects, onUpdateTimeSlots, onUpdateRooms, onUpdateTimetables, onUpdateAcademicCalendarEvents,
   onUpdateStaffAttendance,
 }) => {
@@ -66,6 +70,7 @@ const ManagePage: React.FC<ManagePageProps> = ({
     
     const [isEnrollmentOpen, setIsEnrollmentOpen] = useState(false);
     const [userToEnroll, setUserToEnroll] = useState<User | null>(null);
+    const [isPromotionOpen, setIsPromotionOpen] = useState(false);
 
     const institutionData = useMemo(() => {
         if (!currentUser?.institutionId) {
@@ -134,6 +139,7 @@ const ManagePage: React.FC<ManagePageProps> = ({
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+             <ManageCard title="Ciclo Lectivo y Promoción"><p className="text-slate-600">Gestionar cambio de año, matriculación y promoción de estudiantes.</p><button onClick={() => setIsPromotionOpen(true)} className="mt-4 flex items-center gap-2 px-4 py-2 bg-purple-600 text-white font-semibold rounded-md hover:bg-purple-700"><GraduationCapIcon className="h-5 w-5" /> Asistente de Promoción</button></ManageCard>
              <ManageCard title="Plantillas de Horario y Franjas"><p className="text-slate-600">Definir las jornadas y las horas de clase (franjas horarias).</p><button onClick={() => setView('timetables')} className="mt-4 flex items-center gap-2 px-4 py-2 bg-primary-600 text-white font-semibold rounded-md hover:bg-primary-700"><CalendarIcon className="h-5 w-5" /> Configurar Plantillas</button></ManageCard>
              <ManageCard title="Asignaturas"><p className="text-slate-600">Crear y editar las asignaturas y asignarlas a los profesores.</p><button onClick={() => setView('subjects')} className="mt-4 flex items-center gap-2 px-4 py-2 bg-primary-600 text-white font-semibold rounded-md hover:bg-primary-700"><ClipboardListIcon className="h-5 w-5" /> Gestionar Asignaturas</button></ManageCard>
              <ManageCard title="Aulas y Espacios"><p className="text-slate-600">Administrar las aulas, laboratorios y otros espacios físicos.</p><button onClick={() => setView('rooms')} className="mt-4 flex items-center gap-2 px-4 py-2 bg-primary-600 text-white font-semibold rounded-md hover:bg-primary-700"><UsersIcon className="h-5 w-5" /> Gestionar Aulas</button></ManageCard>
@@ -209,6 +215,16 @@ const ManagePage: React.FC<ManagePageProps> = ({
                     onClose={() => setIsEnrollmentOpen(false)}
                     onEnroll={handleEnrollBiometric}
                     userName={userToEnroll.name}
+                />
+            )}
+            {isPromotionOpen && (
+                <PromotionWizard 
+                    classes={institutionData.classes}
+                    students={institutionData.students}
+                    gradebooks={gradebooks}
+                    onUpdateClasses={handleUpdateInstitutionClasses}
+                    onUpdateStudents={handleUpdateInstitutionStudents}
+                    onClose={() => setIsPromotionOpen(false)}
                 />
             )}
         </div>

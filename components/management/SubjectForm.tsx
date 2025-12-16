@@ -1,5 +1,7 @@
+
 import React, { useState, useEffect, useMemo } from 'react';
-import { Subject, User, Role, AreaOfKnowledge, SubjectLevel, AREAS_OF_KNOWLEDGE, SUBJECT_LEVELS } from '../../types';
+import { Subject, User, Role, AreaOfKnowledge, SubjectLevel } from '../../types';
+import { AREAS_OF_KNOWLEDGE, SUBJECT_LEVELS } from '../../constants';
 import { CloseIcon } from '../icons/Icons';
 
 interface SubjectFormProps {
@@ -41,7 +43,7 @@ const SubjectForm: React.FC<SubjectFormProps> = ({ isOpen, onClose, onSave, subj
                 teacherId: '',
                 maxWeeklyHours: undefined,
                 areaOfKnowledge: AREAS_OF_KNOWLEDGE[0],
-                level: SUBJECT_LEVELS[2], // Default to 'Todos'
+                level: SUBJECT_LEVELS[2],
                 isModule: false,
             });
         }

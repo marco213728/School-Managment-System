@@ -1,161 +1,115 @@
-
 export enum Role {
-  SuperAdmin = 'Super Administrador',
-  InstitutionAdmin = 'Administrador de Institución',
-  Teacher = 'Profesor',
-  Parent = 'Familiar',
-  Student = 'Alumno',
-  JefeDECE = 'Jefe DECE',
-  PsicologoEducativo = 'Psicólogo Educativo',
-  TrabajadorSocial = 'Trabajador Social',
-  HealthProfessional = 'Profesional de Salud',
+  SuperAdmin = 'SuperAdmin',
+  InstitutionAdmin = 'InstitutionAdmin',
+  Teacher = 'Teacher',
+  Student = 'Student',
+  Parent = 'Parent',
+  InspectorGeneral = 'InspectorGeneral',
   Vicerrector = 'Vicerrector',
-  InspectorGeneral = 'Inspector General',
-  Rector = 'Rector', // Added for formal requests
+  Rector = 'Rector',
+  JefeDECE = 'JefeDECE',
+  PsicologoEducativo = 'PsicologoEducativo',
+  TrabajadorSocial = 'TrabajadorSocial',
+  HealthProfessional = 'HealthProfessional',
 }
 
 export interface User {
   id: string;
   name: string;
   email: string;
-  password: string;
+  password?: string;
   role: Role;
-  institutionId?: string; // Optional for SuperAdmin
-  classIds?: string[]; // For teachers and students
-  childIds?: string[]; // For parents (Changed from childId to childIds)
+  institutionId?: string;
+  classIds?: string[];
+  childIds?: string[]; // For parents
   phone?: string;
   address?: string;
-  maxMonthlyHours?: number;
-  // Staff Attendance Fields
+  photoUrl?: string;
   biometricRegistered?: boolean;
   accessPin?: string;
-  // Added workSchedule for staff attendance calculations
-  workSchedule?: {
-    Lunes?: { startTime: string; endTime: string; };
-    Martes?: { startTime: string; endTime: string; };
-    Miércoles?: { startTime: string; endTime: string; };
-    Jueves?: { startTime: string; endTime: string; };
-    Viernes?: { startTime: string; endTime: string; };
-  };
+  maxMonthlyHours?: number;
+  workSchedule?: Record<string, { startTime: string; endTime: string }>;
 }
 
-export type CronogramaStatus = 'Pending' | 'Approved' | 'Rejected';
-
-export interface CronogramaEvent {
+export interface Institution {
   id: string;
-  institutionId: string;
-  title: string; // Actividad
-  date: string; // YYYY-MM-DD
-  startTime: string;
-  endTime: string;
-  location: string; // Lugar
-  responsible: string; // Text field for responsibility (e.g. "Todos los Docentes")
-  proposedBy: string; // User ID
-  status: CronogramaStatus;
-}
-
-export interface Timetable {
-  id: string;
-  institutionId: string;
-  name: string; // e.g., "Horario Primaria Mañana"
-  shift: Shift;
+  name: string;
+  logoUrl: string;
+  contact: { phone: string; email: string; address: string };
+  geofenceConfig?: { latitude: number; longitude: number; radius: number };
+  activeModules?: { dece: boolean; health: boolean };
+  communicationChannels?: any;
+  automatedNotifications?: any;
+  academicYear?: { startDate: string; endDate: string };
+  adminIds?: string[];
+  methodologyFocus?: string;
+  codeAMIE?: string;
 }
 
 export interface Class {
   id: string;
   institutionId: string;
-  name: string; // e.g., "ESO 1ºA"
+  name: string;
   studentIds: string[];
   timetableId?: string;
-  tutorId?: string; // The main tutor for the class
+  tutorId?: string;
+  academicYear?: string;
 }
 
 export interface RelatedContact {
-  id: string;
-  relation: string; // Padre, Madre, Tía, etc.
-  name: string;
-  occupation?: string;
-  phone?: string;
-  email?: string;
+    id: string;
+    relation: string;
+    name: string;
+    occupation?: string;
+    phone?: string;
+    email?: string;
 }
 
 export interface Student {
-  id:string;
+  id: string;
   institutionId: string;
   name: string;
+  parentId: string; // User ID
   classId: string;
-  parentId: string;
-  phone?: string;
-  address?: string;
   photoUrl?: string;
-  grade?: string;
   listNumber?: number;
   nationalId?: string;
-  birthDate?: string; // YYYY-MM-DD
-  gender?: 'FEMENINO' | 'MASCULINO' | 'OTRO';
+  birthDate?: string;
+  gender?: string;
+  address?: string;
+  phone?: string;
   homeLocationLink?: string;
   relatedContacts?: RelatedContact[];
+  className?: string; // Derived prop sometimes
+  grade?: string;
 }
 
-export enum ActivityType {
-  Homework = 'Deberes',
-  OptionalHomework = 'Deberes Opcionales',
-  Reading = 'Lectura Recomendada',
-  Exam = 'Examen',
+export enum Shift {
+    Morning = 'Matutina',
+    Afternoon = 'Vespertina',
+    Night = 'Nocturna'
 }
 
-export const EVALUATION_CATEGORIES = {
-  'ACTIVIDAD_INDIVIDUAL': 'Actividad Individual',
-  'ACTIVIDAD_GRUPAL': 'Actividad Grupal',
-  'PORTAFOLIO': 'Portafolio/Bitácora',
-  'EVALUACION_SUMATIVA': 'Evaluación Sumativa',
-  'PROYECTO_INTEGRADOR': 'Proyecto Integrador'
-} as const;
-
-export type EvaluationCategory = keyof typeof EVALUATION_CATEGORIES;
-
-
-export interface Activity {
+export interface TimeSlot {
   id: string;
   institutionId: string;
+  timetableId: string;
+  startTime: string;
+  endTime: string;
+  isBreak: boolean;
+  shift: Shift;
+}
+
+export interface ScheduleEntry {
+  day: 'Lunes' | 'Martes' | 'Miércoles' | 'Jueves' | 'Viernes' | 'Sábado' | 'Domingo';
+  timeSlotId: string;
   classId: string;
   subjectId: string;
-  teacherId: string;
-  title: string;
-  description: string;
-  rubricId?: string;
-  type: ActivityType;
-  deliveryDate: string;
-  trimester: 1 | 2 | 3;
-  evaluationCategory: EvaluationCategory;
-  gradebookIndex?: 0 | 1 | 2 | 3 | 4; // for 'actividades' array index
-  
-  // Curricular Linking
-  microPlanId?: string; // Link to PUD (Planificación Microcurricular)
-  dcdId?: string; // Link to specific DCD (Destreza con Criterio de Desempeño)
-  duaPrinciple?: 'representation' | 'actionExpression' | 'engagement'; // DUA Principle addressed
-}
-
-export enum AttendanceStatus {
-  Present = 'Presente',
-  Tardy = 'Atraso',
-  Unexcused = 'Falta Injustificada',
-  Excused = 'Falta Justificada',
-  Absent = 'Ausente',
-  JustificationPending = 'Justificación Pendiente',
-}
-
-export interface AttendanceRecord {
-  id: string;
-  institutionId: string;
-  studentId: string;
-  date: string;
-  timeSlot: string;
-  status: AttendanceStatus;
-  notes?: string;
-  justificationNotes?: string;
-  justificationDocumentUrl?: string;
-  observations?: number[];
+  roomId: string;
+  // Derived
+  subjectName?: string;
+  teacherName?: string;
+  timeSlot?: TimeSlot;
 }
 
 export interface Notification {
@@ -178,319 +132,21 @@ export interface SupportContact {
   address: string;
 }
 
-// DECE Module Types
-export enum InterventionType {
-  Call = 'Llamada a Familiar',
-  ParentMeeting = 'Reunión con Familiar',
-  IndividualSession = 'Sesión Individual',
-  TeacherReport = 'Reporte de Profesor',
-  GroupSession = 'Sesión Grupal',
-}
-
-export interface Intervention {
-  id: string;
-  institutionId: string;
-  studentId: string;
-  deceProfessionalId: string;
-  date: string;
-  type: InterventionType;
-  summary: string;
-  participants?: string[]; // Names of participants, one per line
-  agreements?: string; // Markdown or plain text of agreements
-}
-
-// Vicerrectorado Module Types
-export enum ViccInterventionType {
-  AcademicMeeting = 'Reunión Académica',
-  DisciplinaryFollowUp = 'Seguimiento Disciplinario',
-  CurricularAdaptation = 'Adaptación Curricular',
-  ParentOrientation = 'Orientación a Padres',
-}
-
-export interface ViccIntervention {
-  id: string;
-  institutionId: string;
-  studentId: string;
-  vicerrectorId: string;
-  date: string;
-  type: ViccInterventionType;
-  summary: string;
-  participants?: string[];
-  agreements?: string;
-}
-
-export type RubricScaleType = 'Quantitative' | 'Qualitative';
-
-export interface RubricLevel {
-    id: string;
-    rubricId: string;
-    label: string; // e.g. "Domina", "Adquirido"
-    value: number; // e.g. 10, 9
-    order: number;
-    color?: string; // Visual cue (DUA)
-}
-
-export interface RubricDescriptor {
-    criteriaId: string;
-    levelId: string;
-    description: string;
-    audioUrl?: string; // DUA Accessiblity
-}
-
-export interface RubricCriteria {
-    id: string;
-    rubricId: string;
-    description: string;
-    weight: number; // Percentage (0-100)
-    dcdId?: string; // Link to specific skill
-}
-
-export interface Rubric {
-    id: string;
-    institutionId: string;
-    title: string;
-    description?: string;
-    scaleType: RubricScaleType;
-    levels: RubricLevel[];
-    criteria: RubricCriteria[];
-    descriptors: RubricDescriptor[]; // Flattened list of descriptors
-}
-
-export interface RubricCriterion {
-  id: string;
-  category: string; // Planificación, Metodología, Clima, etc.
-  description: string;
-  maxScore: number; // Usually 4
-}
-
-export interface RubricScore {
-  criteriaId: string;
-  score: number; // 1-4
-  evidence?: string;
-}
-
-export interface ClassroomVisit {
-  id: string;
-  institutionId: string;
-  teacherId: string;
-  observerId: string; // Vicerrector or delegate
-  date: string; // Scheduled date
-  startTime?: string;
-  className: string;
-  subject: string;
-  topic?: string;
-  focus: string; // e.g., "Uso de TIC", "Adaptación Curricular", "Metodología DUA"
-  status: 'Scheduled' | 'Completed' | 'Cancelled';
-  
-  // Execution Data
-  scores?: RubricScore[];
-  strengths?: string;
-  weaknesses?: string; // Or "Areas for Improvement"
-  agreements?: string; // Compromisos
-  rating?: number; // Calculated average (e.g. 3.5/4)
-  feedbackDate?: string;
-}
-
-export interface ClassroomObservation {
-  id: string;
-  institutionId: string;
-  teacherId: string;
-  observerId: string; 
-  date: string;
-  className: string;
-  subject: string;
-  topic: string;
-  strengths: string;
-  recommendations: string;
-  rating: number; 
-}
-
-export interface TrainingSession {
-  id: string;
-  institutionId: string;
-  title: string;
-  date: string;
-  duration: string;
-  topic: string;
-  trainer: string;
-  attendees: string[]; // Teacher IDs
-}
-
-export interface InstitutionalDocument {
-  id: string;
-  institutionId: string;
-  type: 'PEI' | 'PCI' | 'PCA' | 'CodigoConvivencia' | 'PlanGestionRiesgos';
-  title: string;
-  status: 'Borrador' | 'Revisión' | 'Aprobado' | 'Vigente';
-  lastUpdated: string;
-  version: string;
-  url?: string;
-}
-
-export interface MeetingRecord {
-    id: string;
-    institutionId: string;
-    type: 'Junta de Curso' | 'Junta de Área' | 'Comisión Pedagógica';
-    date: string;
-    title: string;
-    summary: string;
-    agreements: string;
-    attendees: string[];
-}
-
-// Inspection Module Types
-export enum DisciplinarySeverity {
-  Minor = 'Leve',
-  Serious = 'Grave',
-  VerySerious = 'Muy Grave'
-}
-
-export interface DisciplinaryAction {
-  id: string;
-  institutionId: string;
-  studentId: string;
-  date: string;
-  infraction: string; // Linked to article/code
-  description: string;
-  severity: DisciplinarySeverity;
-  status: 'Abierto' | 'En Proceso' | 'Cerrado';
-  actionsTaken: string;
-}
-
-export interface InspectionVisit {
-  id: string;
-  institutionId: string;
-  inspectorId: string;
-  date: string;
-  type: 'Ordinaria' | 'Extraordinaria' | 'Auditoría';
-  target: string; // e.g., "Área de Matemáticas", "Secretaría"
-  findings: string;
-  status: 'Programada' | 'Realizada' | 'Informe Pendiente';
-}
-
-export interface ConflictMediation {
-  id: string;
-  institutionId: string;
-  date: string;
-  partiesInvolved: string[]; // Names or IDs
-  description: string;
-  status: 'Pendiente' | 'En Mediación' | 'Resuelto';
-  agreements: string;
-  derivedToDece?: boolean; // Indicates if the case has been referred to DECE
-}
-
-// --- PROTOCOLOS DE VIOLENCIA (NUEVO) ---
-
-export type ViolenceType = 'Física' | 'Psicológica' | 'Sexual' | 'Negligencia' | 'Ciberacoso';
-export type ProtocolScope = 'Intrafamiliar' | 'Institucional' | 'Entre Pares' | 'Género';
-export type ProtocolSeverity = 'Conflicto Escolar' | 'Vulneración de Derechos/Delito';
-
-export interface ProtocolCase {
-    id: string;
-    institutionId: string;
-    studentId: string;
-    dateDetected: string;
-    detectedBy: string; // User ID
-    detectionMethod: string; // 'Observación', 'Relato', etc.
-    
-    // Categorization
-    violenceType: ViolenceType;
-    scope: ProtocolScope;
-    severity: ProtocolSeverity;
-    
-    // Workflow Flags
-    isSexualViolence: boolean; // CRITICAL FLAG: Blocks mediation
-    denunciaFiled: boolean; // Required for crimes
-    denunciaDeadline?: string; // 24h from detection
-    
-    // Status
-    status: 'Detección' | 'Intervención' | 'Derivación' | 'Seguimiento' | 'Cerrado';
-    
-    // Details
-    description: string;
-    indicators: string[]; // Checklist items
-    actionsTaken: string;
-    
-    // Documents (URLs or IDs)
-    fichaHechosUrl?: string;
-    informeDeceUrl?: string;
-    fichaDerivacionUrl?: string;
-}
-
-// --- END PROTOCOLOS ---
-
-export interface QualityMetric {
-  id: string;
-  institutionId: string;
-  year: string;
-  category: 'Asistencia' | 'Rendimiento' | 'Convivencia';
-  metric: string;
-  value: number;
-  target: number;
-}
-
-// --- QUALITY & EVALUATION MODULE ---
-
-export interface QualityGoal {
-    id: string;
-    institutionId: string;
-    category: 'Rendimiento' | 'Asistencia' | 'Retención' | 'Comportamiento';
-    metricName: string; // e.g. "Promedio General", "Tasa de Asistencia"
-    targetValue: number; // e.g. 8.0 or 95
-    academicYear: string;
-}
-
-export interface ImprovementPlan {
-    id: string;
-    institutionId: string;
-    dateCreated: string;
-    problemDetected: string; // e.g. "Bajo rendimiento en Matemáticas 8vo"
-    proposedIntervention: string; // e.g. "Clases de refuerzo vespertinas"
-    responsibleId: string; // User ID (Vicerrector/Area Coordinator)
-    deadline: string;
-    status: 'Not Started' | 'In Progress' | 'Completed';
-    progressNotes?: string;
-}
-
-
-export enum OvpAxis {
-  SelfKnowledge = 'Autoconocimiento',
-  Information = 'Información',
-  DecisionMaking = 'Toma de Decisiones',
-}
-
-export interface OvpActivity {
-  id: string;
-  institutionId: string;
-  studentId: string;
-  title: string;
-  axis: OvpAxis;
-  status: 'Pendiente' | 'Completada';
-}
-
 export interface HealthRecord {
   id: string;
   institutionId: string;
   studentId: string;
   allergies: string[];
   conditions: string[];
-  emergencyContact: {
-    name: string;
-    phone: string;
-    relation: string;
-  };
-  medications: {
-    name: string;
-    dosage: string;
-    notes: string;
-  }[];
+  emergencyContact: { name: string; phone: string; relation: string };
+  medications: { name: string; dosage: string; notes: string }[];
   lastCheckup: string;
 }
 
 export interface Diagnosis {
-  code: string; // CIE-10 code
-  description: string;
-  type: 'PRE' | 'DEF'; // Presuntivo o Definitivo
+    code: string;
+    description: string;
+    type: 'PRE' | 'DEF';
 }
 
 export interface MedicalVisit {
@@ -498,171 +154,18 @@ export interface MedicalVisit {
   institutionId: string;
   studentId: string;
   healthProfessionalId: string;
-  date: string; // ISO string date
+  date: string;
   motive: string;
-  vitalSigns: {
-    temperature: string;
-    pulse: string;
-    respiratoryRate: string;
-    bloodPressure: string;
-  };
-  anthropometry: {
-    weight: string;
-    height: string;
-    imc: string;
-  };
+  vitalSigns: { temperature: string; pulse: string; respiratoryRate: string; bloodPressure: string };
+  anthropometry: { weight: string; height: string; imc: string };
   diagnoses: Diagnosis[];
-  treatmentPlan: {
-    diagnostic: string;
-    therapeutic: string;
-    educational: string;
-  };
+  treatmentPlan: { diagnostic: string; therapeutic: string; educational: string };
   isReferred: boolean;
   referralDetails?: string;
 }
 
-export interface AcademicCalendarEvent {
-  id: string;
-  institutionId: string;
-  name: string; // "Independencia de Guayaquil", "Vacaciones de Navidad"
-  startDate: string; // YYYY-MM-DD
-  endDate: string; // YYYY-MM-DD
-}
-
-export interface Institution {
-  id: string;
-  name: string;
-  codeAMIE?: string;
-  logoUrl: string;
-  contact: {
-    phone: string;
-    email: string;
-    address: string;
-  };
-  branding?: {
-    primaryColor: string;
-    secondaryColor: string;
-  };
-  // Geofence Configuration
-  geofenceConfig?: {
-      latitude: number;
-      longitude: number;
-      radius: number; // Meters
-  };
-  activeModules?: {
-    dece: boolean;
-    health: boolean;
-  };
-  adminIds?: string[];
-  methodologyFocus?: 'DUA' | 'Tradicional'; // Added for DUA compliance
-  communicationChannels?: {
-    email: { enabled: boolean };
-    sms: { enabled: boolean };
-    internalMessaging: { enabled: boolean };
-    pushNotifications: { enabled: boolean };
-    phoneCalls: { enabled: boolean };
-    socialMedia: { enabled: boolean };
-    circulars: { enabled: boolean };
-  };
-  automatedNotifications?: {
-    absences: {
-      enabled: boolean;
-      channel: 'email' | 'sms' | 'internalMessaging';
-      template: string;
-    };
-    discipline: {
-      enabled: boolean;
-      channel: 'email' | 'internalMessaging';
-      template: string;
-    };
-    healthEmergencies: {
-      enabled: boolean;
-      channel: 'email' | 'sms' | 'phoneCalls';
-      template: string;
-    };
-    events: {
-      enabled: boolean;
-      channel: 'internalMessaging' | 'email';
-      template: string;
-    };
-    grades: {
-      enabled: boolean;
-      channel: 'internalMessaging';
-      template: string;
-    };
-    checkInOut: {
-      enabled: boolean;
-      channel: 'sms' | 'pushNotifications';
-      template: string;
-    };
-  };
-  academicYear?: {
-    startDate: string; // YYYY-MM-DD
-    endDate: string; // YYYY-MM-DD
-  };
-}
-
-
-export enum OcrSubmissionStatus {
-    Processing = 'Procesando',
-    PendingVerification = 'Pendiente de Verificación',
-    Completed = 'Completado',
-    Failed = 'Error',
-}
-
-export interface ExtractedAttendance {
-    studentName: string;
-    detectedStatus: string;
-    confidence: number; // 0 to 1
-    correctedStatus?: AttendanceStatus;
-}
-
-export interface OcrSubmission {
-    id: string;
-    institutionId: string;
-    classId: string;
-    uploaderId: string;
-    uploadDate: string;
-    fileName: string;
-    imageUrl: string;
-    status: OcrSubmissionStatus;
-    extractedData: ExtractedAttendance[];
-}
-
-export enum Shift {
-  Morning = 'Matutina',
-  Afternoon = 'Vespertina',
-  Night = 'Nocturna',
-}
-
-export interface TimeSlot {
-  id: string;
-  institutionId: string;
-  timetableId: string;
-  shift: Shift;
-  startTime: string; // "08:30"
-  endTime: string; // "10:15"
-  isBreak: boolean;
-}
-
-export const AREAS_OF_KNOWLEDGE = [
-  'Lengua y Literatura',
-  'Matemática',
-  'Ciencias Naturales',
-  'Ciencias Sociales',
-  'Lengua Extranjera',
-  'Educación Física',
-  'Educación Cultural y Artística',
-  'Interdisciplinar',
-  'Áreas Técnicas',
-  'Acompañamiento Integral',
-  'Cívica y Acompañamiento Integral', // Updated for new curriculum
-  'Currículo Integral'
-] as const;
-export type AreaOfKnowledge = typeof AREAS_OF_KNOWLEDGE[number];
-
-export const SUBJECT_LEVELS = ['EGB', 'BGU', 'Todos'] as const;
-export type SubjectLevel = typeof SUBJECT_LEVELS[number];
+export type AreaOfKnowledge = 'Matemática' | 'Lengua y Literatura' | 'Ciencias Naturales' | 'Ciencias Sociales' | 'ECA' | 'Educación Física' | 'Inglés' | 'Interdisciplinar';
+export type SubjectLevel = 'EGB Elemental' | 'EGB Media' | 'EGB Superior' | 'Bachillerato' | 'Todos';
 
 export interface Subject {
   id: string;
@@ -678,15 +181,56 @@ export interface Subject {
 export interface Room {
   id: string;
   institutionId: string;
-  name: string; // 'Aula 101', 'Laboratorio de Química'
+  name: string;
 }
 
-export interface ScheduleEntry {
-  day: 'Lunes' | 'Martes' | 'Miércoles' | 'Jueves' | 'Viernes';
-  timeSlotId: string; // ID from TimeSlot
-  classId: string;
-  subjectId: string;
-  roomId: string;
+export interface Timetable {
+  id: string;
+  institutionId: string;
+  name: string;
+  shift: Shift;
+}
+
+export enum ViccInterventionType {
+    AcademicMeeting = 'Junta Académica',
+    Disciplinary = 'Disciplinario',
+    ParentMeeting = 'Reunión Padres'
+}
+
+export interface ViccIntervention {
+  id: string;
+  institutionId: string;
+  studentId: string;
+  vicerrectorId: string;
+  date: string;
+  type: ViccInterventionType;
+  summary: string;
+  participants: string[];
+  agreements: string;
+}
+
+export enum AttendanceStatus {
+  Present = 'Present',
+  Absent = 'Absent',
+  Tardy = 'Tardy',
+  Excused = 'Excused',
+  Unexcused = 'Unexcused',
+  JustificationPending = 'JustificationPending'
+}
+
+export interface AttendanceRecord {
+  id: string;
+  institutionId: string;
+  studentId: string;
+  date: string;
+  timeSlot: string;
+  status: AttendanceStatus;
+  observations?: string[];
+  justificationNotes?: string;
+  justificationDocumentUrl?: string;
+  // Derived
+  studentName?: string;
+  student?: Student;
 }
 
 export interface ExitPass {
@@ -694,16 +238,16 @@ export interface ExitPass {
   institutionId: string;
   studentId: string;
   inspectorId: string;
-  date: string; // ISO string
+  date: string;
   reason: string;
   responsibleName: string;
-  responsibleId: string; // National ID
+  responsibleId: string;
 }
 
 export enum CitacionStatus {
-  Sent = 'Enviada',
-  Confirmed = 'Confirmada',
-  Completed = 'Realizada',
+    Sent = 'Sent',
+    Confirmed = 'Confirmed',
+    Completed = 'Completed'
 }
 
 export interface Citacion {
@@ -711,20 +255,28 @@ export interface Citacion {
   institutionId: string;
   studentId: string;
   parentId: string;
-  staffId: string; // User ID of the teacher, DECE, inspector, etc.
-  date: string; // ISO string for the appointment
+  staffId: string;
+  date: string;
   reason: string;
   status: CitacionStatus;
-  creationDate: string; // ISO string when it was created
+  creationDate: string;
+}
+
+export interface AcademicCalendarEvent {
+  id: string;
+  institutionId: string;
+  name: string;
+  startDate: string;
+  endDate: string;
 }
 
 export interface LeccionarioEntry {
   id: string;
   institutionId: string;
-  teacherId: string;
   classId: string;
   subjectId: string;
-  date: string; // YYYY-MM-DD
+  teacherId: string;
+  date: string;
   timeSlotId: string;
   skillCode: string;
   topics: string;
@@ -732,18 +284,18 @@ export interface LeccionarioEntry {
   observations: string;
 }
 
-// Curricular Planning Module Types
 export enum CurricularPlanStatus {
-  Draft = 'Borrador',
-  PendingReview = 'Pendiente de Revisión',
-  RequiresAdjustments = 'Requiere Ajustes',
-  Approved = 'Aprobado',
+    Draft = 'Borrador',
+    PendingReview = 'Pendiente de Revisión',
+    RequiresAdjustments = 'Requiere Ajustes',
+    Approved = 'Aprobado'
 }
 
 export interface AdaptacionCurricular {
-  studentId: string;
-  dcdModificada: string;
-  grade: '3'; // DUA covers Grade 1 & 2, so we only track Grade 3
+    studentId: string;
+    dcdModificada: string;
+    grade: string;
+    student?: Student; // derived
 }
 
 export interface MicroPlan {
@@ -756,120 +308,87 @@ export interface MicroPlan {
   unitTitle: string;
   unitObjectives: string;
   dcdIds: string[];
-  
-  // DUA Methodology Integration
-  duaRepresentation: string; // Principle 1: Representation (What)
-  duaActionExpression: string; // Principle 2: Action & Expression (How)
-  duaEngagement: string; // Principle 3: Engagement (Why)
-  
-  // Legacy field for backward compatibility (optional or computed)
-  methodology?: string; 
-
+  duaRepresentation: string;
+  duaActionExpression: string;
+  duaEngagement: string;
+  methodology: string;
   resources: string;
   evaluation: string;
   adaptations: AdaptacionCurricular[];
   status: CurricularPlanStatus;
-  // Workflow fields
   creationDate: string;
   submittedDate?: string;
-  reviewDate?: string;
   reviewerId?: string;
+  reviewDate?: string;
   reviewComments?: string;
 }
 
-// Curriculum Repository Types
-export const GRADE_LEVELS = ['EGB Preparatoria', 'EGB Elemental', 'EGB Media', 'EGB Superior', 'BGU'] as const;
-export type GradeLevel = typeof GRADE_LEVELS[number];
+export type GradeLevel = 'EGB Elemental' | 'EGB Media' | 'EGB Superior' | 'Bachillerato';
+export type Competency = 'Comunicacional' | 'Matemática' | 'Digital' | 'Socioemocional';
+export type CurricularInsertion = 'Educación Financiera' | 'Desarrollo Sostenible' | 'Ciudadanía Digital';
 
-export const COMPETENCIES = ['Comunicacional', 'Lógico-Matemática', 'Digital', 'Socioemocional'] as const;
-export type Competency = typeof COMPETENCIES[number];
-
-export const CURRICULAR_INSERTIONS = [
-  'Educación Cívica, Ética e Integridad',
-  'Educación para el Desarrollo Sostenible',
-  'Educación Financiera',
-  'Educación para la Seguridad Vial y Movilidad Sostenible',
-  'Socioemocional',
-] as const;
-export type CurricularInsertion = typeof CURRICULAR_INSERTIONS[number];
+export interface Dcd {
+  id: string;
+  institutionId: string;
+  subjectId: string;
+  code: string;
+  description: string;
+  gradeLevel: GradeLevel;
+  criterionId: string;
+  competencies: Competency[];
+  curricularInsertions: CurricularInsertion[];
+  isDisaggregated?: boolean;
+  refCode?: string;
+}
 
 export interface EvaluationCriterion {
   id: string;
   institutionId: string;
+  subjectId: string;
   code: string;
   description: string;
-  subjectId: string;
   gradeLevel: GradeLevel;
 }
 
 export interface EvaluationIndicator {
   id: string;
   institutionId: string;
+  criterionId: string;
   code: string;
   description: string;
-  criterionId: string;
 }
 
-export interface Dcd {
-  id: string;
-  institutionId: string;
-  code: string;
-  description: string;
-  subjectId: string;
-  gradeLevel: GradeLevel;
-  criterionId: string;
-  competencies: Competency[];
-  curricularInsertions?: CurricularInsertion[];
-  isDisaggregated?: boolean; // Flag for disaggregation
-  refCode?: string; // Code of the original skill if disaggregated
-}
-
-// Teacher Gradebook Module Types
 export interface GradeEntry {
-  activityId?: string;
-  nota?: number;
-  mejora?: number;
-  refuerzo?: number;
-  promedio: number;
+    activityId?: string;
+    nota?: number;
+    mejora?: number;
+    refuerzo?: number;
+    promedio: number;
 }
 
 export interface TrimesterRecord {
-  // Evaluaciones Formativas (45%)
-  actividades: GradeEntry[]; // Array of 5
-
-  // Portafolio (5%)
-  portafolio: GradeEntry;
-
-  // Evaluacion Sumativa y Proyectos (50%)
-  evaluacionSumativa: GradeEntry;
-  proyectoIntegrador: GradeEntry;
-
-  // Calculated totals
-  promedioFormativas: number;
-  sumaTrimestre: number; // Sum of weighted components
+    actividades: GradeEntry[];
+    portafolio: GradeEntry;
+    evaluacionSumativa: GradeEntry;
+    proyectoIntegrador: GradeEntry;
+    promedioFormativas: number;
+    sumaTrimestre: number;
 }
-
 
 export interface StudentGradebook {
-  studentId: string;
-  trimester1: TrimesterRecord;
-  trimester2: TrimesterRecord;
-  trimester3: TrimesterRecord;
-  
-  // Final calculations
-  promedioTrimestralFinal: number; // Average of the 3 trimesters
-  notaAnual90: number; // The 90% part
-  proyectoFinal10: GradeEntry; // The 10% part
-  notaFinal100: number; // The final grade
-  
-  examenSupletorio?: number;
-  notaFinalConSupletorio?: number;
-  observacionFinal: 'Aprobado' | 'Reprobado' | 'Supletorio' | 'Pendiente';
-  
-  // Tracking
-  mejorasUtilizadas: number;
+    studentId: string;
+    trimester1: TrimesterRecord;
+    trimester2: TrimesterRecord;
+    trimester3: TrimesterRecord;
+    mejorasUtilizadas: number;
+    promedioTrimestralFinal: number;
+    notaAnual90: number;
+    proyectoFinal10: GradeEntry;
+    notaFinal100: number;
+    examenSupletorio?: number;
+    notaFinalConSupletorio?: number;
+    observacionFinal: string;
 }
-
 
 export interface Gradebook {
   id: string;
@@ -879,133 +398,141 @@ export interface Gradebook {
   records: StudentGradebook[];
 }
 
-// Reinforcement Module Types (Based on PDF)
-export type ReinforcementModalidad = 'inside_class' | 'extra_class';
-export type ReinforcementGroupType = 'individual' | 'small_group' | 'large_group';
+export enum ActivityType {
+    Homework = 'Deber',
+    Classwork = 'Trabajo en Clase',
+    Project = 'Proyecto',
+    Exam = 'Examen',
+    Lesson = 'Lección'
+}
+
+export type EvaluationCategory = 'ACTIVIDAD_INDIVIDUAL' | 'ACTIVIDAD_GRUPAL' | 'PORTAFOLIO' | 'EVALUACION_SUMATIVA' | 'PROYECTO_INTEGRADOR';
+
+export interface Activity {
+  id: string;
+  institutionId: string;
+  classId: string;
+  subjectId: string;
+  teacherId: string;
+  title: string;
+  description: string;
+  type: ActivityType;
+  deliveryDate: string;
+  trimester: 1 | 2 | 3;
+  evaluationCategory: EvaluationCategory;
+  gradebookIndex?: 0 | 1 | 2 | 3 | 4;
+  microPlanId?: string;
+  dcdId?: string;
+  duaPrinciple?: 'representation' | 'actionExpression' | 'engagement';
+  rubricId?: string;
+}
 
 export interface ReinforcementTopic {
-    dcd: string; // Destreza
-    strategies: string; // Estrategias Metodológicas
-    resources: string; // Recursos
-    evaluationCriteria: string; // Criterios de Evaluación
+    dcd: string;
+    evaluationCriteria: string;
+    strategies: string;
+    resources: string;
 }
 
 export interface ReinforcementSession {
     id: string;
     date: string;
     attendance: boolean;
-    skillsReinforced: string; // Destrezas Reforzadas
-    achievements: string; // Logros de Aprendizaje
-    observations: string; // Recomendaciones/Observaciones
+    skillsReinforced: string;
+    achievements: string;
+    observations: string;
 }
 
 export interface ReinforcementPlan {
-    id: string;
-    institutionId: string;
-    studentId: string;
-    subjectId: string;
-    teacherId: string; // Docente responsable de la asignatura
-    tutorId: string; // Tutor del grado
-    reinforcementTeacherId?: string; // Profesor de refuerzo (puede ser el mismo)
-    
-    // Context
-    academicYear: string;
-    status: 'Nominated' | 'Planned' | 'ParentNotified' | 'In_Progress' | 'Completed';
-    
-    // Phase 1: Nomination & Planning (Page 1 & 2)
-    nominationDate: string;
-    nominationObservations: string; // Justification
-    
-    modalidad?: ReinforcementModalidad;
-    groupType?: ReinforcementGroupType;
-    schedule?: string; // Horario (Días/Horas)
-    duration?: string; // Duración prevista
-    startDate?: string;
-    generalObjective?: string;
-    topics: ReinforcementTopic[];
-    
-    // Phase 2: Parent Communication (Page 4 & 5)
-    notificationDate?: string;
-    parentConsented: boolean;
-    parentConsentDate?: string;
-    
-    // Phase 3: Execution & Tracking (Page 3)
-    sessions: ReinforcementSession[];
-    
-    // Final Report (Page 5 & 6)
-    finalReport?: {
-        achievements: string; // Logros
-        difficulties: string; // Dificultades
-        suggestions: string; // Sugerencias
-        completionDate: string;
-    };
+  id: string;
+  institutionId: string;
+  studentId: string;
+  subjectId: string;
+  teacherId: string;
+  tutorId: string;
+  reinforcementTeacherId?: string;
+  academicYear: string;
+  status: 'Nominated' | 'Planned' | 'ParentNotified' | 'In_Progress' | 'Completed';
+  nominationDate: string;
+  nominationObservations?: string;
+  topics: ReinforcementTopic[];
+  sessions: ReinforcementSession[];
+  modalidad: 'inside_class' | 'extra_class';
+  groupType: 'individual' | 'small_group';
+  schedule?: string;
+  duration?: string;
+  startDate?: string;
+  generalObjective?: string;
+  parentConsented?: boolean;
+  notificationDate?: string;
+  finalReport?: { achievements: string; difficulties: string; suggestions: string };
 }
 
-// Staff Attendance & Biometrics
-export interface BiometricProfile {
-    userId: string;
-    consentGiven: boolean;
-    consentDate: string;
-    templateId: string; // Simulating a biometric template reference
-}
-
-export type PunchType = 'in' | 'out_break' | 'in_break' | 'out';
-
-export interface AttendancePunch {
-  time: string; // HH:mm:ss format
-  type: PunchType;
-  method: 'Biometric' | 'Manual' | 'Facial';
-  location?: { latitude: number; longitude: number; };
-  verificationStatus?: 'Success' | 'Failed' | 'Pending'; // Geo-fence check
-  distanceFromInstitution?: number; // Meters
-}
+export type PunchType = 'in' | 'out' | 'out_break' | 'in_break';
 
 export interface StaffAttendanceRecord {
-    id: string;
-    institutionId: string;
-    userId: string;
-    date: string; // YYYY-MM-DD
-    punches: AttendancePunch[];
+  id: string;
+  institutionId: string;
+  userId: string;
+  date: string;
+  punches: {
+      time: string;
+      type: PunchType;
+      method: 'Biometric' | 'Manual' | 'Facial';
+      location?: { latitude: number; longitude: number };
+      verificationStatus?: 'Success' | 'Failed' | 'Pending';
+      distanceFromInstitution?: number;
+  }[];
+  checkInTime?: string;
+  status?: 'Late' | 'OnTime' | 'Absent';
+  method?: string;
+  punchSummary?: string;
+  location?: { latitude: number; longitude: number };
 }
 
-// Communications Module - Formal Requests
-export type FormalRequestStatus = 'Pending' | 'Approved' | 'Rejected';
-export type FormalRequestType = 'Time Off' | 'Supply Request' | 'Complaint' | 'Other';
-export type FormalRequestRecipient = Role.Vicerrector | Role.Rector | Role.InstitutionAdmin | Role.InspectorGeneral;
+export enum FormalRequestType {
+    TimeOff = 'Time Off',
+    SupplyRequest = 'Supply Request',
+    Complaint = 'Complaint',
+    Other = 'Other'
+}
+
+export enum FormalRequestRecipient {
+    Rector = 'Rector',
+    Vicerrector = 'Vicerrector',
+    InstitutionAdmin = 'InstitutionAdmin',
+    InspectorGeneral = 'InspectorGeneral'
+}
 
 export interface FormalRequest {
-    id: string;
-    institutionId: string;
-    requesterId: string; // Teacher/Staff ID
-    recipientRole: FormalRequestRecipient;
-    type: FormalRequestType;
-    subject: string;
-    details: string;
-    attachmentUrl?: string; // Link to the attached file (simulated)
-    status: FormalRequestStatus;
-    submissionDate: string; // ISO Date string
-    resolutionDate?: string; // ISO Date string
-    resolverId?: string; // Admin ID who resolved it
-    resolutionComments?: string;
+  id: string;
+  institutionId: string;
+  requesterId: string;
+  subject: string;
+  type: FormalRequestType;
+  recipientRole: FormalRequestRecipient;
+  details: string;
+  attachmentUrl?: string;
+  status: 'Pending' | 'Approved' | 'Rejected';
+  submissionDate: string;
+  resolutionComments?: string;
+  resolutionDate?: string;
+  resolverId?: string;
 }
 
-// Training & Professional Development (Plan de Capacitación)
-export type TrainingStatus = 'Planned' | 'In_Progress' | 'Completed' | 'Evaluated';
 export type TrainingModality = 'Presencial' | 'Virtual' | 'Híbrida';
-export type TrainingType = 'Interna' | 'Externa' | 'Inducción' | 'Directiva';
+export type TrainingType = 'Interna' | 'Externa' | 'Inducción';
 
 export interface TeacherTrainingRecord {
     teacherId: string;
-    attendancePercentage: number; // Min requirement usually 75% or 80%
-    finalGrade: number; // /10
-    evidenceUrl?: string; // URL to uploaded evidence of application
+    attendancePercentage: number;
+    finalGrade: number;
     status: 'En Curso' | 'Aprobado' | 'Reprobado';
-    certificateUrl?: string;
 }
 
 export interface TrainingCourse {
     id: string;
-    planId: string; // Link to parent plan
+    planId: string;
     title: string;
     instructor: string;
     startDate: string;
@@ -1017,16 +544,296 @@ export interface TrainingCourse {
 }
 
 export interface TrainingPlan {
+  id: string;
+  institutionId: string;
+  title: string;
+  academicYear: string;
+  objectives: string;
+  justification: string;
+  methodology: string;
+  transversalThemes: string[];
+  status: 'Planned' | 'Active' | 'Completed';
+  courses: TrainingCourse[];
+}
+
+export interface InstitutionalDocument {
+  id: string;
+  institutionId: string;
+  type: 'PEI' | 'PCI' | 'PCA' | 'CodigoConvivencia' | 'PlanGestionRiesgos';
+  title: string;
+  status: 'Borrador' | 'Revisión' | 'Aprobado' | 'Vigente';
+  version: string;
+  url?: string;
+  lastUpdated: string;
+}
+
+export interface MeetingRecord {
+  id: string;
+  institutionId: string;
+  type: 'Junta de Curso' | 'Junta de Área' | 'Comisión Pedagógica';
+  title: string;
+  date: string;
+  summary: string;
+  agreements: string;
+  attendees: string[]; // User IDs
+}
+
+export interface RubricLevel {
+    id: string;
+    rubricId: string;
+    label: string;
+    value: number;
+    order: number;
+    color?: string;
+}
+
+export interface RubricCriteria {
+    id: string;
+    rubricId: string;
+    description: string;
+    weight: number; // Percentage
+}
+
+export interface RubricDescriptor {
+    criteriaId: string;
+    levelId: string;
+    description: string;
+}
+
+export interface Rubric {
+  id: string;
+  institutionId: string;
+  title: string;
+  description: string;
+  scaleType: 'Quantitative' | 'Qualitative';
+  levels: RubricLevel[];
+  criteria: RubricCriteria[];
+  descriptors: RubricDescriptor[];
+}
+
+export interface ConflictMediation {
+  id: string;
+  date: string;
+  partiesInvolved: string[]; // Student IDs
+  description: string;
+  status: 'Resuelto' | 'Pendiente' | 'Derivado';
+  derivedToDece?: boolean;
+}
+
+export interface CronogramaEvent {
+  id: string;
+  institutionId: string;
+  title: string;
+  date: string; // YYYY-MM-DD
+  startTime: string;
+  endTime: string;
+  location: string;
+  responsible: string;
+  status: 'Pending' | 'Approved' | 'Rejected';
+  proposedBy: string; // User ID
+}
+
+export interface SubjectReport {
     id: string;
     institutionId: string;
+    classId: string;
+    subjectId: string;
+    teacherId: string;
+    trimester: 1 | 2 | 3;
     academicYear: string;
-    title: string; // e.g. "Plan de Desarrollo Profesional 2025"
-    objectives: string; // Qué se quiere lograr
-    justification: string; // Detección de necesidades (Diagnóstico/DECE/PCA)
-    transversalThemes: string[]; // e.g. ["Inclusión", "Género", "TICs"]
-    methodology: string; // Cómo se hará
-    status: TrainingStatus;
-    courses: TrainingCourse[];
+    status: 'Draft' | 'Submitted' | 'Approved';
+    submissionDate?: string;
+    dcdsCovered: string[];
+    difficulties: {
+        studentId: string;
+        difficulty: string;
+        cause: string;
+        measure: string;
+        results: string;
+        minGrade?: number;
+        improvedGrade?: number;
+        subjectName?: string; // Derived
+    }[];
+    conclusions: string;
+    recommendations: string;
+}
+
+export enum OcrSubmissionStatus {
+    Processing = 'Procesando',
+    PendingVerification = 'Pendiente Verificación',
+    Completed = 'Completado',
+    Failed = 'Fallido'
+}
+
+export interface OcrSubmission {
+    id: string;
+    institutionId: string;
+    classId: string;
+    uploaderId: string;
+    uploadDate: string;
+    fileName: string;
+    imageUrl: string;
+    status: OcrSubmissionStatus;
+    extractedData: any[]; // Adjust based on extraction format
+}
+
+export enum InterventionType {
+    IndividualSession = 'Sesión Individual',
+    GroupSession = 'Sesión Grupal',
+    FamilyMeeting = 'Reunión Familiar',
+    Referral = 'Derivación'
+}
+
+export interface Intervention {
+    id: string;
+    institutionId: string;
+    studentId: string;
+    deceProfessionalId: string;
+    date: string;
+    type: InterventionType;
+    summary: string;
+    participants?: string[];
+    agreements?: string;
+}
+
+export enum OvpAxis {
+    SelfKnowledge = 'Autoconocimiento',
+    Information = 'Información',
+    DecisionMaking = 'Toma de Decisiones'
+}
+
+export interface OvpActivity {
+    id: string;
+    institutionId: string;
+    studentId: string;
+    title: string;
+    axis: OvpAxis;
+    status: 'Pendiente' | 'Completada';
+}
+
+export enum DisciplinarySeverity {
+    Minor = 'Leve',
+    Serious = 'Grave',
+    VerySerious = 'Muy Grave'
+}
+
+export interface DisciplinaryAction {
+    id: string;
+    studentId: string;
+    date: string;
+    infraction: string;
+    description: string;
+    severity: DisciplinarySeverity;
+    status: 'Abierto' | 'Cerrado' | 'En Proceso';
+}
+
+export interface InspectionVisit {
+    id: string;
+    institutionId: string;
+    inspectorId: string;
+    target: string; // Area or person
+    date: string;
+    type: 'Ordinaria' | 'Extraordinaria' | 'Auditoría';
+    status: 'Programada' | 'Realizada' | 'Informe Pendiente';
+    findings: string;
+}
+
+export interface QualityMetric {
+    id: string;
+    name: string;
+    value: number;
+}
+
+export interface RubricScore {
+    criteriaId: string;
+    score: number;
+    evidence?: string;
+}
+
+export interface ClassroomVisit {
+    id: string;
+    institutionId: string;
+    observerId: string;
+    teacherId: string;
+    date: string;
+    startTime: string;
+    className: string;
+    subject: string;
+    topic: string;
+    focus: string;
+    status: 'Scheduled' | 'Completed';
+    scores?: RubricScore[];
+    rating?: number;
+    strengths?: string;
+    weaknesses?: string;
+    agreements?: string;
+}
+
+export interface TrainingSession {
+    id: string;
+    title: string;
+    date: string;
+    attendees: number;
+}
+
+export type ViolenceType = 'Física' | 'Psicológica' | 'Sexual' | 'Negligencia' | 'Ciberacoso';
+export type ProtocolScope = 'Intrafamiliar' | 'Institucional' | 'Entre Pares' | 'Género';
+export type ProtocolSeverity = 'Conflicto Escolar' | 'Vulneración de Derechos/Delito';
+
+export interface ProtocolCase {
+    id: string;
+    institutionId: string;
+    dateDetected: string;
+    detectedBy: string; // UserID
+    detectionMethod: string;
+    studentId: string;
+    violenceType: ViolenceType;
+    scope: ProtocolScope;
+    severity: ProtocolSeverity;
+    status: 'Detección' | 'Intervención' | 'Derivación' | 'Seguimiento' | 'Cerrado';
+    isSexualViolence: boolean;
+    denunciaFiled: boolean;
+    denunciaDeadline?: string;
+    indicators: string[];
+    description: string;
+    actionsTaken: string;
+}
+
+export interface QualityGoal {
+    id: string;
+    institutionId: string;
+    category: 'Rendimiento' | 'Asistencia' | 'Retención' | 'Comportamiento';
+    metricName: string;
+    targetValue: number;
+    academicYear: string;
+}
+
+export interface ImprovementPlan {
+    id: string;
+    institutionId: string;
+    problemDetected: string;
+    proposedIntervention: string;
+    responsibleId?: string; // User ID
+    deadline: string;
+    status: 'Not Started' | 'In Progress' | 'Completed';
+    dateCreated?: string;
+}
+
+export interface JuntaDeCurso {
+    id: string;
+    institutionId: string;
+    classId: string;
+    trimester: 1 | 2 | 3;
+    date: string;
+    startTime: string;
+    endTime: string;
+    academicYear: string;
+    status: 'Planned' | 'ReadyToMeet' | 'Completed';
+    reportIds: string[]; // SubjectReport IDs
+    resolutions?: string;
+    stimulusAwards?: { studentId: string; reason: string }[];
+    generatedDeceReport?: string;
+    generatedInspectionReport?: string;
 }
 
 export type ResourceType = 'Activity' | 'Project' | 'ABP';
@@ -1037,12 +844,20 @@ export interface ResourcePhase {
     description: string;
 }
 
+export interface ResourceAttachment {
+    id: string;
+    name: string;
+    url: string;
+    type: 'document' | 'link';
+}
+
 export interface ResourceRepositoryItem {
     id: string;
     institutionId: string;
     authorId: string;
     title: string;
     description: string;
+    coverImageUrl?: string; // New field for card cover
     
     // Taxonomy
     level: SubjectLevel; // EGB, BGU...
@@ -1074,72 +889,6 @@ export interface ResourceRepositoryItem {
     shared: boolean; // Public to institution?
     clonedFromId?: string;
     creationDate: string;
-    resourceLinks?: string[]; // URLs
-}
-
-// --- NEW TYPES FOR JUNTA DE CURSO FLOW ---
-
-export interface DifficultyReport {
-    studentId: string;
-    difficulty: string;
-    cause: string;
-    measure: string;
-    results: string;
-    // Grades (optional for quick reference)
-    minGrade?: number;
-    improvedGrade?: number;
-}
-
-export type SubjectReportStatus = 'Draft' | 'Submitted' | 'Approved' | 'Returned';
-
-export interface SubjectReport {
-    id: string;
-    institutionId: string;
-    classId: string;
-    subjectId: string;
-    teacherId: string;
-    trimester: 1 | 2 | 3;
-    academicYear: string;
-    
-    // Content
-    dcdsCovered: string[]; // List of strings or IDs
-    
-    // Analysis
-    difficulties: DifficultyReport[];
-    conclusions: string;
-    recommendations: string;
-    
-    // Workflow
-    status: SubjectReportStatus;
-    submissionDate?: string;
-    approvalDate?: string;
-    reviewerId?: string; // Vicerrector
-}
-
-export type JuntaStatus = 'Planned' | 'ReportsPending' | 'ReadyToMeet' | 'Completed';
-
-export interface JuntaDeCurso {
-    id: string;
-    institutionId: string;
-    classId: string;
-    trimester: 1 | 2 | 3;
-    academicYear: string;
-    status: JuntaStatus;
-    date: string; // Scheduled date
-    
-    // Linked Data
-    reportIds: string[]; // IDs of SubjectReports
-    
-    // Meeting Minutes (Acta) Data
-    startTime?: string;
-    endTime?: string;
-    attendees?: string[]; // User IDs
-    absentees?: string[]; // User IDs or notes
-    resolutions?: string;
-    stimulusAwards?: { studentId: string; reason: string; }[];
-    
-    // Reports generated by the system automatically based on data
-    generatedPerformanceAnalysis?: string;
-    generatedDeceReport?: string;
-    generatedInspectionReport?: string;
+    resourceLinks?: string[]; // URLs (Legacy, keep for backward compat if needed, or migrate to attachments)
+    attachments?: ResourceAttachment[]; // New field for structured attachments
 }
