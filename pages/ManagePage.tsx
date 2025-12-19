@@ -17,7 +17,10 @@ import StaffAttendanceKiosk from '../components/staff/StaffAttendanceKiosk';
 import StaffAttendanceReport from '../components/staff/StaffAttendanceReport';
 import BiometricEnrollmentModal from '../components/staff/BiometricEnrollmentModal';
 import PromotionWizard from '../components/management/PromotionWizard';
-import { FingerPrintIcon, UsersIcon, ClipboardListIcon, CalendarIcon, ManageIcon, GraduationCapIcon } from '../components/icons/Icons';
+import SchoolStandardsManager from '../components/management/SchoolStandardsManager';
+import PeiBuilder from '../components/management/PeiBuilder';
+// FIX: Added missing SparklesIcon and PlusIcon imports.
+import { FingerPrintIcon, UsersIcon, ClipboardListIcon, CalendarIcon, ManageIcon, GraduationCapIcon, ChartBarIcon, ClipboardDocumentCheckIcon, ChatBubbleIcon, ArchiveBoxIcon, ClockIcon, SparklesIcon, PlusIcon } from '../components/icons/Icons';
 
 interface ManagePageProps {
   allUsers: User[];
@@ -31,7 +34,6 @@ interface ManagePageProps {
   timetables: Timetable[];
   academicCalendarEvents: AcademicCalendarEvent[];
   staffAttendanceRecords: StaffAttendanceRecord[];
-  // Added Gradebooks for promotion logic
   gradebooks?: Gradebook[]; 
   
   onUpdateUsers: (users: User[]) => void;
@@ -49,13 +51,26 @@ interface ManagePageProps {
 
 interface ManageCardProps {
     title: string;
-    children: React.ReactNode;
+    description?: string;
+    icon?: React.ReactNode;
+    onClick: () => void;
+    buttonText: string;
+    color?: string;
 }
 
-const ManageCard: React.FC<ManageCardProps> = ({ title, children }) => (
-    <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-        <h3 className="text-lg font-semibold text-slate-700 mb-4">{title}</h3>
-        {children}
+const ManageCard: React.FC<ManageCardProps> = ({ title, description, icon, onClick, buttonText, color = "bg-primary-600" }) => (
+    <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 flex flex-col h-full hover:shadow-md transition-shadow">
+        <div className="flex items-center gap-3 mb-3">
+            {icon && <div className="p-2 bg-slate-50 rounded-lg text-slate-600">{icon}</div>}
+            <h3 className="text-lg font-bold text-slate-800">{title}</h3>
+        </div>
+        <p className="text-slate-600 text-sm mb-6 flex-grow">{description}</p>
+        <button 
+            onClick={onClick} 
+            className={`w-full py-2 ${color} text-white font-bold rounded-lg hover:opacity-90 transition-opacity flex items-center justify-center gap-2`}
+        >
+            {buttonText}
+        </button>
     </div>
 );
 
@@ -66,7 +81,7 @@ const ManagePage: React.FC<ManagePageProps> = ({
   onUpdateStaffAttendance,
 }) => {
     const { user: currentUser } = useContext(UserContext);
-    const [view, setView] = useState<'dashboard' | 'users' | 'classes' | 'schedule' | 'students' | 'communication' | 'support' | 'subjects' | 'rooms' | 'timetables' | 'calendar' | 'staff_control'>('dashboard');
+    const [view, setView] = useState<'dashboard' | 'users' | 'classes' | 'schedule' | 'students' | 'communication' | 'support' | 'subjects' | 'rooms' | 'timetables' | 'calendar' | 'staff_control' | 'quality_standards' | 'pei_builder'>('dashboard');
     
     const [isEnrollmentOpen, setIsEnrollmentOpen] = useState(false);
     const [userToEnroll, setUserToEnroll] = useState<User | null>(null);
@@ -92,7 +107,7 @@ const ManagePage: React.FC<ManagePageProps> = ({
         };
     }, [currentUser, allUsers, allClasses, allStudents, schedule, supportContacts, subjects, timeSlots, rooms, timetables, academicCalendarEvents]);
 
-    if (!currentUser || ![Role.InstitutionAdmin, Role.InspectorGeneral].includes(currentUser.role)) {
+    if (!currentUser || ![Role.InstitutionAdmin, Role.InspectorGeneral, Role.Rector].includes(currentUser.role)) {
         return <div className="bg-white p-6 rounded-xl shadow-md"><h2 className="text-xl font-bold text-slate-800 mb-4">Gestión del Centro</h2><p>No tiene los permisos necesarios para acceder a esta sección.</p></div>
     }
 
@@ -121,37 +136,151 @@ const ManagePage: React.FC<ManagePageProps> = ({
     const handleUpdateInstitutionAcademicCalendarEvents = (updatedEvents: AcademicCalendarEvent[]) => { const otherEvents = academicCalendarEvents.filter(e => e.institutionId !== currentUser.institutionId); onUpdateAcademicCalendarEvents([...otherEvents, ...updatedEvents]); };
 
     const renderDashboard = () => (
-      <div className="space-y-6">
+      <div className="space-y-10 pb-10">
         {currentUser?.role === Role.InstitutionAdmin && <InstitutionManagement />}
         
-        <div className="border-b pb-4">
-            <h3 className="text-xl font-bold text-slate-800">Módulos de Gestión</h3>
-        </div>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <ManageCard title="Control de Personal (Biometría)"><p className="text-slate-600">Registro de asistencia docente y gestión de perfiles biométricos.</p><button onClick={() => setView('staff_control')} className="mt-4 flex items-center gap-2 px-4 py-2 bg-primary-600 text-white font-semibold rounded-md hover:bg-primary-700"><FingerPrintIcon className="h-5 w-5" /> Acceder al Módulo</button></ManageCard>
-             <ManageCard title="Gestionar Usuarios"><p className="text-slate-600">Añadir, editar y consultar los perfiles de todo el personal.</p><button onClick={() => setView('users')} className="mt-4 px-4 py-2 bg-primary-600 text-white font-semibold rounded-md hover:bg-primary-700">Ir a Gestión de Usuarios</button></ManageCard>
-             <ManageCard title="Gestionar Alumnos"><p className="text-slate-600">Añadir, editar y consultar los perfiles de los alumnos y sus familiares.</p><button onClick={() => setView('students')} className="mt-4 px-4 py-2 bg-primary-600 text-white font-semibold rounded-md hover:bg-primary-700">Ir a Gestión de Alumnos</button></ManageCard>
-        </div>
+        {/* SECCIÓN 1: GESTIÓN ESTRATÉGICA */}
+        <section>
+            <div className="border-b-2 border-indigo-100 pb-3 mb-6">
+                <h3 className="text-xl font-black text-indigo-900 flex items-center gap-2">
+                    <SparklesIcon className="h-6 w-6 text-indigo-500" />
+                    Gobernanza y Estrategia (PEI/Calidad)
+                </h3>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <ManageCard 
+                    title="Constructor de PEI" 
+                    description="Planificación estratégica obligatoria de 5 años. Identidad, FODA, Metas y Mejora." 
+                    icon={<ClipboardDocumentCheckIcon className="h-6 w-6"/>}
+                    buttonText="Abrir Constructor"
+                    color="bg-indigo-600"
+                    onClick={() => setView('pei_builder')}
+                />
+                <ManageCard 
+                    title="Gestión de la Calidad" 
+                    description="Seguimiento de estándares nacionales y carga de medios de verificación para auditoría." 
+                    icon={<ChartBarIcon className="h-6 w-6"/>}
+                    buttonText="Ver Estándares"
+                    color="bg-primary-600"
+                    onClick={() => setView('quality_standards')}
+                />
+                <ManageCard 
+                    title="Biometría de Personal" 
+                    description="Control de asistencia docente mediante huella dactilar, rostro o PIN." 
+                    icon={<FingerPrintIcon className="h-6 w-6"/>}
+                    buttonText="Acceder a Control"
+                    color="bg-slate-800"
+                    onClick={() => setView('staff_control')}
+                />
+            </div>
+        </section>
 
-        <div className="border-b pb-4 pt-6">
-            <h3 className="text-xl font-bold text-slate-800">Configuración Académica</h3>
-        </div>
+        {/* SECCIÓN 2: GESTIÓN ACADÉMICA Y USUARIOS */}
+        <section>
+            <div className="border-b-2 border-slate-100 pb-3 mb-6">
+                <h3 className="text-xl font-black text-slate-800 flex items-center gap-2">
+                    <UsersIcon className="h-6 w-6 text-slate-500" />
+                    Población y Gestión Académica
+                </h3>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                 <ManageCard 
+                    title="Gestión de Personal" 
+                    description="Administrar perfiles de docentes, personal administrativo y directivos." 
+                    icon={<UsersIcon className="h-6 w-6"/>}
+                    buttonText="Gestionar Usuarios"
+                    onClick={() => setView('users')}
+                />
+                <ManageCard 
+                    title="Gestión de Alumnos" 
+                    description="Matriculación, perfiles de estudiantes y registro de representantes legales." 
+                    icon={<GraduationCapIcon className="h-6 w-6"/>}
+                    buttonText="Gestionar Alumnos"
+                    onClick={() => setView('students')}
+                />
+                <ManageCard 
+                    title="Estructura de Clases" 
+                    description="Crear y organizar los grupos de alumnos por grado y paralelo." 
+                    icon={<ArchiveBoxIcon className="h-6 w-6"/>}
+                    buttonText="Gestionar Clases"
+                    onClick={() => setView('classes')}
+                />
+                <ManageCard 
+                    title="Malla de Asignaturas" 
+                    description="Configurar asignaturas, áreas de conocimiento y asignación docente." 
+                    icon={<ClipboardListIcon className="h-6 w-6"/>}
+                    buttonText="Gestionar Materias"
+                    onClick={() => setView('subjects')}
+                />
+                 <ManageCard 
+                    title="Horarios de Clase" 
+                    description="Asignar la carga horaria semanal por asignatura, docente y aula." 
+                    icon={<CalendarIcon className="h-6 w-6"/>}
+                    buttonText="Configurar Horarios"
+                    onClick={() => setView('schedule')}
+                />
+                <ManageCard 
+                    title="Cierre de Ciclo" 
+                    description="Paso de año lectivo, promociones masivas y creación del nuevo periodo." 
+                    icon={<ClockIcon className="h-6 w-6"/>}
+                    buttonText="Asistente Promoción"
+                    color="bg-purple-600"
+                    onClick={() => setIsPromotionOpen(true)}
+                />
+            </div>
+        </section>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-             <ManageCard title="Ciclo Lectivo y Promoción"><p className="text-slate-600">Gestionar cambio de año, matriculación y promoción de estudiantes.</p><button onClick={() => setIsPromotionOpen(true)} className="mt-4 flex items-center gap-2 px-4 py-2 bg-purple-600 text-white font-semibold rounded-md hover:bg-purple-700"><GraduationCapIcon className="h-5 w-5" /> Asistente de Promoción</button></ManageCard>
-             <ManageCard title="Plantillas de Horario y Franjas"><p className="text-slate-600">Definir las jornadas y las horas de clase (franjas horarias).</p><button onClick={() => setView('timetables')} className="mt-4 flex items-center gap-2 px-4 py-2 bg-primary-600 text-white font-semibold rounded-md hover:bg-primary-700"><CalendarIcon className="h-5 w-5" /> Configurar Plantillas</button></ManageCard>
-             <ManageCard title="Asignaturas"><p className="text-slate-600">Crear y editar las asignaturas y asignarlas a los profesores.</p><button onClick={() => setView('subjects')} className="mt-4 flex items-center gap-2 px-4 py-2 bg-primary-600 text-white font-semibold rounded-md hover:bg-primary-700"><ClipboardListIcon className="h-5 w-5" /> Gestionar Asignaturas</button></ManageCard>
-             <ManageCard title="Aulas y Espacios"><p className="text-slate-600">Administrar las aulas, laboratorios y otros espacios físicos.</p><button onClick={() => setView('rooms')} className="mt-4 flex items-center gap-2 px-4 py-2 bg-primary-600 text-white font-semibold rounded-md hover:bg-primary-700"><UsersIcon className="h-5 w-5" /> Gestionar Aulas</button></ManageCard>
-             <ManageCard title="Gestionar Clases (Grupos)"><p className="text-slate-600">Crear grupos de alumnos y asignarles una plantilla de horario.</p><button onClick={() => setView('classes')} className="mt-4 px-4 py-2 bg-primary-600 text-white font-semibold rounded-md hover:bg-primary-700">Gestionar Clases</button></ManageCard>
-             <ManageCard title="Configurar Horario Semanal"><p className="text-slate-600">Asignar asignaturas a las clases en el calendario semanal.</p><button onClick={() => setView('schedule')} className="mt-4 px-4 py-2 bg-primary-600 text-white font-semibold rounded-md hover:bg-primary-700">Configurar Horarios</button></ManageCard>
-        </div>
+        {/* SECCIÓN 3: INFRAESTRUCTURA Y COMUNICACIÓN */}
+        <section>
+            <div className="border-b-2 border-slate-100 pb-3 mb-6">
+                <h3 className="text-xl font-black text-slate-800 flex items-center gap-2">
+                    <ManageIcon className="h-6 w-6 text-slate-500" />
+                    Infraestructura y Configuraciones
+                </h3>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <ManageCard 
+                    title="Aulas y Plantas" 
+                    description="Catálogo de espacios físicos, laboratorios y capacidad instalada." 
+                    icon={<ManageIcon className="h-6 w-6"/>}
+                    buttonText="Gestionar Aulas"
+                    onClick={() => setView('rooms')}
+                />
+                 <ManageCard 
+                    title="Franjas Horarias" 
+                    description="Configurar los periodos de clase y recreos por jornada." 
+                    icon={<ClockIcon className="h-6 w-6"/>}
+                    buttonText="Configurar Franjas"
+                    onClick={() => setView('timetables')}
+                />
+                <ManageCard 
+                    title="Canales de Notificación" 
+                    description="Habilitar SMS, Email y Mensajería Interna para la institución." 
+                    icon={<ChatBubbleIcon className="h-6 w-6"/>}
+                    buttonText="Configurar Canales"
+                    onClick={() => setView('communication')}
+                />
+                <ManageCard 
+                    title="Red de Apoyo" 
+                    description="Contactos externos para derivaciones de salud y seguridad." 
+                    icon={<PlusIcon className="h-6 w-6"/>}
+                    buttonText="Gestionar Red"
+                    onClick={() => setView('support')}
+                />
+                 <ManageCard 
+                    title="Calendario Escolar" 
+                    description="Definir feriados, días no lectivos y eventos institucionales." 
+                    icon={<CalendarIcon className="h-6 w-6"/>}
+                    buttonText="Gestionar Fechas"
+                    onClick={() => setView('calendar')}
+                />
+            </div>
+        </section>
       </div>
     );
 
     const renderStaffControl = () => (
         <div className="space-y-8">
-            {/* Added: Kiosk for Testing */}
             <div className="bg-white p-6 rounded-xl shadow-md border-l-4 border-blue-500">
                 <h3 className="text-lg font-bold text-slate-800 mb-4">Terminal de Asistencia (Modo Prueba)</h3>
                 <p className="text-sm text-slate-600 mb-4">Utilice este terminal para simular el registro de asistencia como cualquier usuario de la institución.</p>
@@ -193,6 +322,8 @@ const ManagePage: React.FC<ManagePageProps> = ({
     
     const renderView = () => {
          switch (view) {
+            case 'pei_builder': return <div><button onClick={() => setView('dashboard')} className="flex items-center gap-2 text-sm font-semibold text-primary-600 hover:underline mb-4">&larr; Volver</button><PeiBuilder /></div>;
+            case 'quality_standards': return <div><button onClick={() => setView('dashboard')} className="flex items-center gap-2 text-sm font-semibold text-primary-600 hover:underline mb-4">&larr; Volver</button><SchoolStandardsManager /></div>;
             case 'staff_control': return <div><button onClick={() => setView('dashboard')} className="flex items-center gap-2 text-sm font-semibold text-primary-600 hover:underline mb-4">&larr; Volver</button>{renderStaffControl()}</div>;
             case 'users': return <UserManagement users={institutionData.users} allClasses={institutionData.classes} allStudents={institutionData.students} onUpdateUsers={handleUpdateInstitutionUsers} />;
             case 'classes': return <ClassManagement classes={institutionData.classes} users={institutionData.users} students={institutionData.students} timetables={institutionData.timetables} onUpdateClasses={handleUpdateInstitutionClasses} onBack={() => setView('dashboard')} />;
@@ -201,13 +332,16 @@ const ManagePage: React.FC<ManagePageProps> = ({
             case 'timetables': return <TimetableManagementComponent timetables={institutionData.timetables} timeSlots={institutionData.timeSlots} onUpdateTimetables={handleUpdateInstitutionTimetables} onUpdateTimeSlots={handleUpdateInstitutionTimeSlots} institutionId={currentUser.institutionId!} onBack={() => setView('dashboard')} />;
             case 'subjects': return <SubjectManagement subjects={institutionData.subjects} users={institutionData.users} onUpdateSubjects={handleUpdateInstitutionSubjects} onBack={() => setView('dashboard')} />;
             case 'rooms': return <RoomManagement rooms={institutionData.rooms} onUpdateRooms={handleUpdateInstitutionRooms} onBack={() => setView('dashboard')} />;
+            case 'communication': return <CommunicationManagement onBack={() => setView('dashboard')} />;
+            case 'support': return <SupportContactManagement contacts={institutionData.supportContacts} onUpdateContacts={handleUpdateInstitutionSupportContacts} onBack={() => setView('dashboard')} />;
+            case 'calendar': return <AcademicCalendarManagement events={institutionData.academicCalendarEvents} onUpdateEvents={handleUpdateInstitutionAcademicCalendarEvents} onBack={() => setView('dashboard')} />;
             default: return renderDashboard();
         }
     }
 
     return (
         <div>
-            <h2 className="text-2xl font-bold text-slate-800 mb-6">Gestión del Centro</h2>
+            <h2 className="text-2xl font-bold text-gray-800 mb-6">Gestión del Centro</h2>
             {renderView()}
             {userToEnroll && (
                 <BiometricEnrollmentModal 

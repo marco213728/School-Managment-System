@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { ReinforcementPlan, User, Student, Class, Subject, ReinforcementTopic, ReinforcementSession } from '../../types';
 import { CloseIcon, PlusIcon, TrashIcon } from '../icons/Icons';
@@ -279,7 +280,7 @@ const ReinforcementForm: React.FC<ReinforcementFormProps> = ({ isOpen, onClose, 
                     )}
 
                     <div className="flex justify-end gap-4 pt-4 border-t mt-auto">
-                        <button type="button" onClick={onClose} className="px-4 py-2 bg-slate-200 text-slate-800 rounded-md hover:bg-slate-300">Cancelar</button>
+                        <button type="button" onClick={onClose} className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300">Cancelar</button>
                         <button type="submit" className="px-6 py-2 bg-primary-600 text-white font-semibold rounded-md hover:bg-primary-700">
                             Guardar Progreso
                         </button>

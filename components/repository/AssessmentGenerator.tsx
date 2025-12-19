@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo } from 'react';
 import { GoogleGenAI } from '@google/genai';
 import { AssessmentIcon, CloseIcon, PrinterIcon, CheckCircleIcon, SparklesIcon, SearchIcon } from '../icons/Icons';
@@ -119,9 +120,10 @@ const AssessmentGenerator: React.FC<AssessmentGeneratorProps> = ({ isOpen, onClo
         `;
 
         try {
-            const ai = new GoogleGenAI({ apiKey: process.env.API_KEY! });
+            // Updated GoogleGenAI initialization and fixed model name
+            const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
             const response = await ai.models.generateContent({ 
-                model: 'gemini-2.5-flash', 
+                model: 'gemini-3-flash-preview', 
                 contents: prompt 
             });
             
@@ -145,7 +147,7 @@ const AssessmentGenerator: React.FC<AssessmentGeneratorProps> = ({ isOpen, onClo
             authorId: currentUser.id,
             title: `Evaluación: ${topic} (${assessmentType})`,
             description: `Evaluación generada automáticamente sobre ${topic}. Formato HTML.`, // Note it's HTML
-            level: 'Todos', 
+            level: 'EGB', 
             type: 'Activity',
             dcdIds: [], 
             curricularInsertions: curricularInsertions as any,

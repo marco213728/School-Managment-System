@@ -2,7 +2,7 @@
 import React, { useContext } from 'react';
 import { Role } from '../../types';
 import { UserContext, InstitutionContext } from '../../contexts/UserContext';
-import { DashboardIcon, AttendanceIcon, ActivityIcon, ReportIcon, ManageIcon, CloseIcon, DeceIcon, HealthIcon, UsersIcon, ChatBubbleIcon, CalendarIcon, VicerrectoradoIcon, InspectionIcon, CitacionIcon, LeccionarioIcon, ClipboardDocumentCheckIcon, ArchiveBoxIcon, ClipboardListIcon, GraduationCapIcon, FingerPrintIcon } from '../icons/Icons';
+import { DashboardIcon, AttendanceIcon, ActivityIcon, ReportIcon, ManageIcon, CloseIcon, DeceIcon, HealthIcon, UsersIcon, ChatBubbleIcon, CalendarIcon, VicerrectoradoIcon, InspectionIcon, CitacionIcon, LeccionarioIcon, ClipboardDocumentCheckIcon, ArchiveBoxIcon, ClipboardListIcon, GraduationCapIcon, FingerPrintIcon, SparklesIcon } from '../icons/Icons';
 import { AMAUTA_LOGO } from '../../branding';
 
 interface SidebarProps {
@@ -39,6 +39,10 @@ const Sidebar: React.FC<SidebarProps> = ({ currentPage, setCurrentPage, isSideba
   ];
 
   const roleLinks = {
+    [Role.SuperAdmin]: [
+        { page: 'dashboard', icon: <DashboardIcon className="h-6 w-6" />, text: 'Panel de Control' },
+        { page: 'resource_bank', icon: <SparklesIcon className="h-6 w-6" />, text: 'Banco Global' }, // Added global bank for superadmin
+    ],
     [Role.InstitutionAdmin]: [
       ...commonLinks,
       { page: 'students', icon: <UsersIcon className="h-6 w-6" />, text: 'Alumnos' },
@@ -53,7 +57,6 @@ const Sidebar: React.FC<SidebarProps> = ({ currentPage, setCurrentPage, isSideba
       { page: 'curriculum_repository', icon: <ArchiveBoxIcon className="h-6 w-6" />, text: 'Repositorio' },
       { page: 'inspection', icon: <InspectionIcon className="h-6 w-6" />, text: 'Inspección' },
       { page: 'manage', icon: <ManageIcon className="h-6 w-6" />, text: 'Gestión Centro' },
-      // Added Resource Bank Link
       { page: 'resource_bank', icon: <ArchiveBoxIcon className="h-6 w-6" />, text: 'Banco de Recursos' },
     ],
     [Role.Teacher]: [
@@ -64,12 +67,10 @@ const Sidebar: React.FC<SidebarProps> = ({ currentPage, setCurrentPage, isSideba
       { page: 'attendance', icon: <AttendanceIcon className="h-6 w-6" />, text: 'Pase de Lista' },
       { page: 'activities', icon: <ActivityIcon className="h-6 w-6" />, text: 'Actividades' },
       { page: 'reinforcement', icon: <GraduationCapIcon className="h-6 w-6" />, text: 'Refuerzo Académico' },
-      // Added Juntas de Curso Link for Teachers
       { page: 'juntas', icon: <UsersIcon className="h-6 w-6" />, text: 'Juntas de Curso' },
       { page: 'reports', icon: <ReportIcon className="h-6 w-6" />, text: 'Informes de Clase' },
       { page: 'citaciones', icon: <CitacionIcon className="h-6 w-6" />, text: 'Citaciones' },
       { page: 'teacher_training', icon: <ArchiveBoxIcon className="h-6 w-6" />, text: 'Capacitación' },
-      // Added Resource Bank Link
       { page: 'resource_bank', icon: <ArchiveBoxIcon className="h-6 w-6" />, text: 'Banco de Recursos' },
       { page: 'communications', icon: <ChatBubbleIcon className="h-6 w-6" />, text: 'Comunicaciones' },
     ],
@@ -94,7 +95,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentPage, setCurrentPage, isSideba
     [Role.Rector]: [ { page: 'dashboard', icon: <DashboardIcon className="h-6 w-6" />, text: 'Dashboard' }, { page: 'communications', icon: <ChatBubbleIcon className="h-6 w-6" />, text: 'Comunicaciones' }, { page: 'manage', icon: <ManageIcon className="h-6 w-6" />, text: 'Gestión Centro' }],
   };
 
-  const links = user && user.role !== Role.SuperAdmin ? roleLinks[user.role] || [] : [];
+  const links = user ? roleLinks[user.role] || [] : [];
   
   const logo = institution?.logoUrl && !institution.logoUrl.includes('placehold') ? institution.logoUrl : AMAUTA_LOGO;
   

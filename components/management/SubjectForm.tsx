@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
+// FIX: AREAS_OF_KNOWLEDGE and SUBJECT_LEVELS are constants, not types, and should be imported from constants.ts
 import { Subject, User, Role, AreaOfKnowledge, SubjectLevel } from '../../types';
 import { AREAS_OF_KNOWLEDGE, SUBJECT_LEVELS } from '../../constants';
 import { CloseIcon } from '../icons/Icons';
@@ -43,7 +44,7 @@ const SubjectForm: React.FC<SubjectFormProps> = ({ isOpen, onClose, onSave, subj
                 teacherId: '',
                 maxWeeklyHours: undefined,
                 areaOfKnowledge: AREAS_OF_KNOWLEDGE[0],
-                level: SUBJECT_LEVELS[2],
+                level: SUBJECT_LEVELS[2], // Default to 'Todos'
                 isModule: false,
             });
         }

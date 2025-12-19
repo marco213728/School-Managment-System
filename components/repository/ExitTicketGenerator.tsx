@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { GoogleGenAI } from '@google/genai';
 import { TicketIcon, CloseIcon, PrinterIcon, CheckCircleIcon } from '../icons/Icons';
@@ -41,9 +42,10 @@ const ExitTicketGenerator: React.FC<ExitTicketGeneratorProps> = ({ isOpen, onClo
         `;
 
         try {
-            const ai = new GoogleGenAI({ apiKey: process.env.API_KEY! });
+            // Updated GoogleGenAI initialization and fixed model name
+            const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
             const response = await ai.models.generateContent({ 
-                model: 'gemini-2.5-flash', 
+                model: 'gemini-3-flash-preview', 
                 contents: prompt 
             });
             setGeneratedContent(response.text || 'No se pudo generar el contenido.');
@@ -64,7 +66,7 @@ const ExitTicketGenerator: React.FC<ExitTicketGeneratorProps> = ({ isOpen, onClo
             authorId: currentUser.id,
             title: `Exit Ticket: ${topic}`,
             description: generatedContent,
-            level: 'Todos', // Default generic level
+            level: 'EGB', // Default generic level
             gradeLevel: undefined, // Specific grade level string from dropdown if mapped
             type: 'Activity',
             dcdIds: [],
@@ -123,7 +125,7 @@ const ExitTicketGenerator: React.FC<ExitTicketGeneratorProps> = ({ isOpen, onClo
     return (
         <div className="fixed inset-0 bg-black bg-opacity-50 z-[70] flex justify-center items-center p-4">
             <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col">
-                {/* Header matching the screenshot purple theme */}
+                {/* Header matching the purple theme */}
                 <div className="bg-purple-100 p-6 rounded-t-xl text-center border-b border-purple-200 relative">
                     <button onClick={onClose} className="absolute top-4 right-4 text-purple-400 hover:text-purple-700">
                         <CloseIcon className="h-6 w-6" />

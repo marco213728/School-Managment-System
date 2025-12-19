@@ -1,5 +1,5 @@
 import React, { useState, useContext, useMemo } from 'react';
-import { User, Class, Student, Notification, Role, FormalRequest } from '../types';
+import { User, Class, Student, Notification, Role, FormalRequest, FormalRequestStatus } from '../types';
 import { UserContext } from '../contexts/UserContext';
 import { SendIcon, PlusIcon, ChatBubbleIcon, ClipboardListIcon } from '../components/icons/Icons';
 import AutomatedNotificationsConfig from '../components/communications/AutomatedNotificationsConfig';

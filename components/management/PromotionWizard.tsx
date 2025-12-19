@@ -104,9 +104,8 @@ const PromotionWizard: React.FC<PromotionWizardProps> = ({ classes, students, gr
         const updatedStudents = [...students];
 
         // 1. Create New Classes based on preview
-        const uniqueNewClasses: string[] = Array.from(new Set(
-            promotionPreview.map(p => p.nextClassName).filter((n): n is string => !!n && n !== 'Graduado')
-        ));
+        // Fixed: Explicit type assertion to string[] for uniqueNewClasses
+        const uniqueNewClasses = Array.from(new Set(promotionPreview.map(p => p.nextClassName).filter((n): n is string => !!n && n !== 'Graduado'))) as string[];
         
         const newClassMap = new Map<string, string>(); // Name -> New ID
 
@@ -140,6 +139,7 @@ const PromotionWizard: React.FC<PromotionWizardProps> = ({ classes, students, gr
                     grade: 'Graduado'
                 };
             } else if (p.nextClassName) {
+                // Fixed: Explicitly typed name as string for Map retrieval
                 const newClassId = newClassMap.get(p.nextClassName);
                 if (newClassId) {
                     updatedStudents[studentIndex] = {

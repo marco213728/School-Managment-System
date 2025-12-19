@@ -1,5 +1,6 @@
 
 
+
 import React, { useState, useMemo, useEffect } from 'react';
 import { ScheduleEntry, Class, TimeSlot, Subject, User, Role, Shift, Room, Timetable } from '../../types';
 import { DAYS_OF_WEEK } from '../../constants';
@@ -268,8 +269,7 @@ const ScheduleManagement: React.FC<ScheduleManagementProps> = ({ schedule, class
                             return (
                                 <tr key={slot.id}>
                                     <td className="px-2 py-4 whitespace-nowrap text-sm font-medium text-gray-900 align-top">{slot.startTime} - {slot.endTime}</td>
-                                    {DAYS_OF_WEEK.map(dayString => {
-                                        const day = dayString as ScheduleEntry['day'];
+                                    {DAYS_OF_WEEK.map(day => {
                                         const allEntriesInSlot = schedule.filter(e => e.day === day && e.timeSlotId === slot.id);
                                         const entryForSelectedClass = selectedClassId ? allEntriesInSlot.find(e => e.classId === selectedClassId) : null;
                                         

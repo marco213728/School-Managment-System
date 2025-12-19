@@ -24,11 +24,11 @@ import TeacherReinforcementPage from '../../pages/TeacherReinforcementPage';
 import StaffAttendanceModal from '../staff/StaffAttendanceModal';
 import TeacherTrainingPage from '../../pages/TeacherTrainingPage'; 
 import ResourceRepositoryPage from '../../pages/ResourceRepositoryPage';
-import JuntaManager from '../vicerrectorado/JuntaManager'; // Import JuntaManager
+import JuntaManager from '../vicerrectorado/JuntaManager'; 
 import { UserContext } from '../../contexts/UserContext';
-import { MOCK_RUBRICS } from '../../constants'; // Import MOCK_RUBRICS for fallback
+import { MOCK_RUBRICS } from '../../constants'; 
 
-type Page = 'dashboard' | 'attendance' | 'activities' | 'reports' | 'manage' | 'dece' | 'health' | 'students' | 'communications' | 'schedule' | 'inspection' | 'citaciones' | 'leccionario' | 'curricular_planning' | 'curriculum_repository' | 'gradebook' | 'vicerrector_dashboard' | 'reinforcement' | 'teacher_training' | 'resource_bank' | 'juntas'; // Added 'juntas'
+type Page = 'dashboard' | 'attendance' | 'activities' | 'reports' | 'manage' | 'dece' | 'health' | 'students' | 'communications' | 'schedule' | 'inspection' | 'citaciones' | 'leccionario' | 'curricular_planning' | 'curriculum_repository' | 'gradebook' | 'vicerrector_dashboard' | 'reinforcement' | 'teacher_training' | 'resource_bank' | 'juntas'; 
 
 interface DashboardLayoutProps {
   users: User[];
@@ -61,7 +61,7 @@ interface DashboardLayoutProps {
   trainingPlans: TrainingPlan[];
   institutionalDocuments: InstitutionalDocument[];
   meetingRecords: MeetingRecord[];
-  rubrics?: Rubric[]; // Optional rubrics prop
+  rubrics?: Rubric[]; 
   conflictMediations?: ConflictMediation[];
   cronogramaEvents?: CronogramaEvent[];
   
@@ -95,7 +95,7 @@ interface DashboardLayoutProps {
   onUpdateTrainingPlans: (plans: TrainingPlan[]) => void;
   onUpdateDocuments: (docs: InstitutionalDocument[]) => void;
   onUpdateMeetings: (meetings: MeetingRecord[]) => void;
-  onUpdateRubrics?: (rubrics: Rubric[]) => void; // Optional updater
+  onUpdateRubrics?: (rubrics: Rubric[]) => void; 
   onUpdateConflictMediations?: (conflicts: ConflictMediation[]) => void;
   onUpdateCronogramaEvents?: (events: CronogramaEvent[]) => void;
 }
@@ -238,6 +238,8 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = (props) => {
                 rubrics={rubrics}
                 onUpdateRubrics={handleUpdateRubrics}
                 subjects={subjects}
+                microPlans={microPlans} // NEW: Pass microPlans
+                classes={classes} // NEW: Pass classes
             />;
         case 'juntas':
             return (
@@ -268,8 +270,8 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = (props) => {
                     users={users} 
                     microPlans={microPlans} 
                     dcds={dcds} 
-                    rubrics={rubrics} // Pass rubrics
-                    onUpdateRubrics={handleUpdateRubrics} // Pass update handler
+                    rubrics={rubrics} 
+                    onUpdateRubrics={handleUpdateRubrics} 
                 />,
                 'reports': <ReportsPage attendanceRecords={restProps.attendanceRecords} academicCalendarEvents={restProps.academicCalendarEvents} students={students} classes={classes} schedule={schedule} timeSlots={timeSlots} timetables={restProps.timetables} users={users} subjects={subjects} gradebooks={gradebooks} />,
                 'dece': <DecePage {...restProps} users={users} classes={classes} schedule={schedule} subjects={subjects} timeSlots={timeSlots} students={students} onUpdateStudents={restProps.onUpdateStudents} viccInterventions={restProps.viccInterventions} onUpdateViccInterventions={restProps.onUpdateViccInterventions} conflictMediations={conflictMediations} onUpdateConflictMediations={onUpdateConflictMediations} />,
