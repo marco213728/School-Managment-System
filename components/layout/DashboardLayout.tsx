@@ -9,7 +9,8 @@ import ReportsPage from '../../pages/ReportsPage';
 import ManagePage from '../../pages/ManagePage';
 import DecePage from '../../pages/DecePage';
 import HealthPage from '../../pages/HealthPage';
-import { User, Class, Student, ScheduleEntry, Notification, SupportContact, HealthRecord, MedicalVisit, Subject, TimeSlot, Room, Timetable, ViccIntervention, AttendanceRecord, ExitPass, Citacion, AcademicCalendarEvent, LeccionarioEntry, MicroPlan, Dcd, EvaluationCriterion, EvaluationIndicator, Gradebook, Activity, ReinforcementPlan, StaffAttendanceRecord, FormalRequest, TrainingPlan, InstitutionalDocument, MeetingRecord, Rubric, ConflictMediation, CronogramaEvent } from '../../types';
+// FIX: Added Role to imports to resolve "Cannot find name 'Role'" error
+import { Role, User, Class, Student, ScheduleEntry, Notification, SupportContact, HealthRecord, MedicalVisit, Subject, TimeSlot, Room, Timetable, ViccIntervention, AttendanceRecord, ExitPass, Citacion, AcademicCalendarEvent, LeccionarioEntry, MicroPlan, Dcd, EvaluationCriterion, EvaluationIndicator, Gradebook, Activity, ReinforcementPlan, StaffAttendanceRecord, FormalRequest, TrainingPlan, InstitutionalDocument, MeetingRecord, Rubric, ConflictMediation, CronogramaEvent } from '../../types';
 import StudentManagementPage from '../../pages/StudentManagementPage';
 import CommunicationsPage from '../../pages/CommunicationsPage';
 import SchedulePage from '../../pages/SchedulePage';
@@ -238,8 +239,19 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = (props) => {
                 rubrics={rubrics}
                 onUpdateRubrics={handleUpdateRubrics}
                 subjects={subjects}
-                microPlans={microPlans} // NEW: Pass microPlans
-                classes={classes} // NEW: Pass classes
+                microPlans={microPlans} 
+                classes={classes} 
+            />;
+        case 'curriculum_repository':
+            return <CurriculumRepositoryPage 
+                dcds={dcds} 
+                onUpdateDcds={restProps.onUpdateDcds} 
+                subjects={subjects} 
+                evaluationCriteria={restProps.evaluationCriteria} 
+                onUpdateEvaluationCriteria={restProps.onUpdateEvaluationCriteria} 
+                evaluationIndicators={restProps.evaluationIndicators} 
+                onUpdateEvaluationIndicators={restProps.onUpdateEvaluationIndicators}
+                readOnly={user?.role !== Role.SuperAdmin} // READ-ONLY para todos menos SuperAdmin
             />;
         case 'juntas':
             return (
@@ -291,7 +303,6 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = (props) => {
                 'citaciones': <CitacionesPage {...restProps} users={users} students={students} />,
                 'leccionario': <LeccionarioPage leccionarioEntries={leccionarioEntries} onUpdateLeccionarioEntries={onUpdateLeccionarioEntries} schedule={schedule} classes={classes} subjects={subjects} users={users} timeSlots={timeSlots} microPlans={microPlans} />,
                 'curricular_planning': <CurricularPlanningPage microPlans={microPlans} onUpdateMicroPlans={onUpdateMicroPlans} classes={classes} subjects={subjects} students={students} users={users} dcds={dcds} evaluationCriteria={restProps.evaluationCriteria} evaluationIndicators={restProps.evaluationIndicators} />,
-                'curriculum_repository': <CurriculumRepositoryPage dcds={dcds} onUpdateDcds={restProps.onUpdateDcds} subjects={subjects} evaluationCriteria={restProps.evaluationCriteria} onUpdateEvaluationCriteria={restProps.onUpdateEvaluationCriteria} evaluationIndicators={restProps.evaluationIndicators} onUpdateEvaluationIndicators={restProps.onUpdateEvaluationIndicators} />,
                 'gradebook': <GradebookPage gradebooks={gradebooks} onUpdateGradebooks={restProps.onUpdateGradebooks} classes={classes} subjects={subjects} students={students} users={users} schedule={schedule} activities={restProps.activities} />,
             };
             return AllOtherPages[currentPage] || <DashboardPage {...restProps} schedule={schedule} classes={classes} subjects={subjects} timeSlots={timeSlots} rooms={restProps.rooms} timetables={restProps.timetables} users={users} onNavigate={setCurrentPage} students={students} formalRequests={formalRequests} />;

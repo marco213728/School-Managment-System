@@ -3,11 +3,9 @@ import React, { useState, useMemo, useContext, useEffect } from 'react';
 import { Dcd, Subject, GradeLevel, EvaluationCriterion, EvaluationIndicator, Competency, CurricularInsertion } from '../types';
 import { GRADE_LEVELS, COMPETENCIES, CURRICULAR_INSERTIONS } from '../constants';
 import { UserContext } from '../contexts/UserContext';
-import { PlusIcon, EditIcon, TrashIcon, CloseIcon, UploadIcon } from '../components/icons/Icons';
+import { PlusIcon, EditIcon, TrashIcon, CloseIcon, UploadIcon, SearchIcon } from '../components/icons/Icons';
 
-// #region FORMS
-// These would normally be separate files but are included here to meet constraints.
-
+// #region FORMS (Internos para gestión)
 interface EvaluationCriterionFormProps {
     isOpen: boolean; onClose: () => void; onSave: (data: any) => void;
     itemToEdit: EvaluationCriterion | null; subjects: Subject[];
@@ -66,18 +64,10 @@ const DcdForm: React.FC<DcdFormProps> = ({ isOpen, onClose, onSave, itemToEdit, 
                         <select name="gradeLevel" value={formData.gradeLevel} onChange={handleChange} required className="w-full p-2 border rounded-md bg-white"><option value="">Nivel</option>{GRADE_LEVELS.map(l => <option key={l} value={l}>{l}</option>)}</select>
                     </div>
                     <select name="criterionId" value={formData.criterionId} onChange={handleChange} required className="w-full p-2 border rounded-md bg-white"><option value="">Criterio de Evaluación Asociado</option>{criteria.map(c => <option key={c.id} value={c.id}>{c.code} {c.description.substring(0, 50)}...</option>)}</select>
-                    
                     <div className="flex items-center p-2 bg-yellow-50 border border-yellow-200 rounded-md">
                         <input type="checkbox" id="isDisaggregated" name="isDisaggregated" checked={formData.isDisaggregated} onChange={(e) => setFormData(p => ({ ...p, isDisaggregated: e.target.checked }))} className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded" />
-                        <label htmlFor="isDisaggregated" className="ml-2 block text-sm text-gray-900">Es una destreza desagregada (Nivel de complejidad ajustado)</label>
+                        <label htmlFor="isDisaggregated" className="ml-2 block text-sm text-gray-900">Es una destreza desagregada</label>
                     </div>
-                    {formData.isDisaggregated && (
-                         <div>
-                            <label className="block text-sm font-medium text-gray-700">Ref. Código Original</label>
-                            <input type="text" name="refCode" value={formData.refCode} onChange={handleChange} className="mt-1 w-full p-2 border rounded-md" placeholder="Ej: M.4.1.1 (Original)"/>
-                        </div>
-                    )}
-
                     <fieldset><legend className="text-sm font-medium text-gray-700 mb-2">Competencias Priorizadas</legend><div className="flex flex-wrap gap-x-4 gap-y-2">{COMPETENCIES.map(c => <label key={c} className="flex items-center gap-2 text-sm"><input type="checkbox" checked={formData.competencies.includes(c)} onChange={() => handleCompetencyChange(c)}/>{c}</label>)}</div></fieldset>
                     <fieldset><legend className="text-sm font-medium text-gray-700 mb-2">Inserciones Curriculares</legend><div className="flex flex-wrap gap-x-4 gap-y-2">{CURRICULAR_INSERTIONS.map(c => <label key={c} className="flex items-center gap-2 text-sm"><input type="checkbox" checked={formData.curricularInsertions.includes(c)} onChange={() => handleCurricularInsertionChange(c)}/>{c}</label>)}</div></fieldset>
                     <div className="flex justify-end gap-4 pt-4"><button type="button" onClick={onClose} className="px-4 py-2 bg-gray-200 rounded-md">Cancelar</button><button type="submit" className="px-4 py-2 bg-primary-600 text-white rounded-md">Guardar</button></div>
@@ -114,112 +104,47 @@ const EvaluationIndicatorForm: React.FC<EvaluationIndicatorFormProps> = ({ isOpe
         </div>
     );
 };
-// #endregion
 
-// #region Import Modal
 interface ImportModalProps {
-    isOpen: boolean;
-    onClose: () => void;
-    onImport: (type: 'ce' | 'dcd' | 'ie', data: any[]) => void;
+    isOpen: boolean; onClose: () => void; onImport: (type: 'ce' | 'dcd' | 'ie', data: any[]) => void;
 }
 const ImportModal: React.FC<ImportModalProps> = ({ isOpen, onClose, onImport }) => {
     const [importType, setImportType] = useState<'ce' | 'dcd' | 'ie'>('ce');
     const [file, setFile] = useState<File | null>(null);
-    const [error, setError] = useState('');
     const [isProcessing, setIsProcessing] = useState(false);
-
-    const instructions = {
-        ce: "CSV con columnas: code, description, subjectId, gradeLevel",
-        dcd: "CSV con columnas: code, description, subjectId, gradeLevel, criterionId, competencies (separadas por '|'), curricularInsertions (separadas por '|')",
-        ie: "CSV con columnas: code, description, criterionId",
-    };
-
-    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (e.target.files && e.target.files[0]) {
-            setFile(e.target.files[0]);
-            setError('');
-        }
-    };
-
+    if (!isOpen) return null;
     const handleImport = () => {
-        if (!file) {
-            setError("Por favor, seleccione un archivo CSV.");
-            return;
-        }
+        if (!file) return;
         setIsProcessing(true);
         const reader = new FileReader();
         reader.onload = (e) => {
-            try {
-                const text = e.target?.result as string;
-                const lines = text.split('\n').filter(line => line.trim() !== '');
-                const headers = lines.shift()?.split(',').map(h => h.trim()) || [];
-                const data = lines.map(line => {
-                    const values = line.split(',');
-                    const obj: any = {};
-                    headers.forEach((header, index) => {
-                        obj[header] = values[index]?.trim();
-                    });
-                    
-                    if (importType === 'dcd') {
-                        if (obj.competencies) {
-                            obj.competencies = obj.competencies.split('|').map((c: string) => c.trim()) as Competency[];
-                        }
-                        if (obj.curricularInsertions) {
-                             obj.curricularInsertions = obj.curricularInsertions.split('|').map((c: string) => c.trim()) as CurricularInsertion[];
-                        }
-                    }
-                    
-                    return obj;
-                });
-                onImport(importType, data);
-                onClose();
-            } catch (err) {
-                setError("Error al procesar el archivo. Asegúrese de que el formato sea correcto.");
-                console.error(err);
-            } finally {
-                setIsProcessing(false);
-            }
-        };
-        reader.onerror = () => {
-            setError("No se pudo leer el archivo.");
+            const text = e.target?.result as string;
+            const lines = text.split('\n').filter(line => line.trim() !== '');
+            const headers = lines.shift()?.split(',').map(h => h.trim()) || [];
+            const data = lines.map(line => {
+                const values = line.split(',');
+                const obj: any = {};
+                headers.forEach((h, i) => obj[h] = values[i]?.trim());
+                return obj;
+            });
+            onImport(importType, data);
             setIsProcessing(false);
+            onClose();
         };
         reader.readAsText(file);
     };
-
-    if (!isOpen) return null;
-
     return (
         <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-center items-center p-4" onClick={onClose}>
             <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-lg relative" onClick={e => e.stopPropagation()}>
                 <button onClick={onClose} className="absolute top-4 right-4 text-gray-500 hover:text-gray-800"><CloseIcon className="h-6 w-6" /></button>
-                <h2 className="text-xl font-bold mb-4">Importación Masiva de Datos</h2>
-                <div className="space-y-4">
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700">Tipo de Dato a Importar</label>
-                        <select value={importType} onChange={(e) => setImportType(e.target.value as any)} className="w-full p-2 border rounded-md bg-white">
-                            <option value="ce">Criterios de Evaluación (CE)</option>
-                            <option value="dcd">Destrezas con Criterios de Desempeño (DCD)</option>
-                            <option value="ie">Indicadores de Evaluación (IE)</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700">Formato Requerido</label>
-                        <p className="text-xs text-gray-600 bg-gray-100 p-2 rounded-md font-mono">{instructions[importType]}</p>
-                    </div>
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700">Archivo CSV</label>
-                        <input type="file" accept=".csv" onChange={handleFileChange} className="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary-50 file:text-primary-700 hover:file:bg-primary-100"/>
-                        {file && <p className="text-xs text-gray-500 mt-1">Seleccionado: {file.name}</p>}
-                    </div>
-                    {error && <p className="text-sm text-red-600">{error}</p>}
-                </div>
-                <div className="flex justify-end gap-4 pt-6 mt-4 border-t">
-                    <button type="button" onClick={onClose} className="px-4 py-2 bg-gray-200 rounded-md">Cancelar</button>
-                    <button type="button" onClick={handleImport} disabled={isProcessing} className="px-4 py-2 bg-primary-600 text-white rounded-md disabled:bg-gray-400">
-                        {isProcessing ? 'Procesando...' : 'Importar'}
-                    </button>
-                </div>
+                <h2 className="text-xl font-bold mb-4">Importación Masiva</h2>
+                <select value={importType} onChange={(e) => setImportType(e.target.value as any)} className="w-full p-2 border rounded-md mb-4">
+                    <option value="ce">Criterios (CE)</option>
+                    <option value="dcd">Destrezas (DCD)</option>
+                    <option value="ie">Indicadores (IE)</option>
+                </select>
+                <input type="file" accept=".csv" onChange={e => setFile(e.target.files?.[0] || null)} className="w-full mb-4" />
+                <div className="flex justify-end gap-2"><button onClick={onClose} className="px-4 py-2 bg-gray-200 rounded">Cancelar</button><button onClick={handleImport} disabled={!file || isProcessing} className="px-4 py-2 bg-primary-600 text-white rounded">Importar</button></div>
             </div>
         </div>
     );
@@ -231,111 +156,114 @@ interface CurriculumRepositoryPageProps {
     subjects: Subject[];
     evaluationCriteria: EvaluationCriterion[]; onUpdateEvaluationCriteria: (criteria: EvaluationCriterion[]) => void;
     evaluationIndicators: EvaluationIndicator[]; onUpdateEvaluationIndicators: (indicators: EvaluationIndicator[]) => void;
+    readOnly?: boolean; // Prop para modo referencial
 }
 
 const CurriculumRepositoryPage: React.FC<CurriculumRepositoryPageProps> = (props) => {
-    const { dcds, onUpdateDcds, subjects, evaluationCriteria, onUpdateEvaluationCriteria, evaluationIndicators, onUpdateEvaluationIndicators } = props;
+    const { dcds, onUpdateDcds, subjects, evaluationCriteria, onUpdateEvaluationCriteria, evaluationIndicators, onUpdateEvaluationIndicators, readOnly = false } = props;
     const { user: currentUser } = useContext(UserContext);
     const [activeTab, setActiveTab] = useState<'ce' | 'dcd' | 'ie'>('ce');
+    const [searchTerm, setSearchTerm] = useState('');
 
     const [isCeModalOpen, setIsCeModalOpen] = useState(false);
     const [isDcdModalOpen, setIsDcdModalOpen] = useState(false);
     const [isIeModalOpen, setIsIeModalOpen] = useState(false);
     const [isImportModalOpen, setIsImportModalOpen] = useState(false);
-    const [editingCe, setEditingCe] = useState<EvaluationCriterion | null>(null);
-    const [editingDcd, setEditingDcd] = useState<Dcd | null>(null);
-    const [editingIe, setEditingIe] = useState<EvaluationIndicator | null>(null);
+    const [editingItem, setEditingItem] = useState<any>(null);
 
-    const institutionSubjects = useMemo(() => subjects.filter(s => s.institutionId === currentUser?.institutionId), [subjects, currentUser]);
     const subjectMap = useMemo(() => new Map(subjects.map(s => [s.id, s.name])), [subjects]);
     const criterionMap = useMemo(() => new Map(evaluationCriteria.map(c => [c.id, c.code])), [evaluationCriteria]);
 
-    // Save Handlers
+    const filteredData = useMemo(() => {
+        const term = searchTerm.toLowerCase();
+        if (activeTab === 'ce') return evaluationCriteria.filter(i => i.code.toLowerCase().includes(term) || i.description.toLowerCase().includes(term));
+        if (activeTab === 'dcd') return dcds.filter(i => i.code.toLowerCase().includes(term) || i.description.toLowerCase().includes(term));
+        return evaluationIndicators.filter(i => i.code.toLowerCase().includes(term) || i.description.toLowerCase().includes(term));
+    }, [activeTab, evaluationCriteria, dcds, evaluationIndicators, searchTerm]);
+
     const handleSave = (type: 'ce' | 'dcd' | 'ie', data: any) => {
-        const institutionId = currentUser!.institutionId!;
-        if (type === 'ce') {
-            const items = evaluationCriteria; const setItems = onUpdateEvaluationCriteria;
-            const newItem = { ...data, id: data.id || `ce-${Date.now()}`, institutionId };
-            setItems(data.id ? items.map(i => i.id === data.id ? newItem : i) : [...items, newItem]);
-            setIsCeModalOpen(false);
-        } else if (type === 'dcd') {
-            const items = dcds; const setItems = onUpdateDcds;
-            const newItem = { ...data, id: data.id || `dcd-${Date.now()}`, institutionId };
-            setItems(data.id ? items.map(i => i.id === data.id ? newItem : i) : [...items, newItem]);
-            setIsDcdModalOpen(false);
-        } else {
-            const items = evaluationIndicators; const setItems = onUpdateEvaluationIndicators;
-            const newItem = { ...data, id: data.id || `ie-${Date.now()}`, institutionId };
-            setItems(data.id ? items.map(i => i.id === data.id ? newItem : i) : [...items, newItem]);
-            setIsIeModalOpen(false);
-        }
+        const institutionId = currentUser!.institutionId || 'GLOBAL';
+        const newItem = { ...data, id: data.id || `${type}-${Date.now()}`, institutionId };
+        if (type === 'ce') onUpdateEvaluationCriteria(data.id ? evaluationCriteria.map(i => i.id === data.id ? newItem : i) : [...evaluationCriteria, newItem]);
+        else if (type === 'dcd') onUpdateDcds(data.id ? dcds.map(i => i.id === data.id ? newItem : i) : [...dcds, newItem]);
+        else onUpdateEvaluationIndicators(data.id ? evaluationIndicators.map(i => i.id === data.id ? newItem : i) : [...evaluationIndicators, newItem]);
     };
     
-    // Delete Handlers
     const handleDelete = (type: 'ce' | 'dcd' | 'ie', id: string) => {
         if (!window.confirm('¿Seguro que desea eliminar este elemento?')) return;
         if (type === 'ce') onUpdateEvaluationCriteria(evaluationCriteria.filter(i => i.id !== id));
         if (type === 'dcd') onUpdateDcds(dcds.filter(i => i.id !== id));
         if (type === 'ie') onUpdateEvaluationIndicators(evaluationIndicators.filter(i => i.id !== id));
     };
-    
-    const handleImportData = (type: 'ce' | 'dcd' | 'ie', data: any[]) => {
-        const institutionId = currentUser!.institutionId!;
-        const newItems = data.map(item => ({ ...item, id: `${type}-${Date.now()}-${Math.random()}`, institutionId }));
 
-        if (type === 'ce') onUpdateEvaluationCriteria([...evaluationCriteria, ...newItems]);
-        if (type === 'dcd') onUpdateDcds([...dcds, ...newItems]);
-        if (type === 'ie') onUpdateEvaluationIndicators([...evaluationIndicators, ...newItems]);
-    };
-
-    const TabButton: React.FC<{ tab: 'ce'|'dcd'|'ie', children: React.ReactNode}> = ({ tab, children }) => {
-        const isActive = activeTab === tab;
-        return <button onClick={() => setActiveTab(tab)} className={`whitespace-nowrap py-3 px-4 font-medium text-sm rounded-t-lg ${isActive ? 'bg-primary-600 text-white' : 'text-gray-500 hover:bg-gray-100'}`}>{children}</button>;
-    };
-
-    const renderContent = () => (
-        <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                    {activeTab === 'ce' && <tr><th className="px-3 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Código</th><th className="px-3 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Descripción</th><th className="px-3 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Asignatura</th><th className="px-3 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Nivel</th><th className="px-3 py-2 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">Acciones</th></tr>}
-                    {activeTab === 'dcd' && <tr><th className="px-3 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Código</th><th className="px-3 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Descripción</th><th className="px-3 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Metadata Curricular</th><th className="px-3 py-2 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">Acciones</th></tr>}
-                    {activeTab === 'ie' && <tr><th className="px-3 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Código</th><th className="px-3 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Descripción</th><th className="px-3 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Criterio</th><th className="px-3 py-2 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">Acciones</th></tr>}
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                    {activeTab === 'ce' && evaluationCriteria.map(item => <tr key={item.id}><td className="px-3 py-2.5 text-sm font-mono">{item.code}</td><td className="px-3 py-2.5 text-sm text-slate-700 max-w-lg">{item.description}</td><td className="px-3 py-2.5 text-sm">{subjectMap.get(item.subjectId)}</td><td className="px-3 py-2.5 text-sm">{item.gradeLevel}</td><td className="px-3 py-2.5 text-sm text-right"><button onClick={() => { setEditingCe(item); setIsCeModalOpen(true); }} className="p-1"><EditIcon className="h-5 w-5 text-gray-500 hover:text-blue-600"/></button><button onClick={() => handleDelete('ce', item.id)} className="p-1"><TrashIcon className="h-5 w-5 text-gray-500 hover:text-red-600"/></button></td></tr>)}
-                    {activeTab === 'dcd' && dcds.map(item => <tr key={item.id}><td className="px-3 py-2.5 text-sm font-mono align-top">{item.code}</td><td className="px-3 py-2.5 text-sm text-slate-700 max-w-md align-top">{item.description}</td><td className="px-3 py-2.5 text-xs align-top"><div className="space-y-1.5"><p><strong className="font-semibold">Criterio:</strong> {criterionMap.get(item.criterionId)}</p><p><strong className="font-semibold">Asignatura:</strong> {subjectMap.get(item.subjectId)}</p><p><strong className="font-semibold">Nivel:</strong> {item.gradeLevel}</p><div><strong className="font-semibold block">Competencias:</strong><div className="flex flex-wrap gap-1 mt-0.5">{item.competencies.map(c => <span key={c} className="px-1.5 py-0.5 bg-blue-100 text-blue-800 rounded">{c}</span>)}</div></div>{item.curricularInsertions && item.curricularInsertions.length > 0 && <div><strong className="font-semibold block">Inserciones:</strong><div className="flex flex-wrap gap-1 mt-0.5">{item.curricularInsertions.map(c => <span key={c} className="px-1.5 py-0.5 bg-green-100 text-green-800 rounded">{c}</span>)}</div></div>}{item.isDisaggregated && <div><span className="inline-block mt-1 px-2 py-0.5 bg-yellow-100 text-yellow-800 text-xs rounded font-semibold">Desagregada</span><p className="text-xs text-gray-500 mt-1">Ref: {item.refCode}</p></div>}</div></td><td className="px-3 py-2.5 text-sm text-right align-top"><button onClick={() => { setEditingDcd(item); setIsDcdModalOpen(true); }} className="p-1"><EditIcon className="h-5 w-5 text-gray-500 hover:text-blue-600"/></button><button onClick={() => handleDelete('dcd', item.id)} className="p-1"><TrashIcon className="h-5 w-5 text-gray-500 hover:text-red-600"/></button></td></tr>)}
-                    {activeTab === 'ie' && evaluationIndicators.map(item => <tr key={item.id}><td className="px-3 py-2.5 text-sm font-mono">{item.code}</td><td className="px-3 py-2.5 text-sm text-slate-700 max-w-lg">{item.description}</td><td className="px-3 py-2.5 text-sm">{criterionMap.get(item.criterionId)}</td><td className="px-3 py-2.5 text-sm text-right"><button onClick={() => { setEditingIe(item); setIsIeModalOpen(true); }} className="p-1"><EditIcon className="h-5 w-5 text-gray-500 hover:text-blue-600"/></button><button onClick={() => handleDelete('ie', item.id)} className="p-1"><TrashIcon className="h-5 w-5 text-gray-500 hover:text-red-600"/></button></td></tr>)}
-                </tbody>
-            </table>
-        </div>
-    );
-    
     return (
         <div className="space-y-6">
-            <div className="bg-white p-6 rounded-xl shadow-md">
-                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-4">
-                    <h2 className="text-xl font-bold text-gray-800">Repositorio Curricular</h2>
-                    <div className="flex items-center gap-2">
-                        <button onClick={() => setIsImportModalOpen(true)} className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white font-semibold rounded-md hover:bg-blue-700"><UploadIcon className="h-5 w-5" />Importar Datos</button>
-                        {activeTab === 'ce' && <button onClick={() => { setEditingCe(null); setIsCeModalOpen(true); }} className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white font-semibold rounded-md hover:bg-primary-700"><PlusIcon className="h-5 w-5" />Añadir Criterio (CE)</button>}
-                        {activeTab === 'dcd' && <button onClick={() => { setEditingDcd(null); setIsDcdModalOpen(true); }} className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white font-semibold rounded-md hover:bg-primary-700"><PlusIcon className="h-5 w-5" />Añadir Destreza (DCD)</button>}
-                        {activeTab === 'ie' && <button onClick={() => { setEditingIe(null); setIsIeModalOpen(true); }} className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white font-semibold rounded-md hover:bg-primary-700"><PlusIcon className="h-5 w-5" />Añadir Indicador (IE)</button>}
+            <div className="bg-white p-6 rounded-xl shadow-md border border-slate-200">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
+                    <div>
+                        <h2 className="text-xl font-bold text-gray-800">{readOnly ? 'Consulta de Malla Curricular' : 'Repositorio Curricular Maestro'}</h2>
+                        <p className="text-sm text-gray-500">{readOnly ? 'Base de datos referencial de destrezas e indicadores.' : 'Gestión global de contenidos curriculares para todas las sedes.'}</p>
+                    </div>
+                    {!readOnly && (
+                        <div className="flex items-center gap-2">
+                            <button onClick={() => setIsImportModalOpen(true)} className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm font-semibold"><UploadIcon className="h-4 w-4" />Importar</button>
+                            <button onClick={() => { setEditingItem(null); if(activeTab==='ce') setIsCeModalOpen(true); else if(activeTab==='dcd') setIsDcdModalOpen(true); else setIsIeModalOpen(true); }} className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 text-sm font-semibold"><PlusIcon className="h-4 w-4" />Nuevo</button>
+                        </div>
+                    )}
+                </div>
+
+                <div className="flex flex-col md:flex-row gap-4 mb-6">
+                    <nav className="flex bg-gray-100 p-1 rounded-lg self-start">
+                        <button onClick={() => setActiveTab('ce')} className={`px-4 py-1.5 rounded-md text-sm font-medium ${activeTab === 'ce' ? 'bg-white shadow text-primary-600' : 'text-gray-500'}`}>Criterios (CE)</button>
+                        <button onClick={() => setActiveTab('dcd')} className={`px-4 py-1.5 rounded-md text-sm font-medium ${activeTab === 'dcd' ? 'bg-white shadow text-primary-600' : 'text-gray-500'}`}>Destrezas (DCD)</button>
+                        <button onClick={() => setActiveTab('ie')} className={`px-4 py-1.5 rounded-md text-sm font-medium ${activeTab === 'ie' ? 'bg-white shadow text-primary-600' : 'text-gray-500'}`}>Indicadores (IE)</button>
+                    </nav>
+                    <div className="relative flex-grow">
+                        <input type="text" placeholder="Buscar por código o descripción..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="w-full pl-10 pr-4 py-2 border rounded-md text-sm" />
+                        <SearchIcon className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
                     </div>
                 </div>
-                
-                <nav className="flex space-x-2 border-b" aria-label="Tabs">
-                    <TabButton tab="ce">Criterios de Evaluación (CE)</TabButton>
-                    <TabButton tab="dcd">Destrezas (DCD)</TabButton>
-                    <TabButton tab="ie">Indicadores de Evaluación (IE)</TabButton>
-                </nav>
-                
-                <div className="mt-6">{renderContent()}</div>
+
+                <div className="overflow-x-auto">
+                    <table className="min-w-full divide-y divide-gray-200 border rounded-lg">
+                        <thead className="bg-gray-50">
+                            <tr>
+                                <th className="px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase">Código</th>
+                                <th className="px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase">Descripción</th>
+                                <th className="px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase">{activeTab === 'ie' ? 'Criterio Ref.' : 'Asignatura'}</th>
+                                {!readOnly && <th className="px-4 py-3 text-right text-xs font-bold text-gray-600 uppercase">Acciones</th>}
+                            </tr>
+                        </thead>
+                        <tbody className="bg-white divide-y divide-gray-200 text-sm">
+                            {filteredData.map(item => (
+                                <tr key={item.id} className="hover:bg-gray-50">
+                                    <td className="px-4 py-3 font-mono font-bold text-primary-700">{item.code}</td>
+                                    <td className="px-4 py-3 text-gray-700 max-w-xl">{item.description}</td>
+                                    <td className="px-4 py-3 text-gray-500">
+                                        {activeTab === 'ie' ? criterionMap.get(item.criterionId) : subjectMap.get(item.subjectId)}
+                                    </td>
+                                    {!readOnly && (
+                                        <td className="px-4 py-3 text-right space-x-2">
+                                            <button onClick={() => { setEditingItem(item); if(activeTab==='ce') setIsCeModalOpen(true); else if(activeTab==='dcd') setIsDcdModalOpen(true); else setIsIeModalOpen(true); }} className="text-blue-600 hover:bg-blue-50 p-1 rounded"><EditIcon className="h-4 w-4"/></button>
+                                            <button onClick={() => handleDelete(activeTab, item.id)} className="text-red-600 hover:bg-red-50 p-1 rounded"><TrashIcon className="h-4 w-4"/></button>
+                                        </td>
+                                    )}
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
             </div>
 
-            <EvaluationCriterionForm isOpen={isCeModalOpen} onClose={() => setIsCeModalOpen(false)} onSave={(d) => handleSave('ce', d)} itemToEdit={editingCe} subjects={institutionSubjects} />
-            <DcdForm isOpen={isDcdModalOpen} onClose={() => setIsDcdModalOpen(false)} onSave={(d) => handleSave('dcd', d)} itemToEdit={editingDcd} subjects={institutionSubjects} criteria={evaluationCriteria} />
-            <EvaluationIndicatorForm isOpen={isIeModalOpen} onClose={() => setIsIeModalOpen(false)} onSave={(d) => handleSave('ie', d)} itemToEdit={editingIe} criteria={evaluationCriteria} />
-            <ImportModal isOpen={isImportModalOpen} onClose={() => setIsImportModalOpen(false)} onImport={handleImportData} />
+            {/* Modales solo se activan si no es readOnly */}
+            {!readOnly && (
+                <>
+                    <EvaluationCriterionForm isOpen={isCeModalOpen} onClose={() => setIsCeModalOpen(false)} onSave={d => handleSave('ce', d)} itemToEdit={editingItem} subjects={subjects} />
+                    <DcdForm isOpen={isDcdModalOpen} onClose={() => setIsDcdModalOpen(false)} onSave={d => handleSave('dcd', d)} itemToEdit={editingItem} subjects={subjects} criteria={evaluationCriteria} />
+                    <EvaluationIndicatorForm isOpen={isIeModalOpen} onClose={() => setIsIeModalOpen(false)} onSave={d => handleSave('ie', d)} itemToEdit={editingItem} criteria={evaluationCriteria} />
+                    <ImportModal isOpen={isImportModalOpen} onClose={() => setIsImportModalOpen(false)} onImport={handleSave} />
+                </>
+            )}
         </div>
     );
 };

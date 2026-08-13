@@ -321,31 +321,110 @@ const PlanDetails: React.FC<PlanDetailsProps> = ({ plan, onClose, onSetStatus, o
         return text;
     }).join('\n\n');
     const handleRequestAdjustments = () => { if (!reviewComments.trim()) { alert('Por favor, ingrese los comentarios para solicitar ajustes.'); return; } onSetStatus(plan.id, CurricularPlanStatus.RequiresAdjustments, reviewComments); };
-    const InfoSection: React.FC<{ title: string, children: React.ReactNode }> = ({ title, children }) => <div><h4 className="text-sm font-bold text-gray-700 mb-1 tracking-wider uppercase border-b pb-1">{title}</h4><div className="text-gray-800 text-sm whitespace-pre-wrap">{children}</div></div>;
-    return <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-center items-center p-4" onClick={onClose}><div className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] flex flex-col" onClick={e => e.stopPropagation()}><header className="p-4 border-b flex justify-between items-start"><div><h2 className="text-xl font-bold text-gray-800">{plan.unitTitle}</h2><p className="text-sm text-gray-500">{classes.find(c => c.id === plan.classId)?.name} - {subjects.find(s => s.id === plan.subjectId)?.name}</p></div><div className="flex gap-2"><button onClick={onClose} className="p-2 text-gray-500 hover:text-gray-800 rounded-full hover:bg-gray-100"><CloseIcon className="h-6 w-6" /></button></div></header><main className="p-6 overflow-y-auto space-y-6"><InfoSection title="Objetivos de la Unidad">{plan.unitObjectives}</InfoSection><InfoSection title="Destrezas con Criterios de Desempeño">{skillsText}</InfoSection>
     
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-3 bg-slate-50 rounded border">
-        <div className="border-l-4 border-blue-500 pl-2"><h5 className="font-bold text-xs uppercase text-blue-700">1. Representación</h5><p className="text-xs mt-1">{plan.duaRepresentation}</p></div>
-        <div className="border-l-4 border-green-500 pl-2"><h5 className="font-bold text-xs uppercase text-green-700">2. Acción y Expresión</h5><p className="text-xs mt-1">{plan.duaActionExpression}</p></div>
-        <div className="border-l-4 border-purple-500 pl-2"><h5 className="font-bold text-xs uppercase text-purple-700">3. Implicación</h5><p className="text-xs mt-1">{plan.duaEngagement}</p></div>
-    </div>
-    
-    <InfoSection title="Recursos">{plan.resources}</InfoSection><InfoSection title="Evaluación">{plan.evaluation}</InfoSection><div><h4 className="text-sm font-bold text-gray-700 mb-1 tracking-wider uppercase border-b pb-1">Adaptaciones Curriculares (Grado 3)</h4>{plan.adaptations.length > 0 ? <ul className="space-y-2 mt-2">{plan.adaptations.map(adapt => <li key={adapt.studentId} className="p-2 bg-gray-50 rounded-md border text-sm"><p className="font-semibold">{students.find(s => s.id === adapt.studentId)?.name || 'Estudiante Desconocido'}</p><p className="text-gray-600 whitespace-pre-wrap">{adapt.dcdModificada}</p></li>)}</ul> : <p className="text-sm text-gray-500 mt-2">No se registraron adaptaciones significativas.</p></div>{plan.status === CurricularPlanStatus.RequiresAdjustments && <div className="p-4 bg-yellow-50 border-l-4 border-yellow-400"><h4 className="font-bold text-yellow-800">Comentarios para Ajuste</h4><p className="text-sm text-yellow-700 mt-1 whitespace-pre-wrap"><strong>{reviewerName}:</strong> {plan.reviewComments}</p></div>}</main><footer className="p-4 bg-gray-50 border-t flex justify-between items-center">
+    const InfoSection: React.FC<{ title: string, children: React.ReactNode }> = ({ title, children }) => (
         <div>
-            {plan.status === CurricularPlanStatus.Approved && onOpenAiAssistant && (
-                <button 
-                    onClick={() => onOpenAiAssistant(plan.id)}
-                    className="flex items-center gap-2 px-4 py-2 bg-purple-100 text-purple-700 rounded-md text-sm font-bold hover:bg-purple-200 border border-purple-200"
-                >
-                    <SparklesIcon className="h-5 w-5" /> Crear Guía Docente con IA
-                </button>
-            )}
+            <h4 className="text-sm font-bold text-gray-700 mb-1 tracking-wider uppercase border-b pb-1">{title}</h4>
+            <div className="text-gray-800 text-sm whitespace-pre-wrap">{children}</div>
         </div>
-        <div className="flex gap-2">
-            {isReviewer && plan.status === CurricularPlanStatus.PendingReview && <><textarea value={reviewComments} onChange={e => setReviewComments(e.target.value)} rows={3} placeholder="Comentarios..." className="w-64 p-2 border rounded-md text-sm"></textarea><div className="flex flex-col gap-2"><button onClick={handleRequestAdjustments} className="px-4 py-1.5 bg-yellow-500 text-white rounded-md text-sm font-semibold">Solicitar Ajustes</button><button onClick={() => onSetStatus(plan.id, CurricularPlanStatus.Approved)} className="px-4 py-1.5 bg-green-600 text-white rounded-md text-sm font-semibold">Aprobar Plan</button></div></>}
-            {plan.status === CurricularPlanStatus.Approved && <button onClick={() => onPrint(plan)} className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-md text-sm font-semibold hover:bg-blue-700"><PrinterIcon className="h-5 w-5" />Imprimir / Descargar PDF</button>}
+    );
+
+    return (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-center items-center p-4" onClick={onClose}>
+            <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] flex flex-col" onClick={e => e.stopPropagation()}>
+                <header className="p-4 border-b flex justify-between items-start">
+                    <div>
+                        <h2 className="text-xl font-bold text-gray-800">{plan.unitTitle}</h2>
+                        <p className="text-sm text-gray-500">
+                            {classes.find(c => c.id === plan.classId)?.name} - {subjects.find(s => s.id === plan.subjectId)?.name}
+                        </p>
+                    </div>
+                    <div className="flex gap-2">
+                        <button onClick={onClose} className="p-2 text-gray-500 hover:text-gray-800 rounded-full hover:bg-gray-100">
+                            <CloseIcon className="h-6 w-6" />
+                        </button>
+                    </div>
+                </header>
+
+                <main className="p-6 overflow-y-auto space-y-6">
+                    <InfoSection title="Objetivos de la Unidad">{plan.unitObjectives}</InfoSection>
+                    <InfoSection title="Destrezas con Criterios de Desempeño">{skillsText}</InfoSection>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-3 bg-slate-50 rounded border">
+                        <div className="border-l-4 border-blue-500 pl-2">
+                            <h5 className="font-bold text-xs uppercase text-blue-700">1. Representación</h5>
+                            <p className="text-xs mt-1">{plan.duaRepresentation}</p>
+                        </div>
+                        <div className="border-l-4 border-green-500 pl-2">
+                            <h5 className="font-bold text-xs uppercase text-green-700">2. Acción y Expresión</h5>
+                            <p className="text-xs mt-1">{plan.duaActionExpression}</p>
+                        </div>
+                        <div className="border-l-4 border-purple-500 pl-2">
+                            <h5 className="font-bold text-xs uppercase text-purple-700">3. Implicación</h5>
+                            <p className="text-xs mt-1">{plan.duaEngagement}</p>
+                        </div>
+                    </div>
+                    
+                    <InfoSection title="Recursos">{plan.resources}</InfoSection>
+                    <InfoSection title="Evaluación">{plan.evaluation}</InfoSection>
+                    
+                    <div>
+                        <h4 className="text-sm font-bold text-gray-700 mb-1 tracking-wider uppercase border-b pb-1">Adaptaciones Curriculares (Grado 3)</h4>
+                        {plan.adaptations.length > 0 ? (
+                            <ul className="space-y-2 mt-2">
+                                {plan.adaptations.map(adapt => (
+                                    <li key={adapt.studentId} className="p-2 bg-gray-50 rounded-md border text-sm">
+                                        <p className="font-semibold">{students.find(s => s.id === adapt.studentId)?.name || 'Estudiante Desconocido'}</p>
+                                        <p className="text-gray-600 whitespace-pre-wrap">{adapt.dcdModificada}</p>
+                                    </li>
+                                ))}
+                            </ul>
+                        ) : (
+                            <p className="text-sm text-gray-500 mt-2">No se registraron adaptaciones significativas.</p>
+                        )}
+                    </div>
+
+                    {plan.status === CurricularPlanStatus.RequiresAdjustments && (
+                        <div className="p-4 bg-yellow-50 border-l-4 border-yellow-400">
+                            <h4 className="font-bold text-yellow-800">Comentarios para Ajuste</h4>
+                            <p className="text-sm text-yellow-700 mt-1 whitespace-pre-wrap">
+                                <strong>{reviewerName}:</strong> {plan.reviewComments}
+                            </p>
+                        </div>
+                    )}
+                </main>
+
+                <footer className="p-4 bg-gray-50 border-t flex justify-between items-center">
+                    <div>
+                        {plan.status === CurricularPlanStatus.Approved && onOpenAiAssistant && (
+                            <button 
+                                onClick={() => onOpenAiAssistant(plan.id)}
+                                className="flex items-center gap-2 px-4 py-2 bg-purple-100 text-purple-700 rounded-md text-sm font-bold hover:bg-purple-200 border border-purple-200"
+                            >
+                                <SparklesIcon className="h-5 w-5" /> Crear Guía Docente con IA
+                            </button>
+                        )}
+                    </div>
+                    <div className="flex gap-2">
+                        {isReviewer && plan.status === CurricularPlanStatus.PendingReview && (
+                            <>
+                                <textarea value={reviewComments} onChange={e => setReviewComments(e.target.value)} rows={3} placeholder="Comentarios..." className="w-64 p-2 border rounded-md text-sm"></textarea>
+                                <div className="flex flex-col gap-2">
+                                    <button onClick={handleRequestAdjustments} className="px-4 py-1.5 bg-yellow-500 text-white rounded-md text-sm font-semibold">Solicitar Ajustes</button>
+                                    <button onClick={() => onSetStatus(plan.id, CurricularPlanStatus.Approved)} className="px-4 py-1.5 bg-green-600 text-white rounded-md text-sm font-semibold">Aprobar Plan</button>
+                                </div>
+                            </>
+                        )}
+                        {plan.status === CurricularPlanStatus.Approved && (
+                            <button onClick={() => onPrint(plan)} className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-md text-sm font-semibold hover:bg-blue-700">
+                                <PrinterIcon className="h-5 w-5" />Imprimir / Descargar PDF
+                            </button>
+                        )}
+                    </div>
+                </footer>
+            </div>
         </div>
-    </footer></div></div>;
+    );
 };
 
 interface CurricularPlanningPageProps {

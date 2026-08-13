@@ -68,6 +68,27 @@ export const EVALUATION_CATEGORIES: Record<EvaluationCategory, string> = {
     'PROYECTO_INTEGRADOR': 'Proyecto Integrador'
 };
 
+// --- DEFAULT CONFIGS ---
+
+const DEFAULT_COMMUNICATION_CHANNELS = {
+    email: { enabled: true },
+    sms: { enabled: false },
+    internalMessaging: { enabled: true },
+    pushNotifications: { enabled: true },
+    phoneCalls: { enabled: false },
+    socialMedia: { enabled: false },
+    circulars: { enabled: true }
+};
+
+const DEFAULT_AUTOMATED_NOTIFICATIONS = {
+    absences: { enabled: true, channel: 'email', template: 'Estimado [PARENT_NAME], le informamos que [STUDENT_NAME] no asistió a clase el día [DATE].' },
+    discipline: { enabled: true, channel: 'internalMessaging', template: 'Alerta de comportamiento para [STUDENT_NAME].' },
+    healthEmergencies: { enabled: true, channel: 'email', template: 'Urgencia médica con el estudiante [STUDENT_NAME]. Por favor contáctenos.' },
+    events: { enabled: true, channel: 'internalMessaging', template: 'Recordatorio: Mañana hay evento institucional.' },
+    grades: { enabled: false, channel: 'internalMessaging', template: 'Nuevas calificaciones disponibles para [STUDENT_NAME].' },
+    checkInOut: { enabled: false, channel: 'pushNotifications', template: '[STUDENT_NAME] ha ingresado a la institución.' }
+};
+
 // --- MOCK DATA ---
 
 export const MOCK_PEIS: PeiProfile[] = [
@@ -122,8 +143,24 @@ export const MOCK_PEIS: PeiProfile[] = [
 ];
 
 export const MOCK_INSTITUTIONS: Institution[] = [
-    { id: 'uemol', name: 'U.E. Municipal "Osvaldo Lombeida"', logoUrl: 'https://placehold.co/150x150/003366/white?text=UEMOL', contact: { phone: '02-123-4567', email: 'info@uemol.edu.ec', address: 'Quito, Sector Sur' }, codeAMIE: '17H00001' },
-    { id: 'ctee', name: 'Colegio Técnico "Eugenio Espejo"', logoUrl: 'https://placehold.co/150x150/800000/white?text=CTEE', contact: { phone: '02-765-4321', email: 'rectorado@espejo.edu.ec', address: 'Quito, Sector Centro' }, codeAMIE: '17H00002' }
+    { 
+        id: 'uemol', 
+        name: 'U.E. Municipal "Osvaldo Lombeida"', 
+        logoUrl: 'https://placehold.co/150x150/003366/white?text=UEMOL', 
+        contact: { phone: '02-123-4567', email: 'info@uemol.edu.ec', address: 'Quito, Sector Sur' }, 
+        codeAMIE: '17H00001',
+        communicationChannels: DEFAULT_COMMUNICATION_CHANNELS,
+        automatedNotifications: DEFAULT_AUTOMATED_NOTIFICATIONS
+    },
+    { 
+        id: 'ctee', 
+        name: 'Colegio Técnico "Eugenio Espejo"', 
+        logoUrl: 'https://placehold.co/150x150/800000/white?text=CTEE', 
+        contact: { phone: '02-765-4321', email: 'rectorado@espejo.edu.ec', address: 'Quito, Sector Centro' }, 
+        codeAMIE: '17H00002',
+        communicationChannels: DEFAULT_COMMUNICATION_CHANNELS,
+        automatedNotifications: DEFAULT_AUTOMATED_NOTIFICATIONS
+    }
 ];
 
 export const MOCK_USERS: User[] = [

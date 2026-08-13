@@ -246,7 +246,17 @@ export default function App() {
       <InstitutionContext.Provider value={institutionContextValue}>
         {currentUser.role === Role.SuperAdmin ? (
           <PlatformAdminLayout>
-            <SuperAdminPage institutions={institutions} users={users} />
+            <SuperAdminPage 
+                institutions={institutions} 
+                users={users}
+                dcds={dcds}
+                evaluationCriteria={evaluationCriteria}
+                evaluationIndicators={evaluationIndicators}
+                subjects={subjects}
+                onUpdateDcds={handleUpdateDcds}
+                onUpdateEvaluationCriteria={handleUpdateEvaluationCriteria}
+                onUpdateEvaluationIndicators={handleUpdateEvaluationIndicators}
+            />
           </PlatformAdminLayout>
         ) : (
           <DashboardLayout 

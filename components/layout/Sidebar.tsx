@@ -10,7 +10,7 @@ interface SidebarProps {
   setCurrentPage: (page: any) => void;
   isSidebarOpen: boolean;
   setSidebarOpen: (isOpen: boolean) => void;
-  onOpenAttendanceModal: () => void; // Added prop to open modal
+  onOpenAttendanceModal: () => void; 
 }
 
 const Sidebar: React.FC<SidebarProps> = ({ currentPage, setCurrentPage, isSidebarOpen, setSidebarOpen, onOpenAttendanceModal }) => {
@@ -40,8 +40,9 @@ const Sidebar: React.FC<SidebarProps> = ({ currentPage, setCurrentPage, isSideba
 
   const roleLinks = {
     [Role.SuperAdmin]: [
-        { page: 'dashboard', icon: <DashboardIcon className="h-6 w-6" />, text: 'Panel de Control' },
-        { page: 'resource_bank', icon: <SparklesIcon className="h-6 w-6" />, text: 'Banco Global' }, // Added global bank for superadmin
+        ...commonLinks,
+        { page: 'curriculum_repository', icon: <ArchiveBoxIcon className="h-6 w-6" />, text: 'Malla Curricular Maestra' },
+        { page: 'resource_bank', icon: <SparklesIcon className="h-6 w-6" />, text: 'Banco Global' },
     ],
     [Role.InstitutionAdmin]: [
       ...commonLinks,
@@ -54,7 +55,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentPage, setCurrentPage, isSideba
       { page: 'health', icon: <HealthIcon className="h-6 w-6" />, text: 'Salud' },
       { page: 'vicerrector_dashboard', icon: <VicerrectoradoIcon className="h-6 w-6" />, text: 'Vicerrectorado' },
       { page: 'curricular_planning', icon: <ClipboardDocumentCheckIcon className="h-6 w-6" />, text: 'Planificación' },
-      { page: 'curriculum_repository', icon: <ArchiveBoxIcon className="h-6 w-6" />, text: 'Repositorio' },
+      { page: 'curriculum_repository', icon: <ArchiveBoxIcon className="h-6 w-6" />, text: 'Consulta Curricular' },
       { page: 'inspection', icon: <InspectionIcon className="h-6 w-6" />, text: 'Inspección' },
       { page: 'manage', icon: <ManageIcon className="h-6 w-6" />, text: 'Gestión Centro' },
       { page: 'resource_bank', icon: <ArchiveBoxIcon className="h-6 w-6" />, text: 'Banco de Recursos' },
@@ -68,9 +69,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentPage, setCurrentPage, isSideba
       { page: 'activities', icon: <ActivityIcon className="h-6 w-6" />, text: 'Actividades' },
       { page: 'reinforcement', icon: <GraduationCapIcon className="h-6 w-6" />, text: 'Refuerzo Académico' },
       { page: 'juntas', icon: <UsersIcon className="h-6 w-6" />, text: 'Juntas de Curso' },
-      { page: 'reports', icon: <ReportIcon className="h-6 w-6" />, text: 'Informes de Clase' },
-      { page: 'citaciones', icon: <CitacionIcon className="h-6 w-6" />, text: 'Citaciones' },
-      { page: 'teacher_training', icon: <ArchiveBoxIcon className="h-6 w-6" />, text: 'Capacitación' },
+      { page: 'curriculum_repository', icon: <ArchiveBoxIcon className="h-6 w-6" />, text: 'Consulta Curricular' },
       { page: 'resource_bank', icon: <ArchiveBoxIcon className="h-6 w-6" />, text: 'Banco de Recursos' },
       { page: 'communications', icon: <ChatBubbleIcon className="h-6 w-6" />, text: 'Comunicaciones' },
     ],
@@ -86,13 +85,19 @@ const Sidebar: React.FC<SidebarProps> = ({ currentPage, setCurrentPage, isSideba
       { page: 'attendance', icon: <AttendanceIcon className="h-6 w-6" />, text: 'Mi Asistencia' },
       { page: 'activities', icon: <ActivityIcon className="h-6 w-6" />, text: 'Mis Actividades' },
     ],
-    [Role.JefeDECE]: [ ...commonLinks, { page: 'dece', icon: <DeceIcon className="h-6 w-6" />, text: 'Módulo DECE' }, { page: 'reports', icon: <ReportIcon className="h-6 w-6" />, text: 'Informes DECE' }, { page: 'citaciones', icon: <CitacionIcon className="h-6 w-6" />, text: 'Citaciones' }, { page: 'communications', icon: <ChatBubbleIcon className="h-6 w-6" />, text: 'Comunicaciones' }],
-    [Role.PsicologoEducativo]: [ ...commonLinks, { page: 'dece', icon: <DeceIcon className="h-6 w-6" />, text: 'Módulo DECE' }, { page: 'citaciones', icon: <CitacionIcon className="h-6 w-6" />, text: 'Citaciones' }, { page: 'communications', icon: <ChatBubbleIcon className="h-6 w-6" />, text: 'Comunicaciones' }],
-    [Role.TrabajadorSocial]: [ ...commonLinks, { page: 'dece', icon: <DeceIcon className="h-6 w-6" />, text: 'Módulo DECE' }, { page: 'citaciones', icon: <CitacionIcon className="h-6 w-6" />, text: 'Citaciones' }, { page: 'communications', icon: <ChatBubbleIcon className="h-6 w-6" />, text: 'Comunicaciones' }],
-    [Role.HealthProfessional]: [ ...commonLinks, { page: 'health', icon: <HealthIcon className="h-6 w-6" />, text: 'Módulo de Salud' }, { page: 'reports', icon: <ReportIcon className="h-6 w-6" />, text: 'Informes de Salud' }, { page: 'communications', icon: <ChatBubbleIcon className="h-6 w-6" />, text: 'Comunicaciones' }],
-    [Role.Vicerrector]: [ { page: 'vicerrector_dashboard', icon: <VicerrectoradoIcon className="h-6 w-6" />, text: 'Dashboard Vicerrectorado' }, { page: 'curricular_planning', icon: <ClipboardDocumentCheckIcon className="h-6 w-6" />, text: 'Planificación Curricular' }, { page: 'curriculum_repository', icon: <ArchiveBoxIcon className="h-6 w-6" />, text: 'Repositorio Curricular' }, { page: 'resource_bank', icon: <ArchiveBoxIcon className="h-6 w-6" />, text: 'Banco de Recursos' }, { page: 'citaciones', icon: <CitacionIcon className="h-6 w-6" />, text: 'Citaciones' }, { page: 'communications', icon: <ChatBubbleIcon className="h-6 w-6" />, text: 'Comunicaciones' }],
-    [Role.InspectorGeneral]: [ ...commonLinks, { page: 'inspection', icon: <InspectionIcon className="h-6 w-6" />, text: 'Inspección' }, { page: 'students', icon: <UsersIcon className="h-6 w-6" />, text: 'Alumnos' }, { page: 'attendance', icon: <AttendanceIcon className="h-6 w-6" />, text: 'Asistencia General' }, { page: 'manage', icon: <ManageIcon className="h-6 w-6" />, text: 'Gestión Centro' }, { page: 'citaciones', icon: <CitacionIcon className="h-6 w-6" />, text: 'Citaciones' }, { page: 'communications', icon: <ChatBubbleIcon className="h-6 w-6" />, text: 'Comunicaciones' }],
-    [Role.Rector]: [ { page: 'dashboard', icon: <DashboardIcon className="h-6 w-6" />, text: 'Dashboard' }, { page: 'communications', icon: <ChatBubbleIcon className="h-6 w-6" />, text: 'Comunicaciones' }, { page: 'manage', icon: <ManageIcon className="h-6 w-6" />, text: 'Gestión Centro' }],
+    [Role.JefeDECE]: [ ...commonLinks, { page: 'dece', icon: <DeceIcon className="h-6 w-6" />, text: 'Módulo DECE' }, { page: 'citaciones', icon: <CitacionIcon className="h-6 w-6" />, text: 'Citaciones' }, { page: 'curriculum_repository', icon: <ArchiveBoxIcon className="h-6 w-6" />, text: 'Consulta Curricular' }],
+    [Role.PsicologoEducativo]: [ ...commonLinks, { page: 'dece', icon: <DeceIcon className="h-6 w-6" />, text: 'Módulo DECE' }],
+    [Role.TrabajadorSocial]: [ ...commonLinks, { page: 'dece', icon: <DeceIcon className="h-6 w-6" />, text: 'Módulo DECE' }],
+    [Role.HealthProfessional]: [ ...commonLinks, { page: 'health', icon: <HealthIcon className="h-6 w-6" />, text: 'Módulo de Salud' }],
+    [Role.Vicerrector]: [ 
+        { page: 'vicerrector_dashboard', icon: <VicerrectoradoIcon className="h-6 w-6" />, text: 'Dashboard Vicerrectorado' }, 
+        { page: 'curricular_planning', icon: <ClipboardDocumentCheckIcon className="h-6 w-6" />, text: 'Planificación Curricular' }, 
+        { page: 'curriculum_repository', icon: <ArchiveBoxIcon className="h-6 w-6" />, text: 'Consulta Curricular' }, // Solo consulta
+        { page: 'resource_bank', icon: <ArchiveBoxIcon className="h-6 w-6" />, text: 'Banco de Recursos' }, 
+        { page: 'communications', icon: <ChatBubbleIcon className="h-6 w-6" />, text: 'Comunicaciones' }
+    ],
+    [Role.InspectorGeneral]: [ ...commonLinks, { page: 'inspection', icon: <InspectionIcon className="h-6 w-6" />, text: 'Inspección' }, { page: 'manage', icon: <ManageIcon className="h-6 w-6" />, text: 'Gestión Centro' }],
+    [Role.Rector]: [ { page: 'dashboard', icon: <DashboardIcon className="h-6 w-6" />, text: 'Dashboard' }, { page: 'manage', icon: <ManageIcon className="h-6 w-6" />, text: 'Gestión Centro' }],
   };
 
   const links = user ? roleLinks[user.role] || [] : [];

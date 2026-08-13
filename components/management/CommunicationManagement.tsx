@@ -1,4 +1,5 @@
-import React, { useState, useContext, useMemo } from 'react';
+
+import React, { useState, useContext, useMemo, useEffect } from 'react';
 import { InstitutionContext } from '../../contexts/UserContext';
 import { Institution } from '../../types';
 import { ArrowLeftIcon, EmailIcon, SmsIcon, ChatBubbleIcon, PushNotificationIcon, PhoneIcon, SocialIcon, CircularIcon } from '../icons/Icons';
@@ -27,10 +28,27 @@ const ToggleSwitch = ({ enabled, onChange }: { enabled: boolean, onChange: () =>
     </button>
 );
 
+const DEFAULT_CHANNELS = {
+    email: { enabled: true },
+    sms: { enabled: false },
+    internalMessaging: { enabled: true },
+    pushNotifications: { enabled: false },
+    phoneCalls: { enabled: false },
+    socialMedia: { enabled: false },
+    circulars: { enabled: false }
+};
+
 const CommunicationManagement: React.FC<CommunicationManagementProps> = ({ onBack }) => {
     const { institution, setInstitution } = useContext(InstitutionContext);
-    const [channels, setChannels] = useState(institution?.communicationChannels);
+    const [channels, setChannels] = useState(institution?.communicationChannels || DEFAULT_CHANNELS);
     const [isSaved, setIsSaved] = useState(false);
+
+    // Sync if institution loads later
+    useEffect(() => {
+        if (institution?.communicationChannels) {
+            setChannels(institution.communicationChannels);
+        }
+    }, [institution]);
 
     const channelConfig = useMemo(() => [
         { key: 'email', title: 'Correo Electrónico', description: 'Para notificaciones automáticas (ausencias, tareas) y recuperación de contraseñas.', icon: <EmailIcon className="h-8 w-8 text-primary-600" /> },
@@ -41,10 +59,6 @@ const CommunicationManagement: React.FC<CommunicationManagementProps> = ({ onBac
         { key: 'socialMedia', title: 'Redes Sociales', description: 'Canales de alerta e información general durante emergencias (ej. suspensión de clases).', icon: <SocialIcon className="h-8 w-8 text-primary-600" /> },
         { key: 'circulars', title: 'Circulares/Cartas', description: 'Para campañas colectivas o información específica sobre procesos de salud (ej. pediculosis).', icon: <CircularIcon className="h-8 w-8 text-primary-600" /> },
     ], []);
-
-    if (!channels) {
-        return <p>Cargando configuración de canales...</p>;
-    }
 
     const handleToggle = (channelKey: ChannelKey) => {
         setChannels(prev => {
@@ -93,7 +107,7 @@ const CommunicationManagement: React.FC<CommunicationManagementProps> = ({ onBac
                                     <h4 className="font-bold text-gray-800">{title}</h4>
                                 </div>
                                 <ToggleSwitch 
-                                    enabled={channels[key as ChannelKey].enabled} 
+                                    enabled={channels[key as ChannelKey]?.enabled || false} 
                                     onChange={() => handleToggle(key as ChannelKey)} 
                                 />
                             </div>
