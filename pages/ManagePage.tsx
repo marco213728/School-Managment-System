@@ -20,7 +20,10 @@ import PromotionWizard from '../components/management/PromotionWizard';
 import SchoolStandardsManager from '../components/management/SchoolStandardsManager';
 import PeiBuilder from '../components/management/PeiBuilder';
 // FIX: Added missing SparklesIcon and PlusIcon imports.
+import WorkloadManagement from '../components/management/WorkloadManagement';
+import { WorkloadManagement as WorkloadManagementComponent } from '../components/management/WorkloadManagement';
 import { FingerPrintIcon, UsersIcon, ClipboardListIcon, CalendarIcon, ManageIcon, GraduationCapIcon, ChartBarIcon, ClipboardDocumentCheckIcon, ChatBubbleIcon, ArchiveBoxIcon, ClockIcon, SparklesIcon, PlusIcon } from '../components/icons/Icons';
+
 
 interface ManagePageProps {
   allUsers: User[];
@@ -81,7 +84,7 @@ const ManagePage: React.FC<ManagePageProps> = ({
   onUpdateStaffAttendance,
 }) => {
     const { user: currentUser } = useContext(UserContext);
-    const [view, setView] = useState<'dashboard' | 'users' | 'classes' | 'schedule' | 'students' | 'communication' | 'support' | 'subjects' | 'rooms' | 'timetables' | 'calendar' | 'staff_control' | 'quality_standards' | 'pei_builder'>('dashboard');
+    const [view, setView] = useState<'dashboard' | 'users' | 'classes' | 'schedule' | 'students' | 'communication' | 'support' | 'subjects' | 'rooms' | 'timetables' | 'calendar' | 'staff_control' | 'quality_standards' | 'pei_builder' | 'workload'>('dashboard');
     
     const [isEnrollmentOpen, setIsEnrollmentOpen] = useState(false);
     const [userToEnroll, setUserToEnroll] = useState<User | null>(null);
@@ -212,12 +215,20 @@ const ManagePage: React.FC<ManagePageProps> = ({
                     buttonText="Gestionar Materias"
                     onClick={() => setView('subjects')}
                 />
-                 <ManageCard 
+                <ManageCard 
                     title="Horarios de Clase" 
                     description="Asignar la carga horaria semanal por asignatura, docente y aula." 
                     icon={<CalendarIcon className="h-6 w-6"/>}
                     buttonText="Configurar Horarios"
                     onClick={() => setView('schedule')}
+                />
+                <ManageCard 
+                    title="Distributivo Docente" 
+                    description="Control de carga horaria y generación de horarios con IA." 
+                    icon={<SparklesIcon className="h-6 w-6"/>}
+                    buttonText="Ver Carga y Generar"
+                    color="bg-indigo-600"
+                    onClick={() => setView('workload')}
                 />
                 <ManageCard 
                     title="Cierre de Ciclo" 
@@ -328,6 +339,7 @@ const ManagePage: React.FC<ManagePageProps> = ({
             case 'users': return <UserManagement users={institutionData.users} allClasses={institutionData.classes} allStudents={institutionData.students} onUpdateUsers={handleUpdateInstitutionUsers} />;
             case 'classes': return <ClassManagement classes={institutionData.classes} users={institutionData.users} students={institutionData.students} timetables={institutionData.timetables} onUpdateClasses={handleUpdateInstitutionClasses} onBack={() => setView('dashboard')} />;
             case 'schedule': return <ScheduleManagement schedule={schedule} classes={institutionData.classes} timeSlots={timeSlots} subjects={institutionData.subjects} rooms={institutionData.rooms} timetables={institutionData.timetables} users={institutionData.users} onUpdateSchedule={handleUpdateInstitutionSchedule} onBack={() => setView('dashboard')} />;
+            case 'workload': return <WorkloadManagementComponent users={institutionData.users} classes={institutionData.classes} rooms={institutionData.rooms} subjects={institutionData.subjects} schedule={schedule} onBack={() => setView('dashboard')} />;
             case 'students': return <StudentManagement students={institutionData.students} users={institutionData.users} classes={institutionData.classes} onUpdateStudents={handleUpdateInstitutionStudents} onUpdateUsers={handleUpdateInstitutionUsers} onBack={() => setView('dashboard')} />;
             case 'timetables': return <TimetableManagementComponent timetables={institutionData.timetables} timeSlots={institutionData.timeSlots} onUpdateTimetables={handleUpdateInstitutionTimetables} onUpdateTimeSlots={handleUpdateInstitutionTimeSlots} institutionId={currentUser.institutionId!} onBack={() => setView('dashboard')} />;
             case 'subjects': return <SubjectManagement subjects={institutionData.subjects} users={institutionData.users} onUpdateSubjects={handleUpdateInstitutionSubjects} onBack={() => setView('dashboard')} />;

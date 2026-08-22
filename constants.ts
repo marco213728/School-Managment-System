@@ -166,7 +166,8 @@ export const MOCK_INSTITUTIONS: Institution[] = [
 export const MOCK_USERS: User[] = [
     { id: 'super1', name: 'Super Administrador Global', email: 'super@amauta.com', password: 'password', role: Role.SuperAdmin },
     { id: 'admin1', name: 'Admin Osvaldo Lombeida', email: 'admin@school.com', password: 'password', role: Role.InstitutionAdmin, institutionId: 'uemol' },
-    { id: 'teacher1', name: 'Prof. Juan Pérez', email: 'juan.perez@school.com', password: 'password', role: Role.Teacher, institutionId: 'uemol', classIds: ['class1'] },
+    { id: 'teacher1', name: 'Prof. Juan Pérez', email: 'juan.perez@school.com', password: 'password', role: Role.Teacher, institutionId: 'uemol', classIds: ['class1'], tieneLimitacionMovilidad: true },
+    { id: 'teacher_lc', name: 'Lic. Martha Gómez (Lactancia)', email: 'martha@school.com', password: 'password', role: Role.Teacher, institutionId: 'uemol', classIds: ['class1'], esPeriodoLactancia: true },
     { id: 'parent1', name: 'Maria Gomez', email: 'maria@gmail.com', password: 'password', role: Role.Parent, institutionId: 'uemol', childIds: ['student1'] },
     
     // Usuarios de roles específicos añadidos para el flujo de trabajo
@@ -176,7 +177,7 @@ export const MOCK_USERS: User[] = [
     { id: 'med1', name: 'Dr. Roberto Méndez', email: 'medico@school.com', password: 'password', role: Role.HealthProfessional, institutionId: 'uemol' },
 
     { id: 'admin2', name: 'Ing. Roberto Espejo', email: 'admin2@school.com', password: 'password', role: Role.InstitutionAdmin, institutionId: 'ctee' },
-    { id: 'teacher2', name: 'Dra. Elena Santos', email: 'profe.espejo@school.com', password: 'password', role: Role.Teacher, institutionId: 'ctee', classIds: ['class2'] },
+    { id: 'teacher2', name: 'Dra. Elena Santos', email: 'profe.espejo@school.com', password: 'password', role: Role.Teacher, institutionId: 'ctee', classIds: ['class2'], esPeriodoLactancia: true },
     { id: 'parent2', name: 'Pedro Andrade', email: 'pedro.padre@gmail.com', password: 'password', role: Role.Parent, institutionId: 'ctee', childIds: ['student2'] }
 ];
 
@@ -323,4 +324,9 @@ export const MOCK_CLASSROOM_VISITS: ClassroomVisit[] = [];
 export const MOCK_TRAINING_SESSIONS: TrainingSession[] = [];
 export const MOCK_JUNTAS: JuntaDeCurso[] = [];
 export const MOCK_SUBJECT_REPORTS: SubjectReport[] = [];
-export const MOCK_ROOMS: Room[] = [];
+export const MOCK_ROOMS: Room[] = [
+    { id: 'room1', institutionId: 'uemol', name: 'Aula 101 - 10mo A', capacidad: 40, esLaboratorio: false, piso: 1, tieneAscensor: false, tieneRampaAcceso: true },
+    { id: 'room2', institutionId: 'uemol', name: 'Laboratorio de Computación (2do Piso)', capacidad: 30, esLaboratorio: true, piso: 2, tieneAscensor: false, tieneRampaAcceso: false },
+    { id: 'room3', institutionId: 'uemol', name: 'Aula 205 (2do Piso)', capacidad: 35, esLaboratorio: false, piso: 2, tieneAscensor: false, tieneRampaAcceso: false },
+    { id: 'room4', institutionId: 'ctee', name: 'Taller de Mecánica', capacidad: 25, esLaboratorio: true, piso: 1, tieneAscensor: false, tieneRampaAcceso: true },
+];

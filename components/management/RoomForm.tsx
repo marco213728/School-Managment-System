@@ -11,18 +11,33 @@ interface RoomFormProps {
 
 const RoomForm: React.FC<RoomFormProps> = ({ isOpen, onClose, onSave, roomToEdit }) => {
     const [name, setName] = useState('');
+    const [capacidad, setCapacidad] = useState(30);
+    const [esLaboratorio, setEsLaboratorio] = useState(false);
+    const [piso, setPiso] = useState(1);
+    const [tieneAscensor, setTieneAscensor] = useState(false);
+    const [tieneRampaAcceso, setTieneRampaAcceso] = useState(false);
 
     useEffect(() => {
         if (roomToEdit) {
             setName(roomToEdit.name);
+            setCapacidad(roomToEdit.capacidad || 30);
+            setEsLaboratorio(roomToEdit.esLaboratorio || false);
+            setPiso(roomToEdit.piso || 1);
+            setTieneAscensor(roomToEdit.tieneAscensor || false);
+            setTieneRampaAcceso(roomToEdit.tieneRampaAcceso || false);
         } else {
             setName('');
+            setCapacidad(30);
+            setEsLaboratorio(false);
+            setPiso(1);
+            setTieneAscensor(false);
+            setTieneRampaAcceso(false);
         }
     }, [roomToEdit, isOpen]);
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        onSave({ id: roomToEdit?.id, name });
+        onSave({ id: roomToEdit?.id, name, capacidad, esLaboratorio, piso, tieneAscensor, tieneRampaAcceso });
     };
 
     if (!isOpen) return null;
@@ -43,6 +58,33 @@ const RoomForm: React.FC<RoomFormProps> = ({ isOpen, onClose, onSave, roomToEdit
                             className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm" 
                             placeholder="Ej: Aula 101, Laboratorio" 
                         />
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-4">
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700">Capacidad (Asientos)</label>
+                            <input type="number" value={capacidad} onChange={e => setCapacidad(Number(e.target.value))} required className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm" />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700">Piso (Nivel)</label>
+                            <input type="number" value={piso} onChange={e => setPiso(Number(e.target.value))} required className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm" />
+                        </div>
+                    </div>
+
+                    <div className="border-t pt-4 mt-4 space-y-3">
+                        <h3 className="text-sm font-bold text-gray-800">Características e Infraestructura</h3>
+                        <div className="flex items-center">
+                            <input type="checkbox" id="lab" checked={esLaboratorio} onChange={e => setEsLaboratorio(e.target.checked)} className="h-4 w-4 text-primary-600 rounded border-gray-300" />
+                            <label htmlFor="lab" className="ml-2 block text-sm text-gray-700">Es Laboratorio / Taller</label>
+                        </div>
+                        <div className="flex items-center">
+                            <input type="checkbox" id="ascensor" checked={tieneAscensor} onChange={e => setTieneAscensor(e.target.checked)} className="h-4 w-4 text-primary-600 rounded border-gray-300" />
+                            <label htmlFor="ascensor" className="ml-2 block text-sm text-gray-700">El edificio cuenta con ascensor</label>
+                        </div>
+                        <div className="flex items-center">
+                            <input type="checkbox" id="rampa" checked={tieneRampaAcceso} onChange={e => setTieneRampaAcceso(e.target.checked)} className="h-4 w-4 text-primary-600 rounded border-gray-300" />
+                            <label htmlFor="rampa" className="ml-2 block text-sm text-gray-700">El aula tiene rampa de acceso</label>
+                        </div>
                     </div>
                     <div className="flex justify-end gap-4 pt-4">
                         <button type="button" onClick={onClose} className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300">Cancelar</button>

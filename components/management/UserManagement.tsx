@@ -3,6 +3,7 @@ import { UserContext } from '../../contexts/UserContext';
 import { User, Role, Class, Student } from '../../types';
 import { PlusIcon, EditIcon, TrashIcon, SearchIcon, UsersIcon } from '../icons/Icons';
 import UserForm from './UserForm';
+import { FormularioCaracterizacionDocente } from './FormularioCaracterizacion';
 
 interface UserManagementProps {
   users: User[];
@@ -15,6 +16,7 @@ const UserManagement: React.FC<UserManagementProps> = ({ users, allClasses, allS
     const { user: currentUser } = useContext(UserContext);
 
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [isGethModalOpen, setIsGethModalOpen] = useState(false);
     const [editingUser, setEditingUser] = useState<User | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
 
@@ -36,6 +38,11 @@ const UserManagement: React.FC<UserManagementProps> = ({ users, allClasses, allS
     const handleEdit = (user: User) => {
         setEditingUser(user);
         setIsModalOpen(true);
+    };
+    
+    const handleGeth = (user: User) => {
+        setEditingUser(user);
+        setIsGethModalOpen(true);
     };
 
     const handleDelete = (userId: string) => {
@@ -66,6 +73,19 @@ const UserManagement: React.FC<UserManagementProps> = ({ users, allClasses, allS
             onUpdateUsers([...users, newUser]);
         }
         setIsModalOpen(false);
+    };
+    
+    const handleSaveGeth = (gethData: any) => {
+        if (editingUser) {
+            const updatedUsers = users.map(u => {
+                if (u.id === editingUser.id) {
+                    return { ...u, ...gethData };
+                }
+                return u;
+            });
+            onUpdateUsers(updatedUsers);
+        }
+        setIsGethModalOpen(false);
     };
 
     return (
@@ -113,6 +133,11 @@ const UserManagement: React.FC<UserManagementProps> = ({ users, allClasses, allS
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">{user.role}</td>
                                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                        {user.role === 'Docente' && (
+                                            <button onClick={() => handleGeth(user)} className="p-2 text-indigo-500 hover:text-indigo-600 rounded-full hover:bg-indigo-100" title="Caracterización GETH">
+                                                <UsersIcon className="h-5 w-5" />
+                                            </button>
+                                        )}
                                         <button onClick={() => handleEdit(user)} className="p-2 text-slate-500 hover:text-primary-600 rounded-full hover:bg-primary-100"><EditIcon className="h-5 w-5" /></button>
                                         <button onClick={() => handleDelete(user.id)} className="p-2 text-slate-500 hover:text-rose-600 rounded-full hover:bg-rose-100"><TrashIcon className="h-5 w-5" /></button>
                                     </td>
@@ -153,6 +178,18 @@ const UserManagement: React.FC<UserManagementProps> = ({ users, allClasses, allS
                     allClasses={allClasses}
                     allStudents={allStudents}
                 />
+            )}
+
+            {isGethModalOpen && (
+                <div className="fixed inset-0 z-50 overflow-y-auto bg-black bg-opacity-50 flex items-center justify-center p-4">
+                    <div className="relative w-full max-w-4xl max-h-[90vh] overflow-y-auto bg-white rounded-xl shadow-2xl">
+                        <FormularioCaracterizacionDocente
+                            initialData={editingUser}
+                            onGuardarDocente={handleSaveGeth}
+                            onCancelar={() => setIsGethModalOpen(false)}
+                        />
+                    </div>
+                </div>
             )}
         </div>
     );

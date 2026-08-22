@@ -43,6 +43,8 @@ const UserForm: React.FC<UserFormProps> = ({ isOpen, onClose, onSave, userToEdit
         address: userToEdit.address || '',
         maxMonthlyHours: userToEdit.maxMonthlyHours,
         workSchedule: userToEdit.workSchedule || {},
+        esPeriodoLactancia: userToEdit.esPeriodoLactancia || false,
+        tieneLimitacionMovilidad: userToEdit.tieneLimitacionMovilidad || false,
       });
     } else {
       setFormData({
@@ -176,7 +178,23 @@ const UserForm: React.FC<UserFormProps> = ({ isOpen, onClose, onSave, userToEdit
 
           {formData.role === Role.Teacher && (
              <>
-                <div className="mt-4">
+                <div className="mt-4 border-t pt-4">
+                    <h3 className="text-sm font-bold text-gray-800 mb-3 border-l-4 border-indigo-500 pl-2">Restricciones y Políticas GETH</h3>
+                    
+                    <div className="flex items-center mb-2">
+                        <input type="checkbox" id="lactancia" name="esPeriodoLactancia" checked={formData.esPeriodoLactancia || false} onChange={e => setFormData(prev => ({...prev, esPeriodoLactancia: e.target.checked}))} className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded" />
+                        <label htmlFor="lactancia" className="ml-2 block text-sm text-gray-700">
+                            En período de lactancia (Limita carga max a 20h)
+                        </label>
+                    </div>
+
+                    <div className="flex items-center mb-4">
+                        <input type="checkbox" id="movilidad" name="tieneLimitacionMovilidad" checked={formData.tieneLimitacionMovilidad || false} onChange={e => setFormData(prev => ({...prev, tieneLimitacionMovilidad: e.target.checked}))} className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded" />
+                        <label htmlFor="movilidad" className="ml-2 block text-sm text-gray-700">
+                            Tiene limitación de movilidad (Restringe aulas sin ascensor)
+                        </label>
+                    </div>
+
                     <label className="block text-sm font-medium text-gray-700">Clases Asignadas (mantener Ctrl para selección múltiple)</label>
                     <select multiple name="classIds" value={formData.classIds} onChange={handleClassIdsChange} className="mt-1 block w-full h-24 px-3 py-2 border border-gray-300 bg-white rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500">
                     {allClasses.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}

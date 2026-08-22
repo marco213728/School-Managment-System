@@ -135,6 +135,29 @@ export interface User {
   accessPin?: string;
   maxMonthlyHours?: number;
   workSchedule?: Record<string, { startTime: string; endTime: string }>;
+  
+  // GETH Policies
+  esPeriodoLactancia?: boolean;
+  tieneLimitacionMovilidad?: boolean;
+  horasMaximas?: number;
+  
+  // Staff Characterization GETH
+  cedula?: string;
+  fechaNacimiento?: string;
+  grupoEtnico?: string;
+  relacionLaboral?: 'contrato' | 'definitivo' | 'provisional';
+  funcion?: 'docente' | 'directivo';
+  nivelEducacion?: 'tercer_nivel' | 'cuarto_nivel' | 'phd';
+  tituloProfesional?: string;
+  especialidadRegistrada?: string;
+  especialidadRequerida?: string;
+  licenciasCuidadoFamiliar?: boolean;
+  maxClasesConsecutivas?: number;
+  horasPlanificacion?: number;
+  horasAtencionPadres?: number;
+  disposicionCoPlanificacion?: boolean;
+  comisionesAdicionales?: boolean;
+  withitnessScore?: number;
 }
 
 export interface PeiFodaEntry {
@@ -392,6 +415,11 @@ export interface Room {
     id: string; 
     institutionId: string; 
     name: string; 
+    capacidad?: number;
+    esLaboratorio?: boolean;
+    piso?: number;
+    tieneAscensor?: boolean;
+    tieneRampaAcceso?: boolean;
 }
 
 export interface Timetable { 
@@ -1038,3 +1066,61 @@ export interface ReinforcementPlan {
         suggestions: string;
     };
 }
+
+export type NivelEducativo = 'inicial' | 'basica' | 'bgu_ciencias' | 'bgu_tecnico';
+export type JornadaType = 'matutina' | 'vespertina';
+
+export interface Docente {
+  id: string;
+  nombre: string;
+  cedula: string;
+  especialidad: string;
+  relacionLaboral: 'contrato' | 'definitivo' | 'provisional';
+  funcion: 'docente' | 'directivo';
+  esPeriodoLactancia: boolean;
+  tieneLimitacionMovilidad: boolean;
+  horasAsignadas: number;
+  horasMaximas: number;
+  climaLaboralSatisfaccion?: number;
+  evaluacionDesempenoReciente?: number;
+  horasMaximasPermitidas?: number;
+}
+
+export interface ParaleloInfo {
+  id: string;
+  gradoCurso: string;
+  letra: string;
+  nivel: NivelEducativo;
+  jornada: JornadaType;
+  numEstudiantes: number;
+}
+
+export interface AulaInfo {
+  id: string;
+  nombre: string;
+  capacidad: number;
+  esLaboratorio: boolean;
+  piso: number;
+  tieneAscensor: boolean;
+  tieneRampaAcceso: boolean;
+}
+
+export interface AsignaturaInfo {
+  id: string;
+  nombre: string;
+  nivel: NivelEducativo;
+  horasSemanales: number;
+  especialidadRequerida: string;
+}
+
+export interface SlotHorarioInfo {
+  id?: string;
+  docenteId: string;
+  paraleloId?: string | null;
+  aulaId?: string | null;
+  asignaturaId?: string | null;
+  dia: number;
+  periodo: number;
+  tipoSlot?: 'clase' | 'tutoria' | 'atencion_padres';
+}
+
