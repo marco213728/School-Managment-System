@@ -93,7 +93,17 @@ export class MotorOptimizadorHorarios {
       
       const doc_info = this.docentes.find(d => d.id === slot.docenteId);
       const aula_info = this.aulas.find(a => a.id === slot.aulaId);
+      const paralelo_info = this.paralelos.find(p => p.id === slot.paraleloId);
       
+      if (aula_info && paralelo_info) {
+        const grado_restringido = aula_info.gradoExclusivo;
+        if (grado_restringido) {
+          if (paralelo_info.gradoCurso !== grado_restringido) {
+            violaciones += 1.0; // peso_conflicto_mobiliario
+          }
+        }
+      }
+
       if (doc_info) {
         if (distribucion_diaria[doc_info.id] && distribucion_diaria[doc_info.id][slot.dia]) {
           distribucion_diaria[doc_info.id][slot.dia].push({ periodo: slot.periodo, tipo: slot.tipoSlot || 'clase' });

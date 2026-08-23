@@ -16,6 +16,7 @@ const RoomForm: React.FC<RoomFormProps> = ({ isOpen, onClose, onSave, roomToEdit
     const [piso, setPiso] = useState(1);
     const [tieneAscensor, setTieneAscensor] = useState(false);
     const [tieneRampaAcceso, setTieneRampaAcceso] = useState(false);
+    const [gradoExclusivo, setGradoExclusivo] = useState<string>('');
 
     useEffect(() => {
         if (roomToEdit) {
@@ -25,6 +26,7 @@ const RoomForm: React.FC<RoomFormProps> = ({ isOpen, onClose, onSave, roomToEdit
             setPiso(roomToEdit.piso || 1);
             setTieneAscensor(roomToEdit.tieneAscensor || false);
             setTieneRampaAcceso(roomToEdit.tieneRampaAcceso || false);
+            setGradoExclusivo(roomToEdit.gradoExclusivo || '');
         } else {
             setName('');
             setCapacidad(30);
@@ -32,12 +34,13 @@ const RoomForm: React.FC<RoomFormProps> = ({ isOpen, onClose, onSave, roomToEdit
             setPiso(1);
             setTieneAscensor(false);
             setTieneRampaAcceso(false);
+            setGradoExclusivo('');
         }
     }, [roomToEdit, isOpen]);
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        onSave({ id: roomToEdit?.id, name, capacidad, esLaboratorio, piso, tieneAscensor, tieneRampaAcceso });
+        onSave({ id: roomToEdit?.id, name, capacidad, esLaboratorio, piso, tieneAscensor, tieneRampaAcceso, gradoExclusivo: gradoExclusivo || undefined });
     };
 
     if (!isOpen) return null;
@@ -73,7 +76,18 @@ const RoomForm: React.FC<RoomFormProps> = ({ isOpen, onClose, onSave, roomToEdit
 
                     <div className="border-t pt-4 mt-4 space-y-3">
                         <h3 className="text-sm font-bold text-gray-800">Características e Infraestructura</h3>
-                        <div className="flex items-center">
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700">Grado Exclusivo (Opcional)</label>
+                            <input 
+                                type="text" 
+                                value={gradoExclusivo} 
+                                onChange={(e) => setGradoExclusivo(e.target.value)} 
+                                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm" 
+                                placeholder="Ej: Segundo de Básica" 
+                            />
+                            <p className="text-xs text-gray-500 mt-1">Bloquea esta aula para que SOLO pueda ser usada por este grado debido a su mobiliario adaptado.</p>
+                        </div>
+                        <div className="flex items-center mt-3">
                             <input type="checkbox" id="lab" checked={esLaboratorio} onChange={e => setEsLaboratorio(e.target.checked)} className="h-4 w-4 text-primary-600 rounded border-gray-300" />
                             <label htmlFor="lab" className="ml-2 block text-sm text-gray-700">Es Laboratorio / Taller</label>
                         </div>

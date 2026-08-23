@@ -328,6 +328,7 @@ const ScheduleManagement: React.FC<ScheduleManagementProps> = ({ schedule, class
                     entryToEdit={editingData.entryToEdit}
                     unavailableSubjects={editingData.unavailableSubjects}
                     unavailableRoomIds={editingData.unavailableRoomIds}
+                    currentClass={classes.find(c => c.id === selectedClassId)}
                 />
             )}
             {isPrintModalOpen && selectedClassId && (

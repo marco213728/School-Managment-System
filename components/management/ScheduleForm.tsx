@@ -2,8 +2,9 @@
 
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { ScheduleEntry, Subject, Room, User, Role } from '../../types';
+import { ScheduleEntry, Subject, Room, User, Role, Class } from '../../types';
 import { CloseIcon } from '../icons/Icons';
+import { validarMobiliarioExclusivoAula } from '../../lib/validators';
 
 interface ScheduleFormProps {
     isOpen: boolean;
@@ -18,13 +19,15 @@ interface ScheduleFormProps {
     entryToEdit: ScheduleEntry | null;
     unavailableSubjects: { id: string, reason: string }[];
     unavailableRoomIds: string[];
+    currentClass?: Class;
 }
 
 const ScheduleForm: React.FC<ScheduleFormProps> = ({ 
-    isOpen, onClose, onSave, subjects, users, rooms, day, classNameDisplay, timeSlotDisplay, entryToEdit, unavailableSubjects, unavailableRoomIds 
+    isOpen, onClose, onSave, subjects, users, rooms, day, classNameDisplay, timeSlotDisplay, entryToEdit, unavailableSubjects, unavailableRoomIds, currentClass 
 }) => {
     const [selectedSubjectId, setSelectedSubjectId] = useState(entryToEdit?.subjectId || '');
     const [selectedRoomId, setSelectedRoomId] = useState(entryToEdit?.roomId || '');
+    const [validationError, setValidationError] = useState<string | null>(null);
     
     const teacherMap = useMemo(() => new Map(users.filter(u => u.role === Role.Teacher).map(t => [t.id, t.name])), [users]);
 
@@ -41,6 +44,37 @@ const ScheduleForm: React.FC<ScheduleFormProps> = ({
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
+        
+        if (currentClass && selectedRoomId) {
+            const room = rooms.find(r => r.id === selectedRoomId);
+            if (room && room.gradoExclusivo) {
+                // Adaptar el tipo de Class a ParaleloInfo para el validador
+                const paraleloAdapter = {
+                    id: currentClass.id,
+                    gradoCurso: currentClass.gradoCurso || currentClass.name,
+                    letra: currentClass.letra || '',
+                    nivel: 'EGB_Elemental' as any, // Dummy
+                    jornada: 'Matutina' as any, // Dummy
+                    numEstudiantes: 30
+                };
+                
+                const validacion = validarMobiliarioExclusivoAula(paraleloAdapter, {
+                    ...room,
+                    capacidad: room.capacidad || 30,
+                    esLaboratorio: room.esLaboratorio || false,
+                    piso: room.piso || 1,
+                    tieneAscensor: room.tieneAscensor || false,
+                    tieneRampaAcceso: room.tieneRampaAcceso || false
+                });
+                
+                if (!validacion.valido) {
+                    setValidationError(validacion.mensaje || 'Error de validación de aula.');
+                    return;
+                }
+            }
+        }
+        
+        setValidationError(null);
         onSave(selectedSubjectId, selectedRoomId);
     };
 
@@ -52,6 +86,11 @@ const ScheduleForm: React.FC<ScheduleFormProps> = ({
                 <button onClick={onClose} className="absolute top-4 right-4 text-gray-500 hover:text-gray-800"><CloseIcon className="h-6 w-6" /></button>
                 <h2 className="text-xl font-bold mb-2">Asignar Horario para {classNameDisplay}</h2>
                 <p className="text-sm text-gray-500 mb-4">{day}, {timeSlotDisplay}</p>
+                {validationError && (
+                    <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 text-sm rounded-md">
+                        {validationError}
+                    </div>
+                )}
                 <form onSubmit={handleSubmit} className="space-y-4">
                     <div>
                         <label className="block text-sm font-medium text-gray-700">Asignatura</label>

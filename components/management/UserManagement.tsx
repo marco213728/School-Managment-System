@@ -133,7 +133,7 @@ const UserManagement: React.FC<UserManagementProps> = ({ users, allClasses, allS
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">{user.role}</td>
                                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                        {user.role === 'Docente' && (
+                                        {user.role === Role.Teacher && (
                                             <button onClick={() => handleGeth(user)} className="p-2 text-indigo-500 hover:text-indigo-600 rounded-full hover:bg-indigo-100" title="Caracterización GETH">
                                                 <UsersIcon className="h-5 w-5" />
                                             </button>

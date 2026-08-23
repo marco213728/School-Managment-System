@@ -1,10 +1,32 @@
-import { Docente, AulaInfo } from '../types';
+import { Docente, AulaInfo, ParaleloInfo } from '../types';
 
 export interface ValidacionColision {
   valido: boolean;
   tipo: 'hard' | 'warning' | 'ok';
   mensaje?: string;
 }
+
+/**
+ * Valida si un paralelo es físicamente apto para ocupar un aula según su mobiliario.
+ */
+export const validarMobiliarioExclusivoAula = (
+  paralelo: ParaleloInfo,
+  aula: AulaInfo
+): ValidacionColision => {
+  
+  if (aula.gradoExclusivo) {
+    // Si el aula está reservada para un grado y el paralelo es de otro grado diferente
+    if (aula.gradoExclusivo !== paralelo.gradoCurso) {
+      return {
+        valido: false,
+        tipo: 'hard',
+        mensaje: `¡BLOQUEO DE INFRAESTRUCTURA! El aula ${aula.nombre} está restringida exclusivamente para "${aula.gradoExclusivo}" debido a que cuenta con mueblería adaptada para estudiantes pequeños. No puede ser compartida con "${paralelo.gradoCurso} '${paralelo.letra}'".`
+      };
+    }
+  }
+
+  return { valido: true, tipo: 'ok' };
+};
 
 /**
  * Valida la accesibilidad física del aula respecto a las condiciones del docente.

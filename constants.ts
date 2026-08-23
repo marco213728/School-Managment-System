@@ -182,8 +182,9 @@ export const MOCK_USERS: User[] = [
 ];
 
 export const MOCK_CLASSES: Class[] = [
-    { id: 'class1', institutionId: 'uemol', name: '10mo EGB A', studentIds: ['student1'], timetableId: 'tt1', tutorId: 'teacher1' },
-    { id: 'class2', institutionId: 'ctee', name: '3ro Bachillerato Ciencias', studentIds: ['student2'], timetableId: 'tt2', tutorId: 'teacher2' }
+    { id: 'class1', institutionId: 'uemol', name: '10mo EGB A', studentIds: ['student1'], timetableId: 'tt1', tutorId: 'teacher1', gradoCurso: 'Décimo de Básica', letra: 'A' },
+    { id: 'class_sexto', institutionId: 'uemol', name: '6to EGB B', studentIds: [], timetableId: 'tt1', gradoCurso: 'Sexto de Básica', letra: 'B' },
+    { id: 'class2', institutionId: 'ctee', name: '3ro Bachillerato Ciencias', studentIds: ['student2'], timetableId: 'tt2', tutorId: 'teacher2', gradoCurso: 'Tercero de Bachillerato', letra: 'A' }
 ];
 
 export const MOCK_STUDENTS: Student[] = [
@@ -328,5 +329,7 @@ export const MOCK_ROOMS: Room[] = [
     { id: 'room1', institutionId: 'uemol', name: 'Aula 101 - 10mo A', capacidad: 40, esLaboratorio: false, piso: 1, tieneAscensor: false, tieneRampaAcceso: true },
     { id: 'room2', institutionId: 'uemol', name: 'Laboratorio de Computación (2do Piso)', capacidad: 30, esLaboratorio: true, piso: 2, tieneAscensor: false, tieneRampaAcceso: false },
     { id: 'room3', institutionId: 'uemol', name: 'Aula 205 (2do Piso)', capacidad: 35, esLaboratorio: false, piso: 2, tieneAscensor: false, tieneRampaAcceso: false },
+    { id: 'room_basica1', institutionId: 'uemol', name: 'Aula 103 (Mobiliario Pequeño)', capacidad: 30, esLaboratorio: false, piso: 1, tieneAscensor: false, tieneRampaAcceso: true, gradoExclusivo: 'Segundo de Básica' },
+    { id: 'room_basica2', institutionId: 'uemol', name: 'Aula 104', capacidad: 30, esLaboratorio: false, piso: 1, tieneAscensor: false, tieneRampaAcceso: true, gradoExclusivo: 'Tercero de Básica' },
     { id: 'room4', institutionId: 'ctee', name: 'Taller de Mecánica', capacidad: 25, esLaboratorio: true, piso: 1, tieneAscensor: false, tieneRampaAcceso: true },
 ];

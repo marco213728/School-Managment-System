@@ -301,6 +301,8 @@ export interface Class {
     timetableId?: string; 
     tutorId?: string; 
     academicYear?: string; 
+    gradoCurso?: string;
+    letra?: string;
 }
 
 export interface Student { 
@@ -420,6 +422,7 @@ export interface Room {
     piso?: number;
     tieneAscensor?: boolean;
     tieneRampaAcceso?: boolean;
+    gradoExclusivo?: string;
 }
 
 export interface Timetable { 
@@ -1103,6 +1106,7 @@ export interface AulaInfo {
   piso: number;
   tieneAscensor: boolean;
   tieneRampaAcceso: boolean;
+  gradoExclusivo?: string;
 }
 
 export interface AsignaturaInfo {
