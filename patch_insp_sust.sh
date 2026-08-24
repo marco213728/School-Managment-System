@@ -1,0 +1,3 @@
+sed -i 's/interface InspectorSustitucionesProps {/interface InspectorSustitucionesProps {\n    absenceRequests: AbsenceRequest\[\];\n    onUpdateAbsenceRequests: (r: AbsenceRequest\[\]) => void;/g' components/inspection/InspectorSustituciones.tsx
+sed -i "s/import { Role, User/import { Role, User, AbsenceRequest/g" components/inspection/InspectorSustituciones.tsx
+sed -i 's/export const InspectorSustituciones: React.FC<InspectorSustitucionesProps> = ({ users, schedule, classes, subjects, staffAttendanceRecords }) => {/export const InspectorSustituciones: React.FC<InspectorSustitucionesProps> = ({ users, schedule, classes, subjects, staffAttendanceRecords, absenceRequests, onUpdateAbsenceRequests }) => {/g' components/inspection/InspectorSustituciones.tsx

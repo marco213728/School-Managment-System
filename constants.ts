@@ -1,6 +1,6 @@
 
 import { 
-  Role, User, Institution, Class, Student, ScheduleEntry, Notification, SupportContact, 
+  Role, User, JobVacancy, Candidate, PerformanceEvaluation, Institution, Class, Student, ScheduleEntry, Notification, SupportContact, 
   HealthRecord, MedicalVisit, Subject, TimeSlot, Room, Timetable, ViccIntervention, 
   AttendanceRecord, ExitPass, Citacion, AcademicCalendarEvent, LeccionarioEntry, 
   MicroPlan, Dcd, EvaluationCriterion, EvaluationIndicator, Gradebook, Activity, 
@@ -332,4 +332,21 @@ export const MOCK_ROOMS: Room[] = [
     { id: 'room_basica1', institutionId: 'uemol', name: 'Aula 103 (Mobiliario Pequeño)', capacidad: 30, esLaboratorio: false, piso: 1, tieneAscensor: false, tieneRampaAcceso: true, gradoExclusivo: 'Segundo de Básica' },
     { id: 'room_basica2', institutionId: 'uemol', name: 'Aula 104', capacidad: 30, esLaboratorio: false, piso: 1, tieneAscensor: false, tieneRampaAcceso: true, gradoExclusivo: 'Tercero de Básica' },
     { id: 'room4', institutionId: 'ctee', name: 'Taller de Mecánica', capacidad: 25, esLaboratorio: true, piso: 1, tieneAscensor: false, tieneRampaAcceso: true },
+];
+
+export const MOCK_JOB_VACANCIES: JobVacancy[] = [
+    { id: 'v1', institutionId: 'uemol', title: 'Docente de Matemáticas - EGB', department: 'Académico', contractType: 'LOEI', description: 'Requerimos docente con experiencia en método singapur.', requirements: ['Título de tercer nivel', '2 años de experiencia'], salaryRange: '$817', status: 'Open', createdAt: new Date().toISOString() },
+    { id: 'v2', institutionId: 'uemol', title: 'Médico Escolar', department: 'Salud', contractType: 'LOSEP', description: 'Atención primaria y prevención en salud escolar.', requirements: ['Título de Médico', 'Registro Senescyt'], salaryRange: '$1200', status: 'Open', createdAt: new Date().toISOString() }
+];
+
+export const MOCK_CANDIDATES: Candidate[] = [
+    { id: 'c1', vacancyId: 'v1', name: 'Laura Mendoza', email: 'laura@email.com', phone: '0999999999', stage: 'Entrevista', score: 85, createdAt: new Date().toISOString() },
+    { id: 'c2', vacancyId: 'v1', name: 'Carlos Viteri', email: 'carlos@email.com', phone: '0988888888', stage: 'Aplicado', createdAt: new Date().toISOString() },
+    { id: 'c3', vacancyId: 'v2', name: 'Dra. Sofia Proaño', email: 'sofia@email.com', phone: '0977777777', stage: 'Prueba Técnica', createdAt: new Date().toISOString() }
+];
+
+export const MOCK_ABSENCE_REQUESTS: any[] = [];
+
+export const MOCK_PERFORMANCE_EVALUATIONS: PerformanceEvaluation[] = [
+    { id: 'pe1', institutionId: 'uemol', userId: 'teacher1', evaluatorId: 'vicerrector1', year: '2025-2026', functionalScore: 65, behavioralScore: 28, totalScore: 93, evidenceLinks: ['Portafolio_Juan_Perez.pdf'], commitments: ['Implementar ABP en Ciencias Naturales en el primer quimestre.'], status: 'Acknowledged', createdAt: new Date().toISOString() }
 ];

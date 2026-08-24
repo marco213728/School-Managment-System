@@ -215,7 +215,7 @@ const PlanForm: React.FC<PlanFormProps> = ({ isOpen, onClose, onSave, planToEdit
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <select name="classId" value={formData.classId} onChange={handleChange} required className="w-full p-2 border rounded-md">
                     <option value="">Seleccionar Clase</option>
-                    {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                    {institutionClasses.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                 </select>
                 <select name="subjectId" value={formData.subjectId} onChange={handleChange} required className="w-full p-2 border rounded-md">
                     <option value="">Seleccionar Asignatura</option>
@@ -284,7 +284,7 @@ const PlanForm: React.FC<PlanFormProps> = ({ isOpen, onClose, onSave, planToEdit
             </fieldset>
             
             <div className="flex justify-end gap-4 pt-4"><button type="button" onClick={onClose} className="px-4 py-2 bg-gray-200 rounded-md">Cancelar</button><button type="submit" className="px-4 py-2 bg-primary-600 text-white rounded-md">Guardar Plan</button></div></form></div></div>
-        <DcdSelectionModal isOpen={isDcdModalOpen} onClose={() => setIsDcdModalOpen(false)} onSave={(ids) => setFormData(p => ({...p, dcdIds: ids}))} allDcds={dcds} subjectId={formData.subjectId} classId={formData.classId} classes={classes} initialSelectedIds={formData.dcdIds} />
+        <DcdSelectionModal isOpen={isDcdModalOpen} onClose={() => setIsDcdModalOpen(false)} onSave={(ids) => setFormData(p => ({...p, dcdIds: ids}))} allDcds={dcds} subjectId={formData.subjectId} classId={formData.classId} classes={institutionClasses} initialSelectedIds={formData.dcdIds} />
         {isAiModalOpen && <AiGeneratorModal isOpen={isAiModalOpen} onClose={() => setIsAiModalOpen(false)} onApply={(rep, act, eng) => { setFormData(p => ({ ...p, duaRepresentation: rep, duaActionExpression: act, duaEngagement: eng })); setIsAiModalOpen(false); }} currentSkills={selectedDcdObjects.map(d => d.description).join('\n')} />}
     </>;
 };
@@ -444,9 +444,14 @@ const CurricularPlanningPage: React.FC<CurricularPlanningPageProps> = ({ microPl
     const [aiPlanId, setAiPlanId] = useState<string | undefined>(undefined);
 
     const isReviewer = currentUser?.role === Role.Vicerrector || currentUser?.role === Role.InstitutionAdmin;
-    const userMap = useMemo(() => new Map(users.map(u => [u.id, u.name])), [users]);
-    const subjectMap = useMemo(() => new Map(subjects.map(s => [s.id, s.name])), [subjects]);
-    const classMap = useMemo(() => new Map(classes.map(c => [c.id, c.name])), [classes]);
+    const institutionClasses = classes.filter(c => c.institutionId === currentUser?.institutionId);
+    const institutionSubjects = subjects.filter(s => s.institutionId === currentUser?.institutionId);
+    const institutionStudents = students.filter(s => s.institutionId === currentUser?.institutionId);
+    const institutionUsers = users.filter(u => u.institutionId === currentUser?.institutionId);
+
+    const userMap = useMemo(() => new Map(institutionUsers.map(u => [u.id, u.name])), [institutionUsers]);
+    const subjectMap = useMemo(() => new Map(institutionSubjects.map(s => [s.id, s.name])), [institutionSubjects]);
+    const classMap = useMemo(() => new Map(institutionClasses.map(c => [c.id, c.name])), [institutionClasses]);
     const plansForView = useMemo(() => { if (!currentUser) return []; const iPlans = microPlans.filter(p => p.institutionId === currentUser.institutionId); return isReviewer ? iPlans : iPlans.filter(p => p.teacherId === currentUser.id); }, [currentUser, microPlans, isReviewer]);
     
     const handleOpenForm = (plan: MicroPlan|null) => { setSelectedPlan(plan); setIsFormOpen(true); };
@@ -517,9 +522,9 @@ const CurricularPlanningPage: React.FC<CurricularPlanningPageProps> = ({ microPl
                     </table>
                 </div>
             </div>
-            {isFormOpen && currentUser && <PlanForm isOpen={isFormOpen} onClose={() => setIsFormOpen(false)} onSave={handleSave} planToEdit={selectedPlan} classes={classes} subjects={subjects} students={students} teacherId={currentUser.id} institutionId={currentUser.institutionId!} dcds={dcds} evaluationCriteria={evaluationCriteria} evaluationIndicators={evaluationIndicators} />}
-            {isDetailsOpen && selectedPlan && currentUser && <PlanDetails plan={selectedPlan} onClose={() => setIsDetailsOpen(false)} onSetStatus={handleSetStatus} onPrint={handlePrint} userRole={currentUser.role} users={users} subjects={subjects} classes={classes} students={students} dcds={dcds} onOpenAiAssistant={handleOpenAiAssistant} />}
-            {printingPlan && currentUser && <div className="fixed inset-0 bg-black bg-opacity-60 z-[60] flex justify-center items-center p-4"><div id="microplan-print-section" className="bg-white rounded-lg shadow-xl w-full max-w-6xl max-h-[90vh] flex flex-col"><header className="p-4 flex justify-between items-center bg-gray-50 border-b no-print sticky top-0 z-10"><h3 className="text-lg font-semibold text-gray-700">Vista Previa del Reporte</h3><div className="flex items-center gap-2"><button onClick={() => setPrintingPlan(null)} className="px-4 py-2 bg-gray-200 rounded-md">Cerrar</button><button onClick={() => window.print()} className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-md"><PrinterIcon className="h-5 w-5" />Imprimir / PDF</button></div></header><div className="overflow-y-auto"><PrintableMicroPlan plan={printingPlan} teacher={users.find(u => u.id === printingPlan.teacherId)} reviewer={users.find(u => u.id === printingPlan.reviewerId)} subject={subjects.find(s => s.id === printingPlan.subjectId)} studentClass={classes.find(c => c.id === printingPlan.classId)} students={students} institution={institution} dcds={dcds}/></div></div></div>}
+            {isFormOpen && currentUser && <PlanForm isOpen={isFormOpen} onClose={() => setIsFormOpen(false)} onSave={handleSave} planToEdit={selectedPlan} classes={institutionClasses} subjects={institutionSubjects} students={institutionStudents} teacherId={currentUser.id} institutionId={currentUser.institutionId!} dcds={dcds} evaluationCriteria={evaluationCriteria} evaluationIndicators={evaluationIndicators} />}
+            {isDetailsOpen && selectedPlan && currentUser && <PlanDetails plan={selectedPlan} onClose={() => setIsDetailsOpen(false)} onSetStatus={handleSetStatus} onPrint={handlePrint} userRole={currentUser.role} users={institutionUsers} subjects={institutionSubjects} classes={institutionClasses} students={institutionStudents} dcds={dcds} onOpenAiAssistant={handleOpenAiAssistant} />}
+            {printingPlan && currentUser && <div className="fixed inset-0 bg-black bg-opacity-60 z-[60] flex justify-center items-center p-4"><div id="microplan-print-section" className="bg-white rounded-lg shadow-xl w-full max-w-6xl max-h-[90vh] flex flex-col"><header className="p-4 flex justify-between items-center bg-gray-50 border-b no-print sticky top-0 z-10"><h3 className="text-lg font-semibold text-gray-700">Vista Previa del Reporte</h3><div className="flex items-center gap-2"><button onClick={() => setPrintingPlan(null)} className="px-4 py-2 bg-gray-200 rounded-md">Cerrar</button><button onClick={() => window.print()} className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-md"><PrinterIcon className="h-5 w-5" />Imprimir / PDF</button></div></header><div className="overflow-y-auto"><PrintableMicroPlan plan={printingPlan} teacher={users.find(u => u.id === printingPlan.teacherId)} reviewer={users.find(u => u.id === printingPlan.reviewerId)} subject={subjects.find(s => s.id === printingPlan.subjectId)} studentClass={classes.find(c => c.id === printingPlan.classId)} students={institutionStudents} institution={institution} dcds={dcds}/></div></div></div>}
             
             {isAiAssistantOpen && currentUser && (
                 <LessonPlanAssistant 
@@ -527,8 +532,8 @@ const CurricularPlanningPage: React.FC<CurricularPlanningPageProps> = ({ microPl
                     onClose={() => setIsAiAssistantOpen(false)}
                     currentUser={currentUser}
                     microPlans={microPlans}
-                    subjects={subjects}
-                    classes={classes}
+                    subjects={institutionSubjects}
+                    classes={institutionClasses}
                     allDcds={dcds}
                     initialPlanId={aiPlanId}
                     onSaveToRepository={() => {

@@ -7,6 +7,7 @@ import AttendancePage from '../../pages/AttendancePage';
 import ActivitiesPage from '../../pages/ActivitiesPage';
 import ReportsPage from '../../pages/ReportsPage';
 import ManagePage from '../../pages/ManagePage';
+import HRISDashboard from '../management/HRISDashboard';
 import DecePage from '../../pages/DecePage';
 import HealthPage from '../../pages/HealthPage';
 // FIX: Added Role to imports to resolve "Cannot find name 'Role'" error
@@ -32,6 +33,8 @@ import { MOCK_RUBRICS } from '../../constants';
 type Page = 'dashboard' | 'attendance' | 'activities' | 'reports' | 'manage' | 'dece' | 'health' | 'students' | 'communications' | 'schedule' | 'inspection' | 'citaciones' | 'leccionario' | 'curricular_planning' | 'curriculum_repository' | 'gradebook' | 'vicerrector_dashboard' | 'reinforcement' | 'teacher_training' | 'resource_bank' | 'juntas'; 
 
 interface DashboardLayoutProps {
+  absenceRequests: any[];
+  onUpdateAbsenceRequests: (r: any[]) => void;
   users: User[];
   classes: Class[];
   students: Student[];
@@ -146,7 +149,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = (props) => {
   const renderContent = () => {
     switch (currentPage) {
         case 'dashboard':
-          return <DashboardPage 
+          return <DashboardPage absenceRequests={props.absenceRequests} onUpdateAbsenceRequests={props.onUpdateAbsenceRequests} 
               {...restProps} 
               schedule={schedule} 
               classes={classes} 
@@ -161,6 +164,8 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = (props) => {
               cronogramaEvents={cronogramaEvents || []}
               onUpdateCronogramaEvents={onUpdateCronogramaEvents || (() => {})}
           />;
+        case 'hris':
+          return <HRISDashboard users={users} staffAttendanceRecords={staffAttendanceRecords} />;
         case 'manage':
           return <ManagePage 
             {...restProps}
@@ -290,7 +295,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = (props) => {
                 'health': <HealthPage {...restProps} users={users} classes={classes} schedule={schedule} subjects={subjects} timeSlots={timeSlots} students={students} onUpdateStudents={restProps.onUpdateStudents} viccInterventions={restProps.viccInterventions} onUpdateViccInterventions={restProps.onUpdateViccInterventions} />,
                 'students': <StudentManagementPage {...restProps} users={users} classes={classes} schedule={schedule} subjects={subjects} timeSlots={timeSlots} rooms={restProps.rooms} timetables={restProps.timetables} students={students} onUpdateStudents={restProps.onUpdateStudents} />,
                 'schedule': <SchedulePage {...restProps} schedule={schedule} subjects={subjects} timeSlots={timeSlots} users={users} classes={classes} students={students} />,
-                'inspection': <InspectionPage 
+                'inspection': <InspectionPage absenceRequests={props.absenceRequests} onUpdateAbsenceRequests={props.onUpdateAbsenceRequests} 
                     {...restProps} 
                     classes={classes} 
                     users={users} 
@@ -305,7 +310,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = (props) => {
                 'curricular_planning': <CurricularPlanningPage microPlans={microPlans} onUpdateMicroPlans={onUpdateMicroPlans} classes={classes} subjects={subjects} students={students} users={users} dcds={dcds} evaluationCriteria={restProps.evaluationCriteria} evaluationIndicators={restProps.evaluationIndicators} />,
                 'gradebook': <GradebookPage gradebooks={gradebooks} onUpdateGradebooks={restProps.onUpdateGradebooks} classes={classes} subjects={subjects} students={students} users={users} schedule={schedule} activities={restProps.activities} />,
             };
-            return AllOtherPages[currentPage] || <DashboardPage {...restProps} schedule={schedule} classes={classes} subjects={subjects} timeSlots={timeSlots} rooms={restProps.rooms} timetables={restProps.timetables} users={users} onNavigate={setCurrentPage} students={students} formalRequests={formalRequests} />;
+            return AllOtherPages[currentPage] || <DashboardPage absenceRequests={props.absenceRequests} onUpdateAbsenceRequests={props.onUpdateAbsenceRequests} {...restProps} schedule={schedule} classes={classes} subjects={subjects} timeSlots={timeSlots} rooms={restProps.rooms} timetables={restProps.timetables} users={users} onNavigate={setCurrentPage} students={students} formalRequests={formalRequests} />;
     }
   };
 

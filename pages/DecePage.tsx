@@ -256,7 +256,7 @@ const DecePage: React.FC<DecePageProps> = ({ students, onUpdateStudents, users, 
 
     const deceRoles = [Role.InstitutionAdmin, Role.JefeDECE, Role.PsicologoEducativo, Role.TrabajadorSocial];
 
-    const referredConflicts = useMemo(() => conflictMediations.filter(c => c.derivedToDece), [conflictMediations]);
+    const referredConflicts = useMemo(() => conflictMediations.filter(c => c.derivedToDece && c.institutionId === user?.institutionId), [conflictMediations]);
 
     if (!user || !deceRoles.includes(user.role)) {
         return (

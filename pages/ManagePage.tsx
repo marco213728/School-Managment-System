@@ -324,7 +324,7 @@ const ManagePage: React.FC<ManagePageProps> = ({
             <div className="bg-white p-6 rounded-xl shadow-md">
                 <h3 className="text-lg font-bold text-slate-800 mb-4">Reporte Administrativo de Asistencia</h3>
                 <StaffAttendanceReport 
-                    records={staffAttendanceRecords}
+                    records={staffAttendanceRecords.filter(r => institutionData.users.some(u => u.id === r.userId))}
                     users={institutionData.users}
                 />
             </div>

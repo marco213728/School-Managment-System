@@ -1128,3 +1128,63 @@ export interface SlotHorarioInfo {
   tipoSlot?: 'clase' | 'tutoria' | 'atencion_padres';
 }
 
+
+export interface JobVacancy {
+    id: string;
+    institutionId: string;
+    title: string;
+    department: string; // 'Académico', 'Administrativo', 'DECE', 'Salud'
+    contractType: string; // 'LOEI', 'LOSEP', 'Código de Trabajo'
+    description: string;
+    requirements: string[];
+    salaryRange: string;
+    status: 'Open' | 'Closed';
+    createdAt: string;
+}
+
+export type CandidateStage = 'Aplicado' | 'Preseleccionado' | 'Prueba Técnica' | 'Entrevista' | 'Referencias' | 'Seleccionado' | 'Descalificado';
+
+export interface Candidate {
+    id: string;
+    vacancyId: string;
+    name: string;
+    email: string;
+    phone: string;
+    cvUrl?: string;
+    stage: CandidateStage;
+    notes?: string;
+    score?: number;
+    referenceCheck?: string;
+    createdAt: string;
+}
+
+export interface PerformanceEvaluation {
+    id: string;
+    institutionId: string;
+    userId: string;
+    evaluatorId: string;
+    year: string;
+    functionalScore: number; // 0-70
+    behavioralScore: number; // 0-30
+    totalScore: number; // 0-100
+    evidenceLinks: string[]; // URLs or document names
+    commitments: string[]; // Structured as "Verb + Object + Condition"
+    status: 'Draft' | 'Submitted' | 'Acknowledged';
+    createdAt: string;
+}
+
+export interface AbsenceRequest {
+    id: string;
+    institutionId: string;
+    docenteTitularId: string;
+    fecha: string;
+    periodo: number;
+    diaSemana: number;
+    classId: string;
+    subjectId: string;
+    instrucciones: string;
+    planificacionUrl?: string;
+    estado: 'Pendiente' | 'Aprobado' | 'Rechazado';
+    docenteReemplazanteId?: string;
+    creadoPorRol: string;
+}

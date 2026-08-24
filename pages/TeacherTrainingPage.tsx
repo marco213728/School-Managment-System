@@ -10,6 +10,8 @@ interface TeacherTrainingPageProps {
 
 const TeacherTrainingPage: React.FC<TeacherTrainingPageProps> = ({ trainingPlans, onUpdateTrainingPlans }) => {
     const { user } = useContext(UserContext);
+    const institution = user?.institutionId;
+    const filteredPlans = trainingPlans.filter(p => p.institutionId === institution);
 
     if (!user) return null;
 
@@ -34,7 +36,7 @@ const TeacherTrainingPage: React.FC<TeacherTrainingPageProps> = ({ trainingPlans
     return (
         <div className="space-y-6">
             <h2 className="text-2xl font-bold text-gray-800">Oferta de Capacitación y Desarrollo Profesional</h2>
-            {trainingPlans.map(plan => (
+            {filteredPlans.map(plan => (
                 <div key={plan.id} className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
                     <h3 className="text-xl font-bold text-primary-700 mb-2">{plan.title}</h3>
                     <p className="text-sm text-gray-600 mb-4">{plan.objectives}</p>
@@ -66,7 +68,7 @@ const TeacherTrainingPage: React.FC<TeacherTrainingPageProps> = ({ trainingPlans
                     </div>
                 </div>
             ))}
-            {trainingPlans.length === 0 && <p className="text-center text-gray-500 py-10">No hay planes de capacitación activos en este momento.</p>}
+            {filteredPlans.length === 0 && <p className="text-center text-gray-500 py-10">No hay planes de capacitación activos en este momento.</p>}
         </div>
     );
 };

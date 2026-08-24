@@ -1,16 +1,20 @@
 
 import React, { useState, useMemo, useContext } from 'react';
-import { AttendanceRecord, Student, Class, ExitPass, Notification, User, DisciplinaryAction, InspectionVisit, ConflictMediation, QualityMetric, DisciplinarySeverity, Gradebook, Subject } from '../types';
+import { AttendanceRecord, Student, Class, ExitPass, Notification, User, DisciplinaryAction, InspectionVisit,
+  AbsenceRequest, ConflictMediation, QualityMetric, DisciplinarySeverity, Gradebook, Subject } from '../types';
 import { UserContext } from '../contexts/UserContext';
 import { MOCK_DISCIPLINARY_ACTIONS, MOCK_INSPECTION_VISITS, MOCK_QUALITY_METRICS } from '../constants';
 import JustificationManagement from '../components/inspection/JustificationManagement';
 import ExitPassManagement from '../components/inspection/ExitPassManagement';
 import { InspectionIcon, AlertTriangleIcon, CheckCircleIcon, UsersIcon, ClipboardListIcon, ChartBarIcon, EditIcon } from '../components/icons/Icons';
+import { InspectorSustituciones } from "../components/inspection/InspectorSustituciones";
 import ProtocolManagement from '../components/inspection/ProtocolManagement';
 import InspectionVisitForm from '../components/inspection/InspectionVisitForm';
 import QualityDashboard from '../components/inspection/QualityDashboard';
 
 interface InspectionPageProps {
+    absenceRequests: AbsenceRequest[];
+    onUpdateAbsenceRequests: (r: AbsenceRequest[]) => void;
     attendanceRecords: AttendanceRecord[];
     onUpdateAttendance: (records: AttendanceRecord[]) => void;
     students: Student[];
@@ -20,6 +24,9 @@ interface InspectionPageProps {
     notifications: Notification[];
     onUpdateNotifications: (notifications: Notification[]) => void;
     users: User[];
+    schedule: ScheduleEntry[];
+    subjects: Subject[];
+    staffAttendanceRecords: StaffAttendanceRecord[];
     conflictMediations?: ConflictMediation[];
     onUpdateConflictMediations?: (conflicts: ConflictMediation[]) => void;
     // New props for Quality Module
@@ -28,14 +35,14 @@ interface InspectionPageProps {
 }
 
 type InspectionView = 'dashboard' | 'justifications' | 'exit_passes';
-type DashboardTab = 'compliance' | 'quality' | 'coexistence';
+type DashboardTab = 'compliance' | 'quality' | 'coexistence' | 'substitutions';
 
 const InspectionPage: React.FC<InspectionPageProps> = (props) => {
     const { 
         attendanceRecords, onUpdateAttendance, students, classes, exitPasses, 
         onUpdateExitPasses, notifications, onUpdateNotifications, users, 
         conflictMediations = [], onUpdateConflictMediations,
-        gradebooks = [], subjects = [] // Defaults
+        gradebooks = [], subjects = [], schedule = [], staffAttendanceRecords = [], absenceRequests = [], onUpdateAbsenceRequests = () => {} // Defaults
     } = props;
 
     const { user: currentUser } = useContext(UserContext);
@@ -50,10 +57,19 @@ const InspectionPage: React.FC<InspectionPageProps> = (props) => {
     const [isVisitFormOpen, setIsVisitFormOpen] = useState(false);
     const [editingVisit, setEditingVisit] = useState<InspectionVisit | null>(null);
 
-    const studentMap = useMemo(() => new Map(students.map(s => [s.id, s.name])), [students]);
+    const institutionStudents = students.filter(s => s.institutionId === currentUser?.institutionId);
+    const institutionClasses = classes.filter(c => c.institutionId === currentUser?.institutionId);
+    const institutionAttendance = attendanceRecords.filter(a => a.institutionId === currentUser?.institutionId);
+    const institutionPasses = exitPasses.filter(e => institutionStudents.some(s => s.id === e.studentId));
+    const institutionConflicts = conflictMediations.filter(c => c.institutionId === currentUser?.institutionId);
+    const institutionUsers = users.filter(u => u.institutionId === currentUser?.institutionId);
+    const institutionVisits = inspectionVisits.filter(v => v.institutionId === currentUser?.institutionId);
+
+    const studentMap = useMemo(() => new Map(institutionStudents.map(s => [s.id, s.name])), [institutionStudents]);
 
     // Handle saving an inspection visit (Create or Update)
-    const handleSaveVisit = (visitData: Omit<InspectionVisit, 'id' | 'institutionId' | 'inspectorId'> & { id?: string }) => {
+    const handleSaveVisit = (visitData: Omit<InspectionVisit,
+  AbsenceRequest, 'id' | 'institutionId' | 'inspectorId'> & { id?: string }) => {
         if (visitData.id) {
             // Edit existing
             setInspectionVisits(prev => prev.map(v => v.id === visitData.id ? { ...v, ...visitData } : v));
@@ -78,20 +94,20 @@ const InspectionPage: React.FC<InspectionPageProps> = (props) => {
 
     if (currentView === 'justifications') {
         return <JustificationManagement 
-            attendanceRecords={attendanceRecords}
+            attendanceRecords={institutionAttendance}
             onUpdateAttendance={onUpdateAttendance}
-            students={students}
-            classes={classes}
+            students={institutionStudents}
+            classes={institutionClasses}
             onBack={() => setCurrentView('dashboard')}
         />;
     }
 
     if (currentView === 'exit_passes') {
         return <ExitPassManagement
-            exitPasses={exitPasses}
+            exitPasses={institutionPasses}
             onUpdateExitPasses={onUpdateExitPasses}
-            students={students}
-            users={users}
+            students={institutionStudents}
+            users={institutionUsers}
             notifications={notifications}
             onUpdateNotifications={onUpdateNotifications}
             onBack={() => setCurrentView('dashboard')}
@@ -132,7 +148,7 @@ const InspectionPage: React.FC<InspectionPageProps> = (props) => {
                         </button>
                     </div>
                     <div className="space-y-2 max-h-64 overflow-y-auto">
-                        {inspectionVisits.length > 0 ? inspectionVisits.map(visit => (
+                        {inspectionVisits.length > 0 ? institutionVisits.map(visit => (
                             <div key={visit.id} className="p-3 border rounded-lg text-sm group hover:border-purple-300 transition-colors relative">
                                 <div className="flex justify-between font-semibold text-gray-700">
                                     <span>{visit.target}</span>
@@ -213,7 +229,7 @@ const InspectionPage: React.FC<InspectionPageProps> = (props) => {
         <div className="space-y-6 animate-fade-in">
             
             {/* New Protocol Management Component */}
-            <ProtocolManagement students={students} users={users} />
+            <ProtocolManagement students={institutionStudents} users={institutionUsers} />
 
             <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
                 <div className="flex justify-between items-center mb-4">
@@ -321,6 +337,12 @@ const InspectionPage: React.FC<InspectionPageProps> = (props) => {
                         <div className="flex items-center gap-2"><ChartBarIcon className="h-5 w-5"/> Evaluación y Calidad</div>
                     </button>
                     <button
+                        onClick={() => setActiveTab('substitutions')}
+                        className={`whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm transition-colors ${activeTab === 'substitutions' ? 'border-primary-600 text-primary-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}
+                    >
+                        <div className="flex items-center gap-2"><ClipboardListIcon className="h-5 w-5"/> Sustituciones y Ausentismo</div>
+                    </button>
+                    <button
                         onClick={() => setActiveTab('coexistence')}
                         className={`whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm transition-colors ${activeTab === 'coexistence' ? 'border-primary-600 text-primary-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}
                     >
@@ -336,16 +358,17 @@ const InspectionPage: React.FC<InspectionPageProps> = (props) => {
                 <div className="animate-fade-in">
                     <QualityDashboard 
                         gradebooks={gradebooks}
-                        attendanceRecords={attendanceRecords}
-                        students={students}
+                        attendanceRecords={institutionAttendance}
+                        students={institutionStudents}
                         subjects={subjects}
-                        classes={classes}
-                        users={users}
+                        classes={institutionClasses}
+                        users={institutionUsers}
                     />
                 </div>
             )}
             
             {activeTab === 'coexistence' && renderCoexistenceTab()}
+            {activeTab === 'substitutions' && <InspectorSustituciones users={institutionUsers} schedule={schedule} classes={institutionClasses} subjects={subjects} staffAttendanceRecords={staffAttendanceRecords} />}
 
             {isVisitFormOpen && (
                 <InspectionVisitForm

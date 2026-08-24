@@ -46,6 +46,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentPage, setCurrentPage, isSideba
     ],
     [Role.InstitutionAdmin]: [
       ...commonLinks,
+      { page: 'hris', icon: <UsersIcon className="h-6 w-6" />, text: 'Talento Humano' },
       { page: 'students', icon: <UsersIcon className="h-6 w-6" />, text: 'Alumnos' },
       { page: 'attendance', icon: <AttendanceIcon className="h-6 w-6" />, text: 'Asistencia General' },
       { page: 'reports', icon: <ReportIcon className="h-6 w-6" />, text: 'Informes' },
@@ -97,7 +98,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentPage, setCurrentPage, isSideba
         { page: 'communications', icon: <ChatBubbleIcon className="h-6 w-6" />, text: 'Comunicaciones' }
     ],
     [Role.InspectorGeneral]: [ ...commonLinks, { page: 'inspection', icon: <InspectionIcon className="h-6 w-6" />, text: 'Inspección' }, { page: 'manage', icon: <ManageIcon className="h-6 w-6" />, text: 'Gestión Centro' }],
-    [Role.Rector]: [ { page: 'dashboard', icon: <DashboardIcon className="h-6 w-6" />, text: 'Dashboard' }, { page: 'manage', icon: <ManageIcon className="h-6 w-6" />, text: 'Gestión Centro' }],
+    [Role.Rector]: [ { page: 'dashboard', icon: <DashboardIcon className="h-6 w-6" />, text: 'Dashboard' }, { page: 'hris', icon: <UsersIcon className="h-6 w-6" />, text: 'Talento Humano' }, { page: 'manage', icon: <ManageIcon className="h-6 w-6" />, text: 'Gestión Centro' }],
   };
 
   const links = user ? roleLinks[user.role] || [] : [];

@@ -137,10 +137,10 @@ const CommunicationsPage: React.FC<CommunicationsPageProps> = (props) => {
         if (!user) return [];
         if (isAdmin) {
             // Admins see requests sent TO them or BY them
-            return props.formalRequests.filter(r => r.recipientRole === user.role || r.requesterId === user.id);
+            return props.formalRequests.filter(r => r.institutionId === user?.institutionId).filter(r => r.recipientRole === user.role || r.requesterId === user.id);
         }
         // Teachers/Staff see only their own requests
-        return props.formalRequests.filter(r => r.requesterId === user.id);
+        return props.formalRequests.filter(r => r.institutionId === user?.institutionId).filter(r => r.requesterId === user.id);
     }, [props.formalRequests, user, isAdmin]);
 
     const handleSaveRequest = (reqData: any) => {

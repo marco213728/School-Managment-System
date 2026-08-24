@@ -67,6 +67,7 @@ export default function App() {
   const [rubrics, setRubrics] = useState<Rubric[]>(MOCK_RUBRICS || []);
   const [conflictMediations, setConflictMediations] = useState<ConflictMediation[]>(MOCK_CONFLICT_MEDIATIONS || []);
   const [cronogramaEvents, setCronogramaEvents] = useState<CronogramaEvent[]>(MOCK_CRONOGRAMA_EVENTS || []);
+  const [absenceRequests, setAbsenceRequests] = useState<any[]>([]);
 
   const handleLogin = (email: string, password: string): boolean => {
     const user = users.find(u => u.email.toLowerCase() === email.toLowerCase());
@@ -298,6 +299,8 @@ export default function App() {
             onUpdateConflictMediations={handleUpdateConflictMediations}
             cronogramaEvents={cronogramaEvents}
             onUpdateCronogramaEvents={handleUpdateCronogramaEvents}
+            absenceRequests={absenceRequests}
+            onUpdateAbsenceRequests={setAbsenceRequests}
 
             onUpdateUsers={handleUpdateUsers}
             onUpdateClasses={handleUpdateClasses}

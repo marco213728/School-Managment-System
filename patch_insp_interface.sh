@@ -1,0 +1,2 @@
+sed -i 's/interface InspectionPageProps {/interface InspectionPageProps {\n    absenceRequests: AbsenceRequest\[\];\n    onUpdateAbsenceRequests: (r: AbsenceRequest\[\]) => void;/g' pages/InspectionPage.tsx
+sed -i 's/        gradebooks = \[\], subjects = \[\], schedule = \[\], staffAttendanceRecords = \[\] \/\/ Defaults/        gradebooks = \[\], subjects = \[\], schedule = \[\], staffAttendanceRecords = \[\], absenceRequests, onUpdateAbsenceRequests \/\/ Defaults/g' pages/InspectionPage.tsx

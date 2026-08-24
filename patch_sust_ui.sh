@@ -1,0 +1,2 @@
+sed -i 's/const \[ausencias, setAusencias\] = useState<AusenciaReportada\[\]>(\[\]);/const \[ausencias, setAusencias\] = useState<AusenciaReportada\[\]>(\[\]);\n  const \[isFormOpen, setIsFormOpen\] = useState(false);\n  const \[formData, setFormData\] = useState({\n      docenteTitularId: "",\n      fecha: new Date().toISOString().split('\''T'\'')\[0\],\n      periodo: 1,\n      classId: "",\n      subjectId: "",\n      instrucciones: "",\n      planificacionUrl: ""\n  });/g' components/inspection/InspectorSustituciones.tsx
+

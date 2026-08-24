@@ -36,6 +36,18 @@ interface VicerrectoradoPageProps {
 
 const VicerrectoradoPage: React.FC<VicerrectoradoPageProps> = ({ microPlans, viccInterventions, gradebooks, users, subjects, classes, students, onNavigate, notifications, onUpdateNotifications, reinforcementPlans = [], onUpdateReinforcementPlans, trainingPlans = [], onUpdateTrainingPlans, institutionalDocuments, onUpdateDocuments, meetingRecords, onUpdateMeetings }) => {
     const { user } = useContext(UserContext);
+    const institution = user?.institutionId;
+    const filteredUsers = users.filter(u => u.institutionId === institution);
+    const filteredStudents = students.filter(s => s.institutionId === institution);
+    const filteredClasses = classes.filter(c => c.institutionId === institution);
+    const filteredSubjects = subjects.filter(s => s.institutionId === institution);
+    const filteredTrainingPlans = trainingPlans.filter(p => p.institutionId === institution);
+    const filteredDocs = institutionalDocuments.filter(d => d.institutionId === institution);
+    const filteredMeetings = meetingRecords.filter(m => m.institutionId === institution);
+    const filteredInterventions = viccInterventions.filter(v => v.institutionId === institution);
+    const filteredMicroPlans = microPlans.filter(m => m.institutionId === institution);
+    const filteredReinforcements = reinforcementPlans.filter(r => r.institutionId === institution);
+    const filteredGradebooks = gradebooks.filter(g => g.institutionId === institution);
     const [activeTab, setActiveTab] = useState<'pedagogical' | 'student_support' | 'institutional'>('pedagogical');
 
     // Mock Data States (only visits is local now, others via props)
@@ -58,7 +70,7 @@ const VicerrectoradoPage: React.FC<VicerrectoradoPageProps> = ({ microPlans, vic
     
     const visitStats = useMemo(() => {
         const uniqueTeachers = new Set(completedVisits.map(v => v.teacherId)).size;
-        const totalTeachers = users.filter(u => u.role === Role.Teacher).length;
+        const totalTeachers = filteredUsers.filter(u => u.role === Role.Teacher).length;
         const avgRating = completedVisits.length > 0 
             ? (completedVisits.reduce((acc, curr) => acc + (curr.rating || 0), 0) / completedVisits.length).toFixed(2) 
             : '0.00';
@@ -75,7 +87,7 @@ const VicerrectoradoPage: React.FC<VicerrectoradoPageProps> = ({ microPlans, vic
         } else {
             setVisits([...visits, visit]);
             if (notifications && onUpdateNotifications && visit.status === 'Scheduled') {
-                const teacher = users.find(u => u.id === visit.teacherId);
+                const teacher = filteredUsers.find(u => u.id === visit.teacherId);
                 if (teacher) {
                     const newNotification: Notification = {
                         id: `notif-visit-${Date.now()}`,
@@ -168,7 +180,7 @@ const VicerrectoradoPage: React.FC<VicerrectoradoPageProps> = ({ microPlans, vic
                         {scheduledVisits.map(v => (
                              <div key={v.id} className="flex justify-between items-center p-3 border rounded-lg hover:bg-gray-50 transition-colors">
                                 <div>
-                                    <p className="font-bold text-sm text-gray-800">{users.find(u => u.id === v.teacherId)?.name} <span className="font-normal text-gray-500 text-xs">({v.className})</span></p>
+                                    <p className="font-bold text-sm text-gray-800">{filteredUsers.find(u => u.id === v.teacherId)?.name} <span className="font-normal text-gray-500 text-xs">({v.className})</span></p>
                                     <p className="text-xs text-gray-500">{new Date(v.date).toLocaleDateString()} - {v.startTime} • {v.focus}</p>
                                 </div>
                                 <div className="flex gap-2">
@@ -204,7 +216,7 @@ const VicerrectoradoPage: React.FC<VicerrectoradoPageProps> = ({ microPlans, vic
                                         {completedVisits.slice(0, 4).map(visit => (
                                             <tr key={visit.id} className="hover:bg-gray-50">
                                                 <td className="p-2">{new Date(visit.date).toLocaleDateString()}</td>
-                                                <td className="p-2">{users.find(u => u.id === visit.teacherId)?.name.split(' ')[1]}</td>
+                                                <td className="p-2">{filteredUsers.find(u => u.id === visit.teacherId)?.name.split(' ')[1]}</td>
                                                 <td className="p-2 text-center">
                                                     <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-bold ${visit.rating! >= 3.5 ? 'bg-green-100 text-green-800' : visit.rating! >= 2.5 ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'}`}>
                                                         {visit.rating}
@@ -275,10 +287,10 @@ const VicerrectoradoPage: React.FC<VicerrectoradoPageProps> = ({ microPlans, vic
                 </h3>
                 <ReinforcementList
                     plans={reinforcementPlans}
-                    students={students}
-                    teachers={users.filter(u => u.role === Role.Teacher)}
-                    subjects={subjects}
-                    classes={classes}
+                    students={filteredStudents}
+                    teachers={filteredUsers.filter(u => u.role === Role.Teacher)}
+                    subjects={filteredSubjects}
+                    classes={filteredClasses}
                     onCreate={() => { setEditingReinforcementPlan(null); setIsReinforcementFormOpen(true); }}
                     onEdit={(plan) => { setEditingReinforcementPlan(plan); setIsReinforcementFormOpen(true); }}
                 />
@@ -297,7 +309,7 @@ const VicerrectoradoPage: React.FC<VicerrectoradoPageProps> = ({ microPlans, vic
                         {viccInterventions.slice(0, 3).map(int => (
                             <div key={int.id} className="p-3 bg-indigo-50 rounded-lg border border-indigo-100 text-sm">
                                 <p className="font-bold text-indigo-900">{int.type}</p>
-                                <p className="text-indigo-700">{students.find(s => s.id === int.studentId)?.name}</p>
+                                <p className="text-indigo-700">{filteredStudents.find(s => s.id === int.studentId)?.name}</p>
                             </div>
                         ))}
                     </div>
@@ -311,13 +323,13 @@ const VicerrectoradoPage: React.FC<VicerrectoradoPageProps> = ({ microPlans, vic
             {/* Junta Manager Component */}
             <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
                 <JuntaManager 
-                    classes={classes}
-                    subjects={subjects}
-                    users={users}
-                    students={students}
-                    gradebooks={gradebooks}
-                    microPlans={microPlans}
-                    reinforcementPlans={reinforcementPlans}
+                    classes={filteredClasses}
+                    subjects={filteredSubjects}
+                    users={filteredUsers}
+                    students={filteredStudents}
+                    gradebooks={filteredGradebooks}
+                    microPlans={filteredMicroPlans}
+                    reinforcementPlans={filteredReinforcements}
                 />
             </div>
 
@@ -332,7 +344,7 @@ const VicerrectoradoPage: React.FC<VicerrectoradoPageProps> = ({ microPlans, vic
                 <MeetingManager 
                     meetings={meetingRecords} 
                     onUpdateMeetings={onUpdateMeetings}
-                    users={users}
+                    users={filteredUsers}
                 />
             </div>
         </div>
@@ -365,9 +377,9 @@ const VicerrectoradoPage: React.FC<VicerrectoradoPageProps> = ({ microPlans, vic
                     onClose={() => setIsVisitFormOpen(false)}
                     onSave={handleSaveVisit}
                     visitToEdit={editingVisit}
-                    teachers={users.filter(u => u.role === Role.Teacher)}
-                    classes={classes}
-                    subjects={subjects}
+                    teachers={filteredUsers.filter(u => u.role === Role.Teacher)}
+                    classes={filteredClasses}
+                    subjects={filteredSubjects}
                     currentUser={user}
                 />
             )}
@@ -378,10 +390,10 @@ const VicerrectoradoPage: React.FC<VicerrectoradoPageProps> = ({ microPlans, vic
                     onClose={() => setIsReinforcementFormOpen(false)}
                     onSave={handleSaveReinforcement}
                     planToEdit={editingReinforcementPlan}
-                    students={students}
-                    teachers={users.filter(u => u.role === Role.Teacher)}
-                    subjects={subjects}
-                    classes={classes}
+                    students={filteredStudents}
+                    teachers={filteredUsers.filter(u => u.role === Role.Teacher)}
+                    subjects={filteredSubjects}
+                    classes={filteredClasses}
                     currentUser={user}
                 />
             )}
@@ -401,8 +413,8 @@ const VicerrectoradoPage: React.FC<VicerrectoradoPageProps> = ({ microPlans, vic
                         <div className="overflow-y-auto bg-gray-100 p-4">
                             <ClassroomVisitPrintable 
                                 visit={printingVisit}
-                                teacher={users.find(u => u.id === printingVisit.teacherId)!}
-                                observer={users.find(u => u.id === printingVisit.observerId)!}
+                                teacher={filteredUsers.find(u => u.id === printingVisit.teacherId)!}
+                                observer={filteredUsers.find(u => u.id === printingVisit.observerId)!}
                             />
                         </div>
                     </div>
@@ -412,7 +424,7 @@ const VicerrectoradoPage: React.FC<VicerrectoradoPageProps> = ({ microPlans, vic
             {isTrainingManagerOpen && (
                 <TrainingPlanManager
                     plans={trainingPlans}
-                    users={users}
+                    users={filteredUsers}
                     onUpdatePlans={onUpdateTrainingPlans} // FIX: Correct prop
                     onClose={() => setIsTrainingManagerOpen(false)}
                 />

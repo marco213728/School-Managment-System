@@ -1,0 +1,2 @@
+sed -i 's/interface TeacherDashboardProps {/interface TeacherDashboardProps {\n    absenceRequests?: any\[\];\n    onUpdateAbsenceRequests?: (r: any\[\]) => void;/g' pages/DashboardPage.tsx
+sed -i 's/const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ schedule/const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ absenceRequests, onUpdateAbsenceRequests, schedule/g' pages/DashboardPage.tsx
