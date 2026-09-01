@@ -5,11 +5,12 @@ import { MotorOptimizadorHorarios } from "./lib/scheduler";
 
 async function startServer() {
   const app = express();
-  const PORT = process.env.PORT || 3000;
+
+  // IMPORTANTE PARA FIREBASE APP HOSTING
+  const PORT = Number(process.env.PORT) || 8080;
 
   app.use(express.json());
 
-  // API endpoint para inicializar el algoritmo asíncronamente
   app.post("/api/v1/horarios/generar", (req, res) => {
     const { docentes, paralelos, aulas, asignaturas } = req.body;
 
@@ -37,18 +38,15 @@ async function startServer() {
     });
   });
 
-  // Validador de Identidad y Auditoría de Carga Laboral GETH
   app.post("/api/v1/staff/validate-characterization", (req, res) => {
     const data = req.body;
 
     const {
       cedula,
       enPeriodoLactancia,
-      tieneLimitacionMovilidad,
       horasMaximasPermitidas,
     } = data;
 
-    // Validación de cédula ecuatoriana
     if (!cedula || cedula.length !== 10 || isNaN(Number(cedula))) {
       return res.status(400).json({
         error:
@@ -73,7 +71,6 @@ async function startServer() {
     }
 
     const decimo = parseInt(cedula[9], 10);
-
     const digitoVerificador =
       suma % 10 === 0 ? 0 : 10 - (suma % 10);
 
@@ -84,7 +81,6 @@ async function startServer() {
       });
     }
 
-    // Regulación de carga horaria
     let horasClaseDirectaMax = horasMaximasPermitidas || 25;
 
     if (enPeriodoLactancia) {
@@ -105,7 +101,6 @@ async function startServer() {
     });
   });
 
-  // Modo desarrollo
   if (process.env.NODE_ENV !== "production") {
     const vite = await createViteServer({
       server: {
@@ -126,8 +121,11 @@ async function startServer() {
   }
 
   app.listen(PORT, "0.0.0.0", () => {
-    console.log(`Server running on http://localhost:${PORT}`);
+    console.log(`Server running on port ${PORT}`);
   });
 }
 
-startServer();
+startServer().catch((error) => {
+  console.error("Error starting server:", error);
+  process.exit(1);
+});
