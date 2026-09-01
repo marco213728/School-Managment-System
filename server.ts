@@ -5,7 +5,9 @@ import { MotorOptimizadorHorarios } from "./lib/scheduler";
 
 async function startServer() {
   const app = express();
-  const PORT = 3000;
+
+  // MODIFICACIÓN: Lee el puerto dinámico de App Hosting o usa 3000 de forma local.
+  const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
 
   app.use(express.json());
 
@@ -13,15 +15,13 @@ async function startServer() {
   app.post("/api/v1/horarios/generar", (req, res) => {
     const { docentes, paralelos, aulas, asignaturas } = req.body;
     
-    // Aquí es donde en una arquitectura real se usaría Celery o un Worker.
-    // Para simplificar, lo ejecutamos asíncronamente en el background
-    // sin bloquear la respuesta de la petición.
+    // NOTA: Recuerda que en Cloud Run la CPU se suspende tras responder.
+    // Si la optimización tarda más de unos segundos, se pausará a mitad de camino.
     setTimeout(() => {
       console.log("Iniciando optimización de horarios...");
       const motor = new MotorOptimizadorHorarios(docentes, paralelos, aulas, asignaturas);
       const resultado = motor.resolver();
       console.log("Optimización terminada. Fitness:", resultado.fitness_score);
-      // En una implementación completa esto guardaría en BD y notificaría.
     }, 100);
 
     // Responder inmediatamente para no bloquear
@@ -55,13 +55,10 @@ async function startServer() {
     }
 
     // 2. Regulación de Carga por Lactancia
-    let horasClaseDirectaMax = horasMaximasPermitidas || 25; // Default 25
+    let horasClaseDirectaMax = horasMaximasPermitidas || 25;
     if (enPeriodoLactancia) {
-      horasClaseDirectaMax = Math.min(horasClaseDirectaMax, 20); // GETH: Max 20h para lactancia
+      horasClaseDirectaMax = Math.min(horasClaseDirectaMax, 20);
     }
-
-    // 3. (Mock) Auditoría Física de Accesibilidad se realiza durante la generación, 
-    // pero guardamos el flag para bloquear asignaciones de piso > 1 sin ascensor.
 
     res.json({
       success: true,
@@ -88,8 +85,9 @@ async function startServer() {
     });
   }
 
+  // MODIFICACIÓN: Escucha en el PORT de la variable de entorno en producción
   app.listen(PORT, "0.0.0.0", () => {
-    console.log(`Server running on http://localhost:${PORT}`);
+    console.log(`Server running on port ${PORT}`);
   });
 }
 
