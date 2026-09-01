@@ -5,59 +5,93 @@ import { MotorOptimizadorHorarios } from "./lib/scheduler";
 
 async function startServer() {
   const app = express();
-
-  // MODIFICACIÓN: Lee el puerto dinámico de App Hosting o usa 3000 de forma local.
-  const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
+  const PORT = process.env.PORT || 3000;
 
   app.use(express.json());
 
   // API endpoint para inicializar el algoritmo asíncronamente
   app.post("/api/v1/horarios/generar", (req, res) => {
     const { docentes, paralelos, aulas, asignaturas } = req.body;
-    
-    // NOTA: Recuerda que en Cloud Run la CPU se suspende tras responder.
-    // Si la optimización tarda más de unos segundos, se pausará a mitad de camino.
+
     setTimeout(() => {
       console.log("Iniciando optimización de horarios...");
-      const motor = new MotorOptimizadorHorarios(docentes, paralelos, aulas, asignaturas);
+
+      const motor = new MotorOptimizadorHorarios(
+        docentes,
+        paralelos,
+        aulas,
+        asignaturas
+      );
+
       const resultado = motor.resolver();
-      console.log("Optimización terminada. Fitness:", resultado.fitness_score);
+
+      console.log(
+        "Optimización terminada. Fitness:",
+        resultado.fitness_score
+      );
     }, 100);
 
-    // Responder inmediatamente para no bloquear
-    res.json({ status: "Procesando", message: "La generación de horarios ha comenzado en segundo plano." });
+    res.json({
+      status: "Procesando",
+      message: "La generación de horarios ha comenzado en segundo plano.",
+    });
   });
 
   // Validador de Identidad y Auditoría de Carga Laboral GETH
   app.post("/api/v1/staff/validate-characterization", (req, res) => {
     const data = req.body;
-    const { cedula, enPeriodoLactancia, tieneLimitacionMovilidad, horasMaximasPermitidas } = data;
 
-    // 1. Validador de Cédula Ecuatoriana (Módulo 10)
+    const {
+      cedula,
+      enPeriodoLactancia,
+      tieneLimitacionMovilidad,
+      horasMaximasPermitidas,
+    } = data;
+
+    // Validación de cédula ecuatoriana
     if (!cedula || cedula.length !== 10 || isNaN(Number(cedula))) {
-      return res.status(400).json({ error: "Formato de cédula inválido. Debe tener 10 dígitos numéricos." });
-    }
-    
-    let suma = 0;
-    for (let i = 0; i < 9; i++) {
-        let digito = parseInt(cedula[i], 10);
-        if (i % 2 === 0) {
-            digito *= 2;
-            if (digito > 9) digito -= 9;
-        }
-        suma += digito;
-    }
-    const decimo = parseInt(cedula[9], 10);
-    const digitoVerificador = (suma % 10 === 0) ? 0 : 10 - (suma % 10);
-    
-    if (decimo !== digitoVerificador) {
-      return res.status(400).json({ error: "La cédula ecuatoriana no pasó la validación matemática (Módulo 10)." });
+      return res.status(400).json({
+        error:
+          "Formato de cédula inválido. Debe tener 10 dígitos numéricos.",
+      });
     }
 
-    // 2. Regulación de Carga por Lactancia
+    let suma = 0;
+
+    for (let i = 0; i < 9; i++) {
+      let digito = parseInt(cedula[i], 10);
+
+      if (i % 2 === 0) {
+        digito *= 2;
+
+        if (digito > 9) {
+          digito -= 9;
+        }
+      }
+
+      suma += digito;
+    }
+
+    const decimo = parseInt(cedula[9], 10);
+
+    const digitoVerificador =
+      suma % 10 === 0 ? 0 : 10 - (suma % 10);
+
+    if (decimo !== digitoVerificador) {
+      return res.status(400).json({
+        error:
+          "La cédula ecuatoriana no pasó la validación matemática (Módulo 10).",
+      });
+    }
+
+    // Regulación de carga horaria
     let horasClaseDirectaMax = horasMaximasPermitidas || 25;
+
     if (enPeriodoLactancia) {
-      horasClaseDirectaMax = Math.min(horasClaseDirectaMax, 20);
+      horasClaseDirectaMax = Math.min(
+        horasClaseDirectaMax,
+        20
+      );
     }
 
     res.json({
@@ -66,28 +100,33 @@ async function startServer() {
         ...data,
         horasMaximasPermitidas: horasClaseDirectaMax,
       },
-      message: "Caracterización validada y auditada correctamente por GETH."
+      message:
+        "Caracterización validada y auditada correctamente por GETH.",
     });
   });
 
-  // Vite middleware for development
+  // Modo desarrollo
   if (process.env.NODE_ENV !== "production") {
     const vite = await createViteServer({
-      server: { middlewareMode: true },
+      server: {
+        middlewareMode: true,
+      },
       appType: "spa",
     });
+
     app.use(vite.middlewares);
   } else {
-    const distPath = path.join(process.cwd(), 'dist');
+    const distPath = path.join(process.cwd(), "dist");
+
     app.use(express.static(distPath));
-    app.get('*all', (req, res) => {
-      res.sendFile(path.join(distPath, 'index.html'));
+
+    app.get("*", (_req, res) => {
+      res.sendFile(path.join(distPath, "index.html"));
     });
   }
 
-  // MODIFICACIÓN: Escucha en el PORT de la variable de entorno en producción
   app.listen(PORT, "0.0.0.0", () => {
-    console.log(`Server running on port ${PORT}`);
+    console.log(`Server running on http://localhost:${PORT}`);
   });
 }
 
