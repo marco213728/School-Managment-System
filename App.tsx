@@ -8,7 +8,7 @@ import { UserContext, InstitutionContext } from './contexts/UserContext';
 import SuperAdminPage from './pages/SuperAdminPage';
 import PlatformAdminLayout from './components/layout/PlatformAdminLayout';
 import { AMAUTA_LOGO } from './branding';
-import { auth, googleProvider, db, handleFirestoreError, OperationType } from './lib/firebase';
+import { auth, googleProvider, db, handleFirestoreError, OperationType, saveDocument, deleteDocument, subscribeToCollection } from './lib/firebase';
 import { signInWithPopup, signOut as fbSignOut, onAuthStateChanged } from 'firebase/auth';
 
 // Helper for Geofencing
@@ -158,25 +158,113 @@ export default function App() {
     setCurrentInstitution(null);
   };
 
+  // Listen to Firestore Real-time Collections
+  useEffect(() => {
+    const unsubInstitutions = subscribeToCollection<Institution>('institutions', (items) => {
+      if (items.length > 0) {
+        setInstitutions(items);
+        setCurrentInstitution(prev => prev ? items.find(i => i.id === prev.id) || prev : items[0] || null);
+      }
+    });
+
+    const unsubUsers = subscribeToCollection<User>('users', (items) => {
+      if (items.length > 0) {
+        setUsers(items);
+        setCurrentUser(prev => prev ? items.find(u => u.id === prev.id) || prev : null);
+      }
+    });
+
+    const unsubClasses = subscribeToCollection<Class>('classes', items => items.length > 0 && setClasses(items));
+    const unsubStudents = subscribeToCollection<Student>('students', items => items.length > 0 && setStudents(items));
+    const unsubSubjects = subscribeToCollection<Subject>('subjects', items => items.length > 0 && setSubjects(items));
+    const unsubRooms = subscribeToCollection<Room>('rooms', items => items.length > 0 && setRooms(items));
+    const unsubTimetables = subscribeToCollection<Timetable>('timetables', items => items.length > 0 && setTimetables(items));
+    const unsubNotifications = subscribeToCollection<Notification>('notifications', items => items.length > 0 && setNotifications(items));
+    const unsubFormalRequests = subscribeToCollection<FormalRequest>('formal_requests', items => items.length > 0 && setFormalRequests(items));
+    const unsubStaffAttendance = subscribeToCollection<StaffAttendanceRecord>('staff_attendance', items => items.length > 0 && setStaffAttendanceRecords(items));
+    const unsubDocs = subscribeToCollection<InstitutionalDocument>('institutional_documents', items => items.length > 0 && setInstitutionalDocuments(items));
+    const unsubMeetings = subscribeToCollection<MeetingRecord>('meeting_records', items => items.length > 0 && setMeetingRecords(items));
+
+    return () => {
+      unsubInstitutions();
+      unsubUsers();
+      unsubClasses();
+      unsubStudents();
+      unsubSubjects();
+      unsubRooms();
+      unsubTimetables();
+      unsubNotifications();
+      unsubFormalRequests();
+      unsubStaffAttendance();
+      unsubDocs();
+      unsubMeetings();
+    };
+  }, []);
+
   const handleSetInstitution = (updatedInstitution: Institution) => {
     setInstitutions(prev => prev.map(i => i.id === updatedInstitution.id ? updatedInstitution : i));
     setCurrentInstitution(updatedInstitution);
+    saveDocument('institutions', updatedInstitution.id, updatedInstitution);
   };
 
-  const handleUpdateDocuments = (docs: InstitutionalDocument[]) => setInstitutionalDocuments(docs);
-  const handleUpdateMeetings = (meetings: MeetingRecord[]) => setMeetingRecords(meetings);
-  const handleUpdateUsers = (updatedUsers: User[]) => setUsers(updatedUsers);
-  const handleUpdateClasses = (updatedClasses: Class[]) => setClasses(updatedClasses);
+  const handleUpdateInstitutions = (updatedInstitutions: Institution[]) => {
+    setInstitutions(updatedInstitutions);
+    updatedInstitutions.forEach(i => saveDocument('institutions', i.id, i));
+  };
+
+  const handleUpdateDocuments = (docs: InstitutionalDocument[]) => {
+    setInstitutionalDocuments(docs);
+    docs.forEach(d => saveDocument('institutional_documents', d.id, d));
+  };
+
+  const handleUpdateMeetings = (meetings: MeetingRecord[]) => {
+    setMeetingRecords(meetings);
+    meetings.forEach(m => saveDocument('meeting_records', m.id, m));
+  };
+
+  const handleUpdateUsers = (updatedUsers: User[]) => {
+    setUsers(updatedUsers);
+    updatedUsers.forEach(u => saveDocument('users', u.id, u));
+  };
+
+  const handleUpdateClasses = (updatedClasses: Class[]) => {
+    setClasses(updatedClasses);
+    updatedClasses.forEach(c => saveDocument('classes', c.id, c));
+  };
+
   const handleUpdateSchedule = (updatedSchedule: ScheduleEntry[]) => setSchedule(updatedSchedule);
-  const handleUpdateStudents = (updatedStudents: Student[]) => setStudents(updatedStudents);
-  const handleUpdateNotifications = (updatedNotifications: Notification[]) => setNotifications(updatedNotifications);
+  
+  const handleUpdateStudents = (updatedStudents: Student[]) => {
+    setStudents(updatedStudents);
+    updatedStudents.forEach(s => saveDocument('students', s.id, s));
+  };
+
+  const handleUpdateNotifications = (updatedNotifications: Notification[]) => {
+    setNotifications(updatedNotifications);
+    updatedNotifications.forEach(n => saveDocument('notifications', n.id, n));
+  };
+
   const handleUpdateSupportContacts = (updatedContacts: SupportContact[]) => setSupportContacts(updatedContacts);
   const handleUpdateHealthRecords = (updatedRecords: HealthRecord[]) => setHealthRecords(updatedRecords);
   const handleUpdateMedicalVisits = (updatedVisits: MedicalVisit[]) => setMedicalVisits(updatedVisits);
-  const handleUpdateSubjects = (updatedSubjects: Subject[]) => setSubjects(updatedSubjects);
+  
+  const handleUpdateSubjects = (updatedSubjects: Subject[]) => {
+    setSubjects(updatedSubjects);
+    updatedSubjects.forEach(s => saveDocument('subjects', s.id, s));
+  };
+
   const handleUpdateTimeSlots = (updatedTimeSlots: TimeSlot[]) => setTimeSlots(updatedTimeSlots);
-  const handleUpdateRooms = (updatedRooms: Room[]) => setRooms(updatedRooms);
-  const handleUpdateTimetables = (updatedTimetables: Timetable[]) => setTimetables(updatedTimetables);
+  
+  const handleUpdateRooms = (updatedRooms: Room[]) => {
+    setRooms(updatedRooms);
+    updatedRooms.forEach(r => saveDocument('rooms', r.id, r));
+  };
+
+  const handleUpdateTimetables = (updatedTimetables: Timetable[]) => {
+    setTimetables(updatedTimetables);
+    updatedTimetables.forEach(t => saveDocument('timetables', t.id, t));
+  };
+
   const handleUpdateViccInterventions = (updatedInterventions: ViccIntervention[]) => setViccInterventions(updatedInterventions);
   const handleUpdateAttendance = (updatedRecords: AttendanceRecord[]) => setAttendanceRecords(updatedRecords);
   const handleUpdateExitPasses = (updatedPasses: ExitPass[]) => setExitPasses(updatedPasses);
@@ -190,7 +278,12 @@ export default function App() {
   const handleUpdateGradebooks = (updatedGradebooks: Gradebook[]) => setGradebooks(updatedGradebooks);
   const handleUpdateActivities = (updatedActivities: Activity[]) => setActivities(updatedActivities);
   const handleUpdateReinforcementPlans = (updatedPlans: ReinforcementPlan[]) => setReinforcementPlans(updatedPlans);
-  const handleUpdateFormalRequests = (updatedRequests: FormalRequest[]) => setFormalRequests(updatedRequests);
+  
+  const handleUpdateFormalRequests = (updatedRequests: FormalRequest[]) => {
+    setFormalRequests(updatedRequests);
+    updatedRequests.forEach(r => saveDocument('formal_requests', r.id, r));
+  };
+
   const handleUpdateTrainingPlans = (updatedPlans: TrainingPlan[]) => setTrainingPlans(updatedPlans);
   const handleUpdateRubrics = (newRubrics: Rubric[]) => setRubrics(newRubrics);
   const handleUpdateConflictMediations = (conflicts: ConflictMediation[]) => setConflictMediations(conflicts);
@@ -318,6 +411,7 @@ export default function App() {
           <PlatformAdminLayout>
             <SuperAdminPage 
                 institutions={institutions} 
+                onUpdateInstitutions={handleUpdateInstitutions}
                 users={users}
                 dcds={dcds}
                 evaluationCriteria={evaluationCriteria}

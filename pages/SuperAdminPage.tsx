@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Institution, User, Role, Dcd, EvaluationCriterion, EvaluationIndicator, Subject } from '../types';
 import { PlusIcon, EditIcon, TrashIcon, ChartBarIcon, UsersIcon, SparklesIcon, ClipboardDocumentCheckIcon, ArchiveBoxIcon } from '../components/icons/Icons';
 import InstitutionForm from '../components/management/InstitutionForm';
@@ -7,9 +7,11 @@ import EducationalQualityAudit from '../components/superadmin/EducationalQuality
 import PeiAudit from '../components/superadmin/PeiAudit';
 import ResourceRepositoryPage from './ResourceRepositoryPage';
 import CurriculumRepositoryPage from './CurriculumRepositoryPage';
+import { saveDocument, deleteDocument } from '../lib/firebase';
 
 interface SuperAdminPageProps {
     institutions: Institution[];
+    onUpdateInstitutions?: (institutions: Institution[]) => void;
     users: User[];
     // Estas props deben venir de App.tsx
     dcds: Dcd[];
@@ -23,7 +25,7 @@ interface SuperAdminPageProps {
 
 const SuperAdminPage: React.FC<SuperAdminPageProps> = (props) => {
     const { 
-        institutions: initialInstitutions, users, 
+        institutions: initialInstitutions, onUpdateInstitutions, users, 
         dcds, evaluationCriteria, evaluationIndicators, subjects,
         onUpdateDcds, onUpdateEvaluationCriteria, onUpdateEvaluationIndicators 
     } = props;
@@ -32,6 +34,10 @@ const SuperAdminPage: React.FC<SuperAdminPageProps> = (props) => {
     const [view, setView] = useState<'institutions' | 'quality' | 'resources' | 'pei_audit' | 'curriculum_master'>('institutions');
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingInstitution, setEditingInstitution] = useState<Institution | null>(null);
+
+    useEffect(() => {
+        setInstitutions(initialInstitutions);
+    }, [initialInstitutions]);
 
     const handleAddNew = () => {
         setEditingInstitution(null);
@@ -43,28 +49,34 @@ const SuperAdminPage: React.FC<SuperAdminPageProps> = (props) => {
         setIsModalOpen(true);
     };
 
-    const handleDelete = (institutionId: string) => {
+    const handleDelete = async (institutionId: string) => {
         if (window.confirm('¿Está seguro de que desea eliminar esta institución? Esta acción no se puede deshacer.')) {
-            setInstitutions(prev => prev.filter(inst => inst.id !== institutionId));
+            const updated = institutions.filter(inst => inst.id !== institutionId);
+            setInstitutions(updated);
+            if (onUpdateInstitutions) onUpdateInstitutions(updated);
+            await deleteDocument('institutions', institutionId);
         }
     };
 
-    const handleSave = (institutionData: Omit<Institution, 'id'> & { id?: string }) => {
+    const handleSave = async (institutionData: Omit<Institution, 'id'> & { id?: string }) => {
+        let savedInst: Institution;
+        let updatedList: Institution[];
         if (institutionData.id) {
-            setInstitutions(prev => prev.map(inst => 
-                inst.id === institutionData.id 
-                ? { ...inst, ...institutionData } as Institution 
-                : inst
-            ));
+            const prevInst = institutions.find(inst => inst.id === institutionData.id);
+            savedInst = { ...prevInst, ...institutionData } as Institution;
+            updatedList = institutions.map(inst => inst.id === institutionData.id ? savedInst : inst);
         } else {
-            const newInstitution: Institution = {
+            savedInst = {
                 ...institutionData,
-                id: `inst-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+                id: `inst-${Date.now()}-${Math.random().toString(36).substr(2, 7)}`,
                 logoUrl: institutionData.logoUrl || 'https://placehold.co/150x150/cccccc/333333?text=Logo',
                 activeModules: institutionData.activeModules || { dece: false, health: false },
             } as Institution;
-            setInstitutions(prev => [...prev, newInstitution]);
+            updatedList = [...institutions, savedInst];
         }
+        setInstitutions(updatedList);
+        if (onUpdateInstitutions) onUpdateInstitutions(updatedList);
+        await saveDocument('institutions', savedInst.id, savedInst);
         setIsModalOpen(false);
     };
 

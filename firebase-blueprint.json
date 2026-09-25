@@ -8,6 +8,7 @@
         "id": { "type": "string", "maxLength": 128 },
         "name": { "type": "string", "maxLength": 200 },
         "code": { "type": "string", "maxLength": 50 },
+        "codeAMIE": { "type": "string", "maxLength": 50 },
         "address": { "type": "string", "maxLength": 300 },
         "phone": { "type": "string", "maxLength": 50 },
         "email": { "type": "string", "maxLength": 100 },
@@ -28,6 +29,28 @@
         "cedula": { "type": "string", "maxLength": 20 }
       },
       "required": ["id", "email", "name", "role"]
+    },
+    "Class": {
+      "title": "Class",
+      "description": "Class or grade level group",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "name": { "type": "string", "maxLength": 100 },
+        "institutionId": { "type": "string", "maxLength": 128 }
+      },
+      "required": ["id", "name"]
+    },
+    "Student": {
+      "title": "Student",
+      "description": "Student profile",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "name": { "type": "string", "maxLength": 150 },
+        "institutionId": { "type": "string", "maxLength": 128 }
+      },
+      "required": ["id", "name"]
     },
     "Notification": {
       "title": "Notification",
@@ -72,6 +95,15 @@
       },
       "required": ["id", "userId", "type", "status"]
     },
+    "GenericDocument": {
+      "title": "GenericDocument",
+      "description": "Institutional records and academic plans",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 }
+      },
+      "required": ["id"]
+    },
     "TestDoc": {
       "title": "TestDoc",
       "description": "Test connectivity document",
@@ -91,6 +123,26 @@
       "schema": "UserProfile",
       "description": "User profiles"
     },
+    "/classes/{classId}": {
+      "schema": "Class",
+      "description": "School classes"
+    },
+    "/students/{studentId}": {
+      "schema": "Student",
+      "description": "Student records"
+    },
+    "/subjects/{subjectId}": {
+      "schema": "GenericDocument",
+      "description": "Academic subjects"
+    },
+    "/timetables/{timetableId}": {
+      "schema": "GenericDocument",
+      "description": "School schedules and timetables"
+    },
+    "/rooms/{roomId}": {
+      "schema": "GenericDocument",
+      "description": "Classrooms and physical spaces"
+    },
     "/notifications/{notificationId}": {
       "schema": "Notification",
       "description": "User alerts and notifications"
@@ -102,6 +154,14 @@
     "/formal_requests/{requestId}": {
       "schema": "FormalRequest",
       "description": "Staff administrative requests"
+    },
+    "/institutional_documents/{docId}": {
+      "schema": "GenericDocument",
+      "description": "Institutional governance documents"
+    },
+    "/meeting_records/{meetingId}": {
+      "schema": "GenericDocument",
+      "description": "Meeting minutes and records"
     },
     "/test/{docId}": {
       "schema": "TestDoc",

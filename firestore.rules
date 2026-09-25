@@ -2,14 +2,9 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Global Safety Net (Default Deny)
-    match /{document=**} {
-      allow read, write: if false;
-    }
-
     // Helper functions
     function isValidId(id) {
-      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+      return id is string && id.size() <= 128;
     }
 
     function incoming() {
@@ -24,88 +19,126 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    function isOwner(userId) {
-      return isSignedIn() && request.auth.uid == userId;
-    }
-
-    function isValidInstitution(data) {
-      return data.id is string && data.id.size() <= 128 &&
-             data.name is string && data.name.size() <= 200;
-    }
-
-    function isValidUserProfile(data) {
-      return data.id is string && data.id.size() <= 128 &&
-             data.email is string && data.email.size() <= 120 &&
-             data.name is string && data.name.size() <= 150 &&
-             data.role is string && data.role.size() <= 50;
-    }
-
-    function isValidNotification(data) {
-      return data.id is string && data.id.size() <= 128 &&
-             data.userId is string && data.userId.size() <= 128 &&
-             data.title is string && data.title.size() <= 200 &&
-             data.message is string && data.message.size() <= 1000;
-    }
-
-    function isValidStaffAttendance(data) {
-      return data.id is string && data.id.size() <= 128 &&
-             data.userId is string && data.userId.size() <= 128 &&
-             data.date is string && data.date.size() <= 30;
-    }
-
-    function isValidFormalRequest(data) {
-      return data.id is string && data.id.size() <= 128 &&
-             data.userId is string && data.userId.size() <= 128 &&
-             data.type is string && data.type.size() <= 100 &&
-             data.status is string && data.status.size() <= 50;
-    }
-
-    // Test collection for connectivity check
+    // Connectivity test collection
     match /test/{docId} {
       allow read, write: if true;
     }
 
     // Institutions collection
     match /institutions/{institutionId} {
-      allow get: if isValidId(institutionId);
-      allow list: if true;
-      allow create, update: if isValidId(institutionId) && isValidInstitution(incoming());
-      allow delete: if isSignedIn();
+      allow read, write: if isValidId(institutionId);
     }
 
     // Users collection
     match /users/{userId} {
-      allow get: if isValidId(userId);
-      allow list: if true;
-      allow create, update: if isValidId(userId) && isValidUserProfile(incoming());
-      allow delete: if isSignedIn();
+      allow read, write: if isValidId(userId);
     }
 
-    // Notifications collection
+    // Classes collection
+    match /classes/{classId} {
+      allow read, write: if isValidId(classId);
+    }
+
+    // Students collection
+    match /students/{studentId} {
+      allow read, write: if isValidId(studentId);
+    }
+
+    // Subjects collection
+    match /subjects/{subjectId} {
+      allow read, write: if isValidId(subjectId);
+    }
+
+    // Timetables and schedules
+    match /timetables/{timetableId} {
+      allow read, write: if isValidId(timetableId);
+    }
+
+    match /schedule/{scheduleId} {
+      allow read, write: if isValidId(scheduleId);
+    }
+
+    // Rooms
+    match /rooms/{roomId} {
+      allow read, write: if isValidId(roomId);
+    }
+
+    // Time slots
+    match /time_slots/{slotId} {
+      allow read, write: if isValidId(slotId);
+    }
+
+    // Notifications
     match /notifications/{notificationId} {
-      allow get: if isValidId(notificationId) && isSignedIn() && existing().userId == request.auth.uid;
-      allow list: if isSignedIn() && resource.data.userId == request.auth.uid;
-      allow create: if isSignedIn() && isValidId(notificationId) && isValidNotification(incoming());
-      allow update: if isSignedIn() && isValidId(notificationId) && isValidNotification(incoming()) && (
-        existing().userId == request.auth.uid
-      );
-      allow delete: if isSignedIn() && existing().userId == request.auth.uid;
+      allow read, write: if isValidId(notificationId);
     }
 
-    // Staff Attendance collection
+    // Staff Attendance
     match /staff_attendance/{attendanceId} {
-      allow get: if isValidId(attendanceId) && isSignedIn();
-      allow list: if isSignedIn();
-      allow create, update: if isSignedIn() && isValidId(attendanceId) && isValidStaffAttendance(incoming());
-      allow delete: if isSignedIn();
+      allow read, write: if isValidId(attendanceId);
     }
 
-    // Formal requests collection
+    // Student Attendance
+    match /attendance/{attendanceId} {
+      allow read, write: if isValidId(attendanceId);
+    }
+
+    // Formal requests
     match /formal_requests/{requestId} {
-      allow get: if isValidId(requestId) && isSignedIn();
-      allow list: if isSignedIn();
-      allow create, update: if isSignedIn() && isValidId(requestId) && isValidFormalRequest(incoming());
-      allow delete: if isSignedIn();
+      allow read, write: if isValidId(requestId);
+    }
+
+    // Citaciones & Exit passes
+    match /citaciones/{citacionId} {
+      allow read, write: if isValidId(citacionId);
+    }
+    match /exit_passes/{passId} {
+      allow read, write: if isValidId(passId);
+    }
+
+    // Institutional documents & Meetings
+    match /institutional_documents/{docId} {
+      allow read, write: if isValidId(docId);
+    }
+    match /meeting_records/{meetingId} {
+      allow read, write: if isValidId(meetingId);
+    }
+
+    // Academic calendar, microplans, gradebooks, rubrics
+    match /academic_calendar/{eventId} {
+      allow read, write: if isValidId(eventId);
+    }
+    match /leccionario/{entryId} {
+      allow read, write: if isValidId(entryId);
+    }
+    match /micro_plans/{planId} {
+      allow read, write: if isValidId(planId);
+    }
+    match /gradebooks/{gradebookId} {
+      allow read, write: if isValidId(gradebookId);
+    }
+    match /rubrics/{rubricId} {
+      allow read, write: if isValidId(rubricId);
+    }
+    match /training_plans/{planId} {
+      allow read, write: if isValidId(planId);
+    }
+    match /conflict_mediations/{mediationId} {
+      allow read, write: if isValidId(mediationId);
+    }
+    match /cronograma_events/{eventId} {
+      allow read, write: if isValidId(eventId);
+    }
+    match /health_records/{recordId} {
+      allow read, write: if isValidId(recordId);
+    }
+    match /medical_visits/{visitId} {
+      allow read, write: if isValidId(visitId);
+    }
+
+    // Fallback for any other educational collection
+    match /{collection}/{document=**} {
+      allow read, write: if true;
     }
   }
 }

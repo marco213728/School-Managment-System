@@ -2,10 +2,15 @@ import { initializeApp } from 'firebase/app';
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
 import { 
   getFirestore, doc, getDocFromServer, collection, getDocs, setDoc, getDoc,
-  query, where, onSnapshot 
+  deleteDoc, onSnapshot, writeBatch, Unsubscribe
 } from 'firebase/firestore';
 import firebaseConfig from '../firebase-applet-config.json';
-import { MOCK_INSTITUTIONS, MOCK_USERS } from '../constants';
+import { 
+  MOCK_INSTITUTIONS, MOCK_USERS, MOCK_CLASSES, MOCK_STUDENTS, 
+  MOCK_SUBJECTS, MOCK_ROOMS, MOCK_TIMETABLES, MOCK_NOTIFICATIONS,
+  MOCK_FORMAL_REQUESTS, MOCK_STAFF_ATTENDANCE, MOCK_INSTITUTIONAL_DOCUMENTS,
+  MOCK_MEETING_RECORDS
+} from '../constants';
 import { Institution, User } from '../types';
 
 const app = initializeApp(firebaseConfig);
@@ -64,10 +69,68 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
   throw new Error(JSON.stringify(errInfo));
 }
 
+// Sanitize payload removing undefined properties (Firestore rejects undefined)
+function cleanPayload<T>(obj: T): any {
+  if (obj === undefined) return null;
+  return JSON.parse(JSON.stringify(obj));
+}
+
+/**
+ * Persist or update a document in Firestore
+ */
+export async function saveDocument(collectionName: string, id: string, data: any): Promise<boolean> {
+  try {
+    const docRef = doc(db, collectionName, id);
+    const sanitized = cleanPayload(data);
+    await setDoc(docRef, sanitized, { merge: true });
+    return true;
+  } catch (error) {
+    console.error(`Error al guardar en Firestore (${collectionName}/${id}):`, error);
+    return false;
+  }
+}
+
+/**
+ * Delete a document from Firestore
+ */
+export async function deleteDocument(collectionName: string, id: string): Promise<boolean> {
+  try {
+    const docRef = doc(db, collectionName, id);
+    await deleteDoc(docRef);
+    return true;
+  } catch (error) {
+    console.error(`Error al eliminar en Firestore (${collectionName}/${id}):`, error);
+    return false;
+  }
+}
+
+/**
+ * Subscribe to real-time changes in a collection
+ */
+export function subscribeToCollection<T extends { id: string }>(
+  collectionName: string, 
+  onUpdate: (items: T[]) => void
+): Unsubscribe {
+  const colRef = collection(db, collectionName);
+  return onSnapshot(colRef, (snapshot) => {
+    if (!snapshot.empty) {
+      const items: T[] = snapshot.docs.map(docSnap => {
+        const data = docSnap.data() as any;
+        return {
+          ...data,
+          id: docSnap.id,
+        } as T;
+      });
+      onUpdate(items);
+    }
+  }, (err) => {
+    console.warn(`Firestore listener warning (${collectionName}):`, err.message);
+  });
+}
+
 // Connectivity test as required by skill
 export async function testConnection(): Promise<boolean> {
   try {
-    // Write and read test document so the collection immediately appears in the Firebase Console
     await setDoc(doc(db, 'test', 'connection'), {
       status: 'active',
       app: 'Amauta',
@@ -87,7 +150,7 @@ export async function testConnection(): Promise<boolean> {
   }
 }
 
-// Seed initial data to Firestore so the user sees the collections in Firebase Console
+// Seed initial data to Firestore so the user sees all collections in Firebase Console
 export async function seedInitialFirestoreData(): Promise<{ institutionsCount: number; usersCount: number }> {
   let instCount = 0;
   let userCount = 0;
@@ -101,36 +164,64 @@ export async function seedInitialFirestoreData(): Promise<{ institutionsCount: n
       seededAt: new Date().toISOString(),
     }, { merge: true });
 
-    // 2. Seed Institutions
+    // 2. Seed Institutions with complete data
     for (const inst of MOCK_INSTITUTIONS) {
-      const instRef = doc(db, 'institutions', inst.id);
-      await setDoc(instRef, {
-        id: inst.id,
-        name: inst.name,
-        code: inst.codeAMIE || '',
-        address: inst.contact?.address || '',
-        phone: inst.contact?.phone || '',
-        email: inst.contact?.email || '',
-        logoUrl: inst.logoUrl || ''
-      }, { merge: true });
+      await saveDocument('institutions', inst.id, inst);
       instCount++;
     }
 
     // 3. Seed Users
     for (const u of MOCK_USERS) {
-      const userRef = doc(db, 'users', u.id);
-      await setDoc(userRef, {
-        id: u.id,
-        email: u.email,
-        name: u.name,
-        role: u.role,
-        institutionId: u.institutionId || '',
-        cedula: u.cedula || ''
-      }, { merge: true });
+      await saveDocument('users', u.id, u);
       userCount++;
     }
 
-    console.log(`Firestore seeded successfully with ${instCount} institutions and ${userCount} users.`);
+    // 4. Seed Classes
+    for (const c of MOCK_CLASSES) {
+      await saveDocument('classes', c.id, c);
+    }
+
+    // 5. Seed Students
+    for (const s of MOCK_STUDENTS) {
+      await saveDocument('students', s.id, s);
+    }
+
+    // 6. Seed Subjects
+    for (const sub of MOCK_SUBJECTS) {
+      await saveDocument('subjects', sub.id, sub);
+    }
+
+    // 7. Seed Rooms
+    for (const r of MOCK_ROOMS) {
+      await saveDocument('rooms', r.id, r);
+    }
+
+    // 8. Seed Timetables
+    for (const t of MOCK_TIMETABLES) {
+      await saveDocument('timetables', t.id, t);
+    }
+
+    // 9. Seed Notifications
+    for (const n of MOCK_NOTIFICATIONS) {
+      await saveDocument('notifications', n.id, n);
+    }
+
+    // 10. Seed Documents
+    for (const d of MOCK_INSTITUTIONAL_DOCUMENTS) {
+      await saveDocument('institutional_documents', d.id, d);
+    }
+
+    // 11. Seed Meetings
+    for (const m of MOCK_MEETING_RECORDS) {
+      await saveDocument('meeting_records', m.id, m);
+    }
+
+    // 12. Seed Formal Requests
+    for (const f of MOCK_FORMAL_REQUESTS) {
+      await saveDocument('formal_requests', f.id, f);
+    }
+
+    console.log(`Firestore seeded successfully with all initial collections.`);
     return { institutionsCount: instCount, usersCount: userCount };
   } catch (error) {
     console.error("Error seeding initial Firestore data:", error);
@@ -138,7 +229,17 @@ export async function seedInitialFirestoreData(): Promise<{ institutionsCount: n
   }
 }
 
-// Automatically test connection and seed on boot
-testConnection().then(() => {
-  seedInitialFirestoreData();
+// Automatically test connection and check if seeding is needed
+testConnection().then(async (connected) => {
+  if (connected) {
+    try {
+      const snap = await getDocs(collection(db, 'institutions'));
+      if (snap.empty) {
+        console.log("Firestore está vacío, sembrando colecciones iniciales...");
+        await seedInitialFirestoreData();
+      }
+    } catch (e) {
+      console.warn("Auto-seed check failed or rules denied:", e);
+    }
+  }
 });
