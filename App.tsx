@@ -184,6 +184,28 @@ export default function App() {
     const unsubStaffAttendance = subscribeToCollection<StaffAttendanceRecord>('staff_attendance', items => items.length > 0 && setStaffAttendanceRecords(items));
     const unsubDocs = subscribeToCollection<InstitutionalDocument>('institutional_documents', items => items.length > 0 && setInstitutionalDocuments(items));
     const unsubMeetings = subscribeToCollection<MeetingRecord>('meeting_records', items => items.length > 0 && setMeetingRecords(items));
+    const unsubAttendance = subscribeToCollection<AttendanceRecord>('attendance', items => items.length > 0 && setAttendanceRecords(items));
+    const unsubExitPasses = subscribeToCollection<ExitPass>('exit_passes', items => items.length > 0 && setExitPasses(items));
+    const unsubCitaciones = subscribeToCollection<Citacion>('citaciones', items => items.length > 0 && setCitaciones(items));
+    const unsubCalendar = subscribeToCollection<AcademicCalendarEvent>('academic_calendar', items => items.length > 0 && setAcademicCalendarEvents(items));
+    const unsubLeccionario = subscribeToCollection<LeccionarioEntry>('leccionario', items => items.length > 0 && setLeccionarioEntries(items));
+    const unsubMicroPlans = subscribeToCollection<MicroPlan>('micro_plans', items => items.length > 0 && setMicroPlans(items));
+    const unsubDcds = subscribeToCollection<Dcd>('dcds', items => items.length > 0 && setDcds(items));
+    const unsubEvalCrit = subscribeToCollection<EvaluationCriterion>('evaluation_criteria', items => items.length > 0 && setEvaluationCriteria(items));
+    const unsubEvalInd = subscribeToCollection<EvaluationIndicator>('evaluation_indicators', items => items.length > 0 && setEvaluationIndicators(items));
+    const unsubGradebooks = subscribeToCollection<Gradebook>('gradebooks', items => items.length > 0 && setGradebooks(items));
+    const unsubActivities = subscribeToCollection<Activity>('activities', items => items.length > 0 && setActivities(items));
+    const unsubReinforce = subscribeToCollection<ReinforcementPlan>('reinforcement_plans', items => items.length > 0 && setReinforcementPlans(items));
+    const unsubTraining = subscribeToCollection<TrainingPlan>('training_plans', items => items.length > 0 && setTrainingPlans(items));
+    const unsubRubrics = subscribeToCollection<Rubric>('rubrics', items => items.length > 0 && setRubrics(items));
+    const unsubConflict = subscribeToCollection<ConflictMediation>('conflict_mediations', items => items.length > 0 && setConflictMediations(items));
+    const unsubCronograma = subscribeToCollection<CronogramaEvent>('cronograma_events', items => items.length > 0 && setCronogramaEvents(items));
+    const unsubHealth = subscribeToCollection<HealthRecord>('health_records', items => items.length > 0 && setHealthRecords(items));
+    const unsubMedicalVisits = subscribeToCollection<MedicalVisit>('medical_visits', items => items.length > 0 && setMedicalVisits(items));
+    const unsubTimeSlots = subscribeToCollection<TimeSlot>('time_slots', items => items.length > 0 && setTimeSlots(items));
+    const unsubSchedule = subscribeToCollection<ScheduleEntry>('schedule', items => items.length > 0 && setSchedule(items));
+    const unsubSupport = subscribeToCollection<SupportContact>('support_contacts', items => items.length > 0 && setSupportContacts(items));
+    const unsubVicc = subscribeToCollection<ViccIntervention>('vicc_interventions', items => items.length > 0 && setViccInterventions(items));
 
     return () => {
       unsubInstitutions();
@@ -198,6 +220,28 @@ export default function App() {
       unsubStaffAttendance();
       unsubDocs();
       unsubMeetings();
+      unsubAttendance();
+      unsubExitPasses();
+      unsubCitaciones();
+      unsubCalendar();
+      unsubLeccionario();
+      unsubMicroPlans();
+      unsubDcds();
+      unsubEvalCrit();
+      unsubEvalInd();
+      unsubGradebooks();
+      unsubActivities();
+      unsubReinforce();
+      unsubTraining();
+      unsubRubrics();
+      unsubConflict();
+      unsubCronograma();
+      unsubHealth();
+      unsubMedicalVisits();
+      unsubTimeSlots();
+      unsubSchedule();
+      unsubSupport();
+      unsubVicc();
     };
   }, []);
 
@@ -232,7 +276,10 @@ export default function App() {
     updatedClasses.forEach(c => saveDocument('classes', c.id, c));
   };
 
-  const handleUpdateSchedule = (updatedSchedule: ScheduleEntry[]) => setSchedule(updatedSchedule);
+  const handleUpdateSchedule = (updatedSchedule: ScheduleEntry[]) => {
+    setSchedule(updatedSchedule);
+    updatedSchedule.forEach(s => saveDocument('schedule', s.id, s));
+  };
   
   const handleUpdateStudents = (updatedStudents: Student[]) => {
     setStudents(updatedStudents);
@@ -244,16 +291,30 @@ export default function App() {
     updatedNotifications.forEach(n => saveDocument('notifications', n.id, n));
   };
 
-  const handleUpdateSupportContacts = (updatedContacts: SupportContact[]) => setSupportContacts(updatedContacts);
-  const handleUpdateHealthRecords = (updatedRecords: HealthRecord[]) => setHealthRecords(updatedRecords);
-  const handleUpdateMedicalVisits = (updatedVisits: MedicalVisit[]) => setMedicalVisits(updatedVisits);
+  const handleUpdateSupportContacts = (updatedContacts: SupportContact[]) => {
+    setSupportContacts(updatedContacts);
+    updatedContacts.forEach(c => saveDocument('support_contacts', c.id, c));
+  };
+
+  const handleUpdateHealthRecords = (updatedRecords: HealthRecord[]) => {
+    setHealthRecords(updatedRecords);
+    updatedRecords.forEach(h => saveDocument('health_records', h.id, h));
+  };
+
+  const handleUpdateMedicalVisits = (updatedVisits: MedicalVisit[]) => {
+    setMedicalVisits(updatedVisits);
+    updatedVisits.forEach(m => saveDocument('medical_visits', m.id, m));
+  };
   
   const handleUpdateSubjects = (updatedSubjects: Subject[]) => {
     setSubjects(updatedSubjects);
     updatedSubjects.forEach(s => saveDocument('subjects', s.id, s));
   };
 
-  const handleUpdateTimeSlots = (updatedTimeSlots: TimeSlot[]) => setTimeSlots(updatedTimeSlots);
+  const handleUpdateTimeSlots = (updatedTimeSlots: TimeSlot[]) => {
+    setTimeSlots(updatedTimeSlots);
+    updatedTimeSlots.forEach(ts => saveDocument('time_slots', ts.id, ts));
+  };
   
   const handleUpdateRooms = (updatedRooms: Room[]) => {
     setRooms(updatedRooms);
@@ -265,29 +326,95 @@ export default function App() {
     updatedTimetables.forEach(t => saveDocument('timetables', t.id, t));
   };
 
-  const handleUpdateViccInterventions = (updatedInterventions: ViccIntervention[]) => setViccInterventions(updatedInterventions);
-  const handleUpdateAttendance = (updatedRecords: AttendanceRecord[]) => setAttendanceRecords(updatedRecords);
-  const handleUpdateExitPasses = (updatedPasses: ExitPass[]) => setExitPasses(updatedPasses);
-  const handleUpdateCitaciones = (updatedCitaciones: Citacion[]) => setCitaciones(updatedCitaciones);
-  const handleUpdateAcademicCalendarEvents = (updatedEvents: AcademicCalendarEvent[]) => setAcademicCalendarEvents(updatedEvents);
-  const handleUpdateLeccionarioEntries = (updatedEntries: LeccionarioEntry[]) => setLeccionarioEntries(updatedEntries);
-  const handleUpdateMicroPlans = (updatedPlans: MicroPlan[]) => setMicroPlans(updatedPlans);
-  const handleUpdateDcds = (newDcds: Dcd[]) => setDcds(newDcds); 
-  const handleUpdateEvaluationCriteria = (newCriteria: EvaluationCriterion[]) => setEvaluationCriteria(newCriteria);
-  const handleUpdateEvaluationIndicators = (newIndicators: EvaluationIndicator[]) => setEvaluationIndicators(newIndicators);
-  const handleUpdateGradebooks = (updatedGradebooks: Gradebook[]) => setGradebooks(updatedGradebooks);
-  const handleUpdateActivities = (updatedActivities: Activity[]) => setActivities(updatedActivities);
-  const handleUpdateReinforcementPlans = (updatedPlans: ReinforcementPlan[]) => setReinforcementPlans(updatedPlans);
+  const handleUpdateViccInterventions = (updatedInterventions: ViccIntervention[]) => {
+    setViccInterventions(updatedInterventions);
+    updatedInterventions.forEach(v => saveDocument('vicc_interventions', v.id, v));
+  };
+
+  const handleUpdateAttendance = (updatedRecords: AttendanceRecord[]) => {
+    setAttendanceRecords(updatedRecords);
+    updatedRecords.forEach(a => saveDocument('attendance', a.id, a));
+  };
+
+  const handleUpdateExitPasses = (updatedPasses: ExitPass[]) => {
+    setExitPasses(updatedPasses);
+    updatedPasses.forEach(p => saveDocument('exit_passes', p.id, p));
+  };
+
+  const handleUpdateCitaciones = (updatedCitaciones: Citacion[]) => {
+    setCitaciones(updatedCitaciones);
+    updatedCitaciones.forEach(c => saveDocument('citaciones', c.id, c));
+  };
+
+  const handleUpdateAcademicCalendarEvents = (updatedEvents: AcademicCalendarEvent[]) => {
+    setAcademicCalendarEvents(updatedEvents);
+    updatedEvents.forEach(e => saveDocument('academic_calendar', e.id, e));
+  };
+
+  const handleUpdateLeccionarioEntries = (updatedEntries: LeccionarioEntry[]) => {
+    setLeccionarioEntries(updatedEntries);
+    updatedEntries.forEach(l => saveDocument('leccionario', l.id, l));
+  };
+
+  const handleUpdateMicroPlans = (updatedPlans: MicroPlan[]) => {
+    setMicroPlans(updatedPlans);
+    updatedPlans.forEach(m => saveDocument('micro_plans', m.id, m));
+  };
+
+  const handleUpdateDcds = (newDcds: Dcd[]) => {
+    setDcds(newDcds);
+    newDcds.forEach(d => saveDocument('dcds', d.id, d));
+  };
+
+  const handleUpdateEvaluationCriteria = (newCriteria: EvaluationCriterion[]) => {
+    setEvaluationCriteria(newCriteria);
+    newCriteria.forEach(c => saveDocument('evaluation_criteria', c.id, c));
+  };
+
+  const handleUpdateEvaluationIndicators = (newIndicators: EvaluationIndicator[]) => {
+    setEvaluationIndicators(newIndicators);
+    newIndicators.forEach(i => saveDocument('evaluation_indicators', i.id, i));
+  };
+
+  const handleUpdateGradebooks = (updatedGradebooks: Gradebook[]) => {
+    setGradebooks(updatedGradebooks);
+    updatedGradebooks.forEach(g => saveDocument('gradebooks', g.id, g));
+  };
+
+  const handleUpdateActivities = (updatedActivities: Activity[]) => {
+    setActivities(updatedActivities);
+    updatedActivities.forEach(a => saveDocument('activities', a.id, a));
+  };
+
+  const handleUpdateReinforcementPlans = (updatedPlans: ReinforcementPlan[]) => {
+    setReinforcementPlans(updatedPlans);
+    updatedPlans.forEach(r => saveDocument('reinforcement_plans', r.id, r));
+  };
   
   const handleUpdateFormalRequests = (updatedRequests: FormalRequest[]) => {
     setFormalRequests(updatedRequests);
     updatedRequests.forEach(r => saveDocument('formal_requests', r.id, r));
   };
 
-  const handleUpdateTrainingPlans = (updatedPlans: TrainingPlan[]) => setTrainingPlans(updatedPlans);
-  const handleUpdateRubrics = (newRubrics: Rubric[]) => setRubrics(newRubrics);
-  const handleUpdateConflictMediations = (conflicts: ConflictMediation[]) => setConflictMediations(conflicts);
-  const handleUpdateCronogramaEvents = (events: CronogramaEvent[]) => setCronogramaEvents(events);
+  const handleUpdateTrainingPlans = (updatedPlans: TrainingPlan[]) => {
+    setTrainingPlans(updatedPlans);
+    updatedPlans.forEach(t => saveDocument('training_plans', t.id, t));
+  };
+
+  const handleUpdateRubrics = (newRubrics: Rubric[]) => {
+    setRubrics(newRubrics);
+    newRubrics.forEach(r => saveDocument('rubrics', r.id, r));
+  };
+
+  const handleUpdateConflictMediations = (conflicts: ConflictMediation[]) => {
+    setConflictMediations(conflicts);
+    conflicts.forEach(c => saveDocument('conflict_mediations', c.id, c));
+  };
+
+  const handleUpdateCronogramaEvents = (events: CronogramaEvent[]) => {
+    setCronogramaEvents(events);
+    events.forEach(e => saveDocument('cronograma_events', e.id, e));
+  };
   
   const handleUpdateStaffAttendance = (userId: string, method: 'Biometric' | 'Manual' | 'Facial', location?: { latitude: number; longitude: number; }) => {
     
@@ -363,6 +490,7 @@ export default function App() {
                 { time: currentTime, type: newPunchType, method, location, verificationStatus, distanceFromInstitution: Math.round(distance) },
             ];
             updatedRecords[existingRecordIndex] = recordToUpdate;
+            saveDocument('staff_attendance', recordToUpdate.id, recordToUpdate);
             return updatedRecords;
         } else {
             const newRecord: StaffAttendanceRecord = {
@@ -372,6 +500,7 @@ export default function App() {
                 date: today,
                 punches: [{ time: currentTime, type: 'in', method, location, verificationStatus, distanceFromInstitution: Math.round(distance) }],
             };
+            saveDocument('staff_attendance', newRecord.id, newRecord);
             return [newRecord, ...prev];
         }
     });
