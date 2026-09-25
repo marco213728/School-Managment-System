@@ -17,7 +17,7 @@ const PeiAudit: React.FC = () => {
     const filteredPeis = useMemo(() => {
         return peis.filter(p => {
             const inst = MOCK_INSTITUTIONS.find(i => i.id === p.institutionId);
-            return inst?.name.toLowerCase().includes(searchTerm.toLowerCase());
+            return (inst?.name || '').toLowerCase().includes(searchTerm.toLowerCase());
         });
     }, [peis, searchTerm]);
 

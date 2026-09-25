@@ -25,12 +25,12 @@ interface SuperAdminPageProps {
 
 const SuperAdminPage: React.FC<SuperAdminPageProps> = (props) => {
     const { 
-        institutions: initialInstitutions, onUpdateInstitutions, users, 
-        dcds, evaluationCriteria, evaluationIndicators, subjects,
+        institutions: initialInstitutions = [], onUpdateInstitutions, users = [], 
+        dcds = [], evaluationCriteria = [], evaluationIndicators = [], subjects = [],
         onUpdateDcds, onUpdateEvaluationCriteria, onUpdateEvaluationIndicators 
     } = props;
     
-    const [institutions, setInstitutions] = useState<Institution[]>(initialInstitutions);
+    const [institutions, setInstitutions] = useState<Institution[]>(initialInstitutions || []);
     const [view, setView] = useState<'institutions' | 'quality' | 'resources' | 'pei_audit' | 'curriculum_master'>('institutions');
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingInstitution, setEditingInstitution] = useState<Institution | null>(null);
@@ -128,18 +128,18 @@ const SuperAdminPage: React.FC<SuperAdminPageProps> = (props) => {
                                         <td className="px-6 py-4 whitespace-nowrap">
                                             <div className="flex items-center">
                                                 <div className="flex-shrink-0 h-10 w-10">
-                                                    <img className="h-10 w-10 rounded-full object-cover border" src={inst.logoUrl} alt={`Logo de ${inst.name}`} />
+                                                    <img className="h-10 w-10 rounded-full object-cover border" src={inst.logoUrl || 'https://placehold.co/150x150/cccccc/333333?text=Logo'} alt={`Logo de ${inst.name || 'Institución'}`} />
                                                 </div>
                                                 <div className="ml-4">
-                                                    <div className="text-sm font-bold text-gray-900">{inst.name}</div>
+                                                    <div className="text-sm font-bold text-gray-900">{inst.name || 'Sin Nombre'}</div>
                                                 </div>
                                             </div>
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                            <div>{inst.contact.email}</div>
-                                            <div className="font-mono text-xs">{inst.contact.phone}</div>
+                                            <div>{inst.contact?.email || 'Sin correo'}</div>
+                                            <div className="font-mono text-xs">{inst.contact?.phone || 'Sin teléfono'}</div>
                                         </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 font-mono font-bold uppercase">{inst.codeAMIE}</td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 font-mono font-bold uppercase">{inst.codeAMIE || 'N/A'}</td>
                                         <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                             <button onClick={() => handleEdit(inst)} className="p-2 text-slate-500 hover:text-blue-600 rounded-full hover:bg-blue-50 transition-colors"><EditIcon className="h-5 w-5" /></button>
                                             <button onClick={() => handleDelete(inst.id)} className="p-2 text-slate-500 hover:text-red-600 rounded-full hover:bg-red-50 transition-colors"><TrashIcon className="h-5 w-5" /></button>

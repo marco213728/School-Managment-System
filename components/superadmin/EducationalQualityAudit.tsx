@@ -20,7 +20,7 @@ const EducationalQualityAudit: React.FC<EducationalQualityAuditProps> = ({ insti
 
     const institutionCompliance = useMemo(() => {
         return institutions.map(inst => {
-            const schoolRecords = complianceData.filter(c => c.institutionId === inst.id);
+            const schoolRecords = complianceData.filter(c => c.institutionId === inst?.id);
             const avgLevel = schoolRecords.length > 0 
                 ? schoolRecords.reduce((acc, curr) => acc + curr.level, 0) / schoolRecords.length 
                 : 0;
@@ -31,7 +31,7 @@ const EducationalQualityAudit: React.FC<EducationalQualityAuditProps> = ({ insti
             else if (avgLevel >= 2) status = 'Yellow';
 
             return { ...inst, avgLevel, status, recordsCount: schoolRecords.length };
-        }).filter(inst => inst.name.toLowerCase().includes(searchTerm.toLowerCase()));
+        }).filter(inst => (inst?.name || '').toLowerCase().includes(searchTerm.toLowerCase()));
     }, [institutions, complianceData, searchTerm]);
 
     const handleVerify = (recordId: string) => {
