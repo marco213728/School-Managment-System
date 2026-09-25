@@ -3,6 +3,9 @@ import { User, Role } from '../types';
 import { InstitutionContext } from '../contexts/UserContext';
 import { MOCK_USERS } from '../constants';
 import { 
+  auth,
+  signInWithEmailAndPassword,
+  sendPasswordResetEmail,
   FIRESTORE_CONSOLE_URL, 
   FIRESTORE_DATABASE_ID, 
   FIREBASE_PROJECT_ID, 
@@ -20,17 +23,65 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin, onGoogleLogin, isLoading
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [resetMessage, setResetMessage] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [showDemoAccounts, setShowDemoAccounts] = useState(true);
   const [syncStatus, setSyncStatus] = useState<string | null>(null);
   const [syncing, setSyncing] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
-    const success = onLogin(email, password);
-    if (!success) {
-      setError('Email o contraseña incorrectos. Por favor, inténtelo de nuevo.');
+    setResetMessage(null);
+    setIsSubmitting(true);
+
+    const cleanEmail = email.trim();
+
+    try {
+      // 1. First attempt native Firebase Authentication (Cloud Auth)
+      await signInWithEmailAndPassword(auth, cleanEmail, password);
+      // App.tsx's onAuthStateChanged listener handles session state automatically
+    } catch (fbErr: any) {
+      console.warn("Firebase Auth sign-in attempted, checking local fallback:", fbErr);
+
+      // 2. If Firebase Auth did not match, check local/mock credentials
+      const localSuccess = onLogin(cleanEmail, password);
+      if (!localSuccess) {
+        let msg = 'Email o contraseña incorrectos. Por favor, verifica tus datos.';
+        if (fbErr?.code === 'auth/invalid-credential' || fbErr?.code === 'auth/wrong-password') {
+          msg = 'Contraseña o correo incorrectos.';
+        } else if (fbErr?.code === 'auth/user-not-found') {
+          msg = 'No existe una cuenta registrada con este correo.';
+        } else if (fbErr?.code === 'auth/too-many-requests') {
+          msg = 'Demasiados intentos fallidos. Por favor, espera un momento o restablece tu contraseña.';
+        } else if (fbErr?.code === 'auth/network-request-failed') {
+          msg = 'Error de conexión con los servidores de autenticación.';
+        }
+        setError(msg);
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleForgotPassword = async () => {
+    if (!email.trim()) {
+      setError('Por favor escribe tu correo electrónico en el campo para enviarte el enlace de restablecimiento.');
+      return;
+    }
+    setError(null);
+    setResetMessage(null);
+    try {
+      await sendPasswordResetEmail(auth, email.trim());
+      setResetMessage(`Te hemos enviado un correo con instrucciones para restablecer tu contraseña a ${email.trim()}.`);
+    } catch (err: any) {
+      console.error("Error al enviar email de restablecimiento:", err);
+      if (err.code === 'auth/user-not-found') {
+        setError('No existe una cuenta registrada en Firebase con este correo.');
+      } else {
+        setError('No se pudo enviar el correo de recuperación. Verifica la dirección ingresada.');
+      }
     }
   };
 
@@ -38,6 +89,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin, onGoogleLogin, isLoading
     if (!onGoogleLogin) return;
     try {
       setError(null);
+      setResetMessage(null);
       setGoogleLoading(true);
       await onGoogleLogin();
     } catch (err: any) {
@@ -65,6 +117,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin, onGoogleLogin, isLoading
     setEmail(userEmail);
     setPassword(userPass);
     setError(null);
+    setResetMessage(null);
   };
 
   return (
@@ -196,9 +249,18 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin, onGoogleLogin, isLoading
           </div>
           
           <div>
-            <label htmlFor="password" className="block text-xs font-semibold text-slate-700 uppercase tracking-wide">
-              Contraseña
-            </label>
+            <div className="flex items-center justify-between">
+              <label htmlFor="password" className="block text-xs font-semibold text-slate-700 uppercase tracking-wide">
+                Contraseña
+              </label>
+              <button
+                type="button"
+                onClick={handleForgotPassword}
+                className="text-xs text-blue-600 hover:text-blue-800 hover:underline"
+              >
+                ¿Olvidaste tu contraseña?
+              </button>
+            </div>
             <input
               id="password"
               name="password"
@@ -212,6 +274,12 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin, onGoogleLogin, isLoading
             />
           </div>
           
+          {resetMessage && (
+            <div className="p-2.5 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-lg text-xs leading-relaxed" role="status">
+              ✓ {resetMessage}
+            </div>
+          )}
+
           {error && (
             <div className="p-2.5 bg-red-50 border border-red-200 text-red-700 rounded-lg text-xs leading-relaxed" role="alert">
               {error}
@@ -221,10 +289,10 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin, onGoogleLogin, isLoading
           <div>
             <button
               type="submit"
-              disabled={!email || !password || isLoading}
+              disabled={!email || !password || isLoading || isSubmitting}
               className="w-full px-4 py-2 font-semibold text-sm text-white bg-blue-600 rounded-lg shadow hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:bg-slate-300 disabled:cursor-not-allowed transition"
             >
-              {isLoading ? 'Ingresando...' : 'Iniciar Sesión'}
+              {isSubmitting || isLoading ? 'Verificando credenciales...' : 'Iniciar Sesión'}
             </button>
           </div>
         </form>

@@ -1,5 +1,9 @@
 import { initializeApp } from 'firebase/app';
-import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
+import { 
+  getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged, 
+  signInWithEmailAndPassword, sendPasswordResetEmail,
+  User as FirebaseUser 
+} from 'firebase/auth';
 import { 
   getFirestore, doc, getDocFromServer, collection, getDocs, setDoc, getDoc,
   deleteDoc, onSnapshot, writeBatch, Unsubscribe
@@ -17,6 +21,7 @@ const app = initializeApp(firebaseConfig);
 export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId); /* CRITICAL: The app will break without this line */
 export const auth = getAuth(app);
 export const googleProvider = new GoogleAuthProvider();
+export { signInWithEmailAndPassword, sendPasswordResetEmail, signInWithPopup, signOut, onAuthStateChanged };
 
 export const FIREBASE_PROJECT_ID = firebaseConfig.projectId;
 export const FIRESTORE_DATABASE_ID = firebaseConfig.firestoreDatabaseId;
