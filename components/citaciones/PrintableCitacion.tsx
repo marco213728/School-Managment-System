@@ -24,8 +24,8 @@ const PrintableCitacion: React.FC<PrintableCitacionProps> = ({ citacion, student
                     <img src={institution.logoUrl} alt="Logo" className="h-20 w-20 object-contain" />
                     <div>
                         <h1 className="text-xl font-bold uppercase">{institution.name}</h1>
-                        <p className="text-sm">{institution.contact.address}</p>
-                        <p className="text-sm">{institution.contact.email} / {institution.contact.phone}</p>
+                        <p className="text-sm">{institution.contact?.address || ''}</p>
+                        <p className="text-sm">{institution.contact?.email || ''} {institution.contact?.phone ? `/ ${institution.contact.phone}` : ''}</p>
                     </div>
                 </div>
                  <div className="text-right text-sm">

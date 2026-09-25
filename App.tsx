@@ -174,8 +174,16 @@ export default function App() {
   useEffect(() => {
     const unsubInstitutions = subscribeToCollection<Institution>('institutions', (items) => {
       if (items.length > 0) {
-        setInstitutions(items);
-        setCurrentInstitution(prev => prev ? items.find(i => i.id === prev.id) || prev : items[0] || null);
+        const sanitized = items.map(inst => ({
+          ...inst,
+          contact: {
+            email: inst.contact?.email || '',
+            phone: inst.contact?.phone || '',
+            address: inst.contact?.address || '',
+          }
+        }));
+        setInstitutions(sanitized);
+        setCurrentInstitution(prev => prev ? sanitized.find(i => i.id === prev.id) || sanitized[0] : sanitized[0] || null);
       }
     });
 

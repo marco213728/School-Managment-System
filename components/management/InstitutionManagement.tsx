@@ -11,17 +11,33 @@ const InstitutionManagement = () => {
     const [isSaved, setIsSaved] = useState(false);
 
     useEffect(() => {
-        setLocalInstitution(institution);
+        if (institution) {
+            setLocalInstitution({
+                ...institution,
+                contact: {
+                    email: institution.contact?.email || '',
+                    phone: institution.contact?.phone || '',
+                    address: institution.contact?.address || ''
+                }
+            });
+        } else {
+            setLocalInstitution(null);
+        }
         setLogoPreview(null);
     }, [institution]);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (!localInstitution) return;
         const { name, value } = e.target;
-        if (name in localInstitution.contact) {
+        if (['email', 'phone', 'address'].includes(name)) {
             setLocalInstitution(prev => prev ? ({
                 ...prev,
-                contact: { ...prev.contact, [name]: value }
+                contact: {
+                    email: prev.contact?.email || '',
+                    phone: prev.contact?.phone || '',
+                    address: prev.contact?.address || '',
+                    [name]: value
+                }
             }) : null);
         } else {
             setLocalInstitution(prev => prev ? ({ ...prev, [name]: value as any }) : null);
@@ -107,16 +123,16 @@ const InstitutionManagement = () => {
                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                         <label htmlFor="email" className="block text-sm font-medium text-gray-700">Email de Contacto</label>
-                        <input id="email" type="email" name="email" value={localInstitution.contact.email} onChange={handleChange} required className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500" />
+                        <input id="email" type="email" name="email" value={localInstitution.contact?.email || ''} onChange={handleChange} required className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500" />
                     </div>
                     <div>
                         <label htmlFor="phone" className="block text-sm font-medium text-gray-700">Teléfono de Contacto</label>
-                        <input id="phone" type="tel" name="phone" value={localInstitution.contact.phone} onChange={handleChange} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500" />
+                        <input id="phone" type="tel" name="phone" value={localInstitution.contact?.phone || ''} onChange={handleChange} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500" />
                     </div>
                 </div>
                 <div>
                     <label htmlFor="address" className="block text-sm font-medium text-gray-700">Dirección</label>
-                    <input id="address" type="text" name="address" value={localInstitution.contact.address} onChange={handleChange} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500" />
+                    <input id="address" type="text" name="address" value={localInstitution.contact?.address || ''} onChange={handleChange} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500" />
                 </div>
 
                 {/* Geofence Configuration */}

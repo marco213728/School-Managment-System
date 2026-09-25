@@ -34,9 +34,13 @@ const InstitutionForm: React.FC<InstitutionFormProps> = ({ isOpen, onClose, onSa
         if (institutionToEdit) {
             setFormData({
                 id: institutionToEdit.id,
-                name: institutionToEdit.name,
-                logoUrl: institutionToEdit.logoUrl,
-                contact: institutionToEdit.contact,
+                name: institutionToEdit.name || '',
+                logoUrl: institutionToEdit.logoUrl || 'https://placehold.co/150x150/cccccc/333333?text=Logo',
+                contact: {
+                    phone: institutionToEdit.contact?.phone || '',
+                    email: institutionToEdit.contact?.email || '',
+                    address: institutionToEdit.contact?.address || '',
+                },
                 activeModules: institutionToEdit.activeModules || { dece: false, health: false },
                 adminIds: institutionToEdit.adminIds || [],
                 methodologyFocus: institutionToEdit.methodologyFocus || 'DUA',
@@ -51,8 +55,16 @@ const InstitutionForm: React.FC<InstitutionFormProps> = ({ isOpen, onClose, onSa
     // FIX: Use `e.currentTarget` to correctly access form element properties and avoid type errors.
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.currentTarget;
-        if (name in formData.contact) {
-            setFormData(prev => ({ ...prev, contact: { ...prev.contact, [name]: value } }));
+        if (['email', 'phone', 'address'].includes(name)) {
+            setFormData(prev => ({ 
+                ...prev, 
+                contact: { 
+                    phone: prev.contact?.phone || '',
+                    email: prev.contact?.email || '',
+                    address: prev.contact?.address || '',
+                    [name]: value 
+                } 
+            }));
         } else {
             setFormData(prev => ({ ...prev, [name]: value }));
         }
@@ -130,16 +142,16 @@ const InstitutionForm: React.FC<InstitutionFormProps> = ({ isOpen, onClose, onSa
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                             <label className="block text-sm font-medium text-gray-700">Email de Contacto</label>
-                            <input type="email" name="email" value={formData.contact.email} onChange={handleChange} required className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500" />
+                            <input type="email" name="email" value={formData.contact?.email || ''} onChange={handleChange} required className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500" />
                         </div>
                         <div>
                             <label className="block text-sm font-medium text-gray-700">Teléfono</label>
-                            <input type="tel" name="phone" value={formData.contact.phone} onChange={handleChange} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500" />
+                            <input type="tel" name="phone" value={formData.contact?.phone || ''} onChange={handleChange} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500" />
                         </div>
                     </div>
                     <div>
                         <label className="block text-sm font-medium text-gray-700">Dirección</label>
-                        <input type="text" name="address" value={formData.contact.address} onChange={handleChange} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500" />
+                        <input type="text" name="address" value={formData.contact?.address || ''} onChange={handleChange} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500" />
                     </div>
                      <div>
                         <label className="block text-sm font-medium text-gray-700">Administradores de la Institución</label>
