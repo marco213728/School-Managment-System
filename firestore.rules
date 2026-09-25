@@ -1,0 +1,111 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global Safety Net (Default Deny)
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper functions
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidInstitution(data) {
+      return data.id is string && data.id.size() <= 128 &&
+             data.name is string && data.name.size() <= 200;
+    }
+
+    function isValidUserProfile(data) {
+      return data.id is string && data.id.size() <= 128 &&
+             data.email is string && data.email.size() <= 120 &&
+             data.name is string && data.name.size() <= 150 &&
+             data.role is string && data.role.size() <= 50;
+    }
+
+    function isValidNotification(data) {
+      return data.id is string && data.id.size() <= 128 &&
+             data.userId is string && data.userId.size() <= 128 &&
+             data.title is string && data.title.size() <= 200 &&
+             data.message is string && data.message.size() <= 1000;
+    }
+
+    function isValidStaffAttendance(data) {
+      return data.id is string && data.id.size() <= 128 &&
+             data.userId is string && data.userId.size() <= 128 &&
+             data.date is string && data.date.size() <= 30;
+    }
+
+    function isValidFormalRequest(data) {
+      return data.id is string && data.id.size() <= 128 &&
+             data.userId is string && data.userId.size() <= 128 &&
+             data.type is string && data.type.size() <= 100 &&
+             data.status is string && data.status.size() <= 50;
+    }
+
+    // Test collection for connectivity check
+    match /test/{docId} {
+      allow read, write: if true;
+    }
+
+    // Institutions collection
+    match /institutions/{institutionId} {
+      allow get: if isValidId(institutionId);
+      allow list: if true;
+      allow create, update: if isValidId(institutionId) && isValidInstitution(incoming());
+      allow delete: if isSignedIn();
+    }
+
+    // Users collection
+    match /users/{userId} {
+      allow get: if isValidId(userId);
+      allow list: if true;
+      allow create, update: if isValidId(userId) && isValidUserProfile(incoming());
+      allow delete: if isSignedIn();
+    }
+
+    // Notifications collection
+    match /notifications/{notificationId} {
+      allow get: if isValidId(notificationId) && isSignedIn() && existing().userId == request.auth.uid;
+      allow list: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow create: if isSignedIn() && isValidId(notificationId) && isValidNotification(incoming());
+      allow update: if isSignedIn() && isValidId(notificationId) && isValidNotification(incoming()) && (
+        existing().userId == request.auth.uid
+      );
+      allow delete: if isSignedIn() && existing().userId == request.auth.uid;
+    }
+
+    // Staff Attendance collection
+    match /staff_attendance/{attendanceId} {
+      allow get: if isValidId(attendanceId) && isSignedIn();
+      allow list: if isSignedIn();
+      allow create, update: if isSignedIn() && isValidId(attendanceId) && isValidStaffAttendance(incoming());
+      allow delete: if isSignedIn();
+    }
+
+    // Formal requests collection
+    match /formal_requests/{requestId} {
+      allow get: if isValidId(requestId) && isSignedIn();
+      allow list: if isSignedIn();
+      allow create, update: if isSignedIn() && isValidId(requestId) && isValidFormalRequest(incoming());
+      allow delete: if isSignedIn();
+    }
+  }
+}

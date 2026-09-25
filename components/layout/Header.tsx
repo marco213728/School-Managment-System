@@ -3,6 +3,7 @@ import { UserContext, InstitutionContext } from '../../contexts/UserContext';
 import { LogoutIcon, MenuIcon, BellIcon } from '../icons/Icons';
 import { Notification } from '../../types';
 import NotificationsPanel from './NotificationsPanel';
+import { FIRESTORE_CONSOLE_URL } from '../../lib/firebase';
 
 interface HeaderProps {
     toggleSidebar: () => void;
@@ -62,6 +63,18 @@ const Header: React.FC<HeaderProps> = ({ toggleSidebar, notifications, onUpdateN
         <h1 className="text-lg font-semibold text-slate-800 ml-4 lg:ml-0">{institution?.name || 'Plataforma de Gestión Escolar'}</h1>
       </div>
       <div className="flex items-center space-x-2 sm:space-x-4">
+        <a 
+          href={FIRESTORE_CONSOLE_URL} 
+          target="_blank" 
+          rel="noopener noreferrer"
+          className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-50 text-emerald-800 border border-emerald-200 hover:bg-emerald-100 transition shadow-xs"
+          title="Ver base de datos Firestore en Firebase Console"
+        >
+          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+          <span>Firestore Conectado</span>
+          <span className="text-[10px] text-emerald-600">↗</span>
+        </a>
+
         <div ref={notificationsRef} className="relative">
           <button
             onClick={() => setNotificationsOpen(prev => !prev)}

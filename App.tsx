@@ -8,6 +8,8 @@ import { UserContext, InstitutionContext } from './contexts/UserContext';
 import SuperAdminPage from './pages/SuperAdminPage';
 import PlatformAdminLayout from './components/layout/PlatformAdminLayout';
 import { AMAUTA_LOGO } from './branding';
+import { auth, googleProvider, db, handleFirestoreError, OperationType } from './lib/firebase';
+import { signInWithPopup, signOut as fbSignOut, onAuthStateChanged } from 'firebase/auth';
 
 // Helper for Geofencing
 function getDistanceFromLatLonInM(lat1: number, lon1: number, lat2: number, lon2: number) {
@@ -69,6 +71,38 @@ export default function App() {
   const [cronogramaEvents, setCronogramaEvents] = useState<CronogramaEvent[]>(MOCK_CRONOGRAMA_EVENTS || []);
   const [absenceRequests, setAbsenceRequests] = useState<any[]>([]);
 
+  // Listen to Firebase Auth state
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (fbUser) => {
+      if (fbUser && fbUser.email) {
+        const existing = users.find(u => u.email.toLowerCase() === fbUser.email!.toLowerCase());
+        if (existing) {
+          setCurrentUser(existing);
+          if (existing.institutionId) {
+            const inst = institutions.find(i => i.id === existing.institutionId);
+            setCurrentInstitution(inst || null);
+          }
+        } else {
+          // New Google authenticated user gets SuperAdmin or institution access
+          const newUser: User = {
+            id: fbUser.uid,
+            name: fbUser.displayName || fbUser.email.split('@')[0],
+            email: fbUser.email,
+            password: '',
+            role: Role.SuperAdmin,
+          };
+          setUsers(prev => {
+            if (prev.some(u => u.id === newUser.id)) return prev;
+            return [newUser, ...prev];
+          });
+          setCurrentUser(newUser);
+        }
+      }
+    });
+
+    return () => unsubscribe();
+  }, [users, institutions]);
+
   const handleLogin = (email: string, password: string): boolean => {
     const user = users.find(u => u.email.toLowerCase() === email.toLowerCase());
     if (user && user.password === password) {
@@ -84,7 +118,42 @@ export default function App() {
     return false;
   };
 
-  const handleLogout = () => {
+  const handleGoogleLogin = async () => {
+    try {
+      const cred = await signInWithPopup(auth, googleProvider);
+      const fbUser = cred.user;
+      if (fbUser && fbUser.email) {
+        const existing = users.find(u => u.email.toLowerCase() === fbUser.email!.toLowerCase());
+        if (existing) {
+          setCurrentUser(existing);
+          if (existing.institutionId) {
+            const inst = institutions.find(i => i.id === existing.institutionId);
+            setCurrentInstitution(inst || null);
+          }
+        } else {
+          const newUser: User = {
+            id: fbUser.uid,
+            name: fbUser.displayName || fbUser.email.split('@')[0],
+            email: fbUser.email,
+            password: '',
+            role: Role.SuperAdmin,
+          };
+          setUsers(prev => [newUser, ...prev]);
+          setCurrentUser(newUser);
+        }
+      }
+    } catch (err) {
+      console.error("Error al autenticar con Google:", err);
+      throw err;
+    }
+  };
+
+  const handleLogout = async () => {
+    try {
+      await fbSignOut(auth);
+    } catch (e) {
+      console.error("Error en Firebase signout:", e);
+    }
     setCurrentUser(null);
     setCurrentInstitution(null);
   };
@@ -237,7 +306,7 @@ export default function App() {
 
     return (
       <InstitutionContext.Provider value={loginInstitutionContext}>
-        <LoginPage onLogin={handleLogin} />
+        <LoginPage onLogin={handleLogin} onGoogleLogin={handleGoogleLogin} />
       </InstitutionContext.Provider>
     );
   }
