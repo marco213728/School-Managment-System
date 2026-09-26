@@ -96,6 +96,25 @@ export async function saveDocument(collectionName: string, id: string, data: any
 }
 
 /**
+ * Persist multiple documents in Firestore in a single batch
+ */
+export async function saveDocumentsBatch(items: { collectionName: string; id: string; data: any }[]): Promise<boolean> {
+  try {
+    const batch = writeBatch(db);
+    for (const item of items) {
+      const docRef = doc(db, item.collectionName, item.id);
+      const sanitized = cleanPayload(item.data);
+      batch.set(docRef, sanitized, { merge: true });
+    }
+    await batch.commit();
+    return true;
+  } catch (error) {
+    console.error(`Error al guardar lote en Firestore:`, error);
+    return false;
+  }
+}
+
+/**
  * Delete a document from Firestore
  */
 export async function deleteDocument(collectionName: string, id: string): Promise<boolean> {

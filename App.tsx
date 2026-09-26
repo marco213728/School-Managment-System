@@ -32,7 +32,7 @@ function deg2rad(deg: number) {
 
 export default function App() {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const [currentInstitution, setCurrentInstitution] = useState<Institution | null>(null);
+  const [currentInstitution, setCurrentInstitution] = useState<Institution | null>(MOCK_INSTITUTIONS[0]);
 
   const [institutionalDocuments, setInstitutionalDocuments] = useState<InstitutionalDocument[]>(MOCK_INSTITUTIONAL_DOCUMENTS);
   const [meetingRecords, setMeetingRecords] = useState<MeetingRecord[]>(MOCK_MEETING_RECORDS);
@@ -78,10 +78,8 @@ export default function App() {
         const existing = users.find(u => u.email.toLowerCase() === fbUser.email!.toLowerCase());
         if (existing) {
           setCurrentUser(existing);
-          if (existing.institutionId) {
-            const inst = institutions.find(i => i.id === existing.institutionId);
-            setCurrentInstitution(inst || null);
-          }
+          const inst = (existing.institutionId && institutions.find(i => i.id === existing.institutionId)) || institutions[0] || MOCK_INSTITUTIONS[0];
+          setCurrentInstitution(inst);
         } else {
           // New Google authenticated user gets SuperAdmin or institution access
           const newUser: User = {
@@ -96,6 +94,7 @@ export default function App() {
             return [newUser, ...prev];
           });
           setCurrentUser(newUser);
+          setCurrentInstitution(institutions[0] || MOCK_INSTITUTIONS[0]);
         }
       }
     });
@@ -119,12 +118,8 @@ export default function App() {
 
     if (isValid) {
       setCurrentUser(user);
-      if (user.role !== Role.SuperAdmin && user.institutionId) {
-        const institution = institutions.find(i => i.id === user.institutionId);
-        setCurrentInstitution(institution || null);
-      } else {
-        setCurrentInstitution(null);
-      }
+      const targetInst = (user.institutionId && institutions.find(i => i.id === user.institutionId)) || institutions[0] || MOCK_INSTITUTIONS[0];
+      setCurrentInstitution(targetInst);
       return true;
     }
     return false;
@@ -138,10 +133,8 @@ export default function App() {
         const existing = users.find(u => u.email.toLowerCase() === fbUser.email!.toLowerCase());
         if (existing) {
           setCurrentUser(existing);
-          if (existing.institutionId) {
-            const inst = institutions.find(i => i.id === existing.institutionId);
-            setCurrentInstitution(inst || null);
-          }
+          const inst = (existing.institutionId && institutions.find(i => i.id === existing.institutionId)) || institutions[0] || MOCK_INSTITUTIONS[0];
+          setCurrentInstitution(inst);
         } else {
           const newUser: User = {
             id: fbUser.uid,
@@ -152,6 +145,7 @@ export default function App() {
           };
           setUsers(prev => [newUser, ...prev]);
           setCurrentUser(newUser);
+          setCurrentInstitution(institutions[0] || MOCK_INSTITUTIONS[0]);
         }
       }
     } catch (err) {
@@ -183,7 +177,10 @@ export default function App() {
           }
         }));
         setInstitutions(sanitized);
-        setCurrentInstitution(prev => prev ? sanitized.find(i => i.id === prev.id) || sanitized[0] : sanitized[0] || null);
+        setCurrentInstitution(prev => prev ? sanitized.find(i => i.id === prev.id) || sanitized[0] : sanitized[0]);
+      } else {
+        MOCK_INSTITUTIONS.forEach(inst => saveDocument('institutions', inst.id, inst));
+        setCurrentInstitution(MOCK_INSTITUTIONS[0]);
       }
     });
 
@@ -292,6 +289,12 @@ export default function App() {
   };
 
   const handleUpdateClasses = (updatedClasses: Class[]) => {
+    const currentClassIds = new Set(updatedClasses.map(c => c.id));
+    classes.forEach(c => {
+      if (!currentClassIds.has(c.id)) {
+        deleteDocument('classes', c.id);
+      }
+    });
     setClasses(updatedClasses);
     updatedClasses.forEach(c => saveDocument('classes', c.id, c));
   };
@@ -302,6 +305,12 @@ export default function App() {
   };
   
   const handleUpdateStudents = (updatedStudents: Student[]) => {
+    const currentStudentIds = new Set(updatedStudents.map(s => s.id));
+    students.forEach(s => {
+      if (!currentStudentIds.has(s.id)) {
+        deleteDocument('students', s.id);
+      }
+    });
     setStudents(updatedStudents);
     updatedStudents.forEach(s => saveDocument('students', s.id, s));
   };

@@ -1,28 +1,35 @@
 import React, { useState, useContext, useEffect } from 'react';
 import { Institution } from '../../types';
+import { MOCK_INSTITUTIONS } from '../../constants';
 // FIX: Corrected import path for InstitutionContext.
 import { InstitutionContext } from '../../contexts/UserContext';
 import { LocationMarkerIcon } from '../icons/Icons';
 
 const InstitutionManagement = () => {
     const { institution, setInstitution: setGlobalInstitution } = useContext(InstitutionContext);
-    const [localInstitution, setLocalInstitution] = useState<Institution | null>(institution);
+    const initialInst = institution || MOCK_INSTITUTIONS[0];
+
+    const [localInstitution, setLocalInstitution] = useState<Institution>({
+        ...initialInst,
+        contact: {
+            email: initialInst.contact?.email || '',
+            phone: initialInst.contact?.phone || '',
+            address: initialInst.contact?.address || ''
+        }
+    });
     const [logoPreview, setLogoPreview] = useState<string | null>(null);
     const [isSaved, setIsSaved] = useState(false);
 
     useEffect(() => {
-        if (institution) {
-            setLocalInstitution({
-                ...institution,
-                contact: {
-                    email: institution.contact?.email || '',
-                    phone: institution.contact?.phone || '',
-                    address: institution.contact?.address || ''
-                }
-            });
-        } else {
-            setLocalInstitution(null);
-        }
+        const target = institution || MOCK_INSTITUTIONS[0];
+        setLocalInstitution({
+            ...target,
+            contact: {
+                email: target.contact?.email || '',
+                phone: target.contact?.phone || '',
+                address: target.contact?.address || ''
+            }
+        });
         setLogoPreview(null);
     }, [institution]);
 
@@ -92,16 +99,10 @@ const InstitutionManagement = () => {
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        if (localInstitution) {
-            setGlobalInstitution(localInstitution);
-            setIsSaved(true);
-            setTimeout(() => setIsSaved(false), 3000);
-        }
+        setGlobalInstitution(localInstitution);
+        setIsSaved(true);
+        setTimeout(() => setIsSaved(false), 3000);
     };
-
-    if (!localInstitution) {
-        return <p>Cargando datos de la institución...</p>
-    }
 
     return (
         <div className="bg-white p-6 rounded-xl shadow-md">

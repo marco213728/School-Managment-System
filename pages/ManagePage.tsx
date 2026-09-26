@@ -90,27 +90,26 @@ const ManagePage: React.FC<ManagePageProps> = ({
     const [userToEnroll, setUserToEnroll] = useState<User | null>(null);
     const [isPromotionOpen, setIsPromotionOpen] = useState(false);
 
+    const effectiveInstitutionId = currentUser?.institutionId || 'uemol';
+
     const institutionData = useMemo(() => {
-        if (!currentUser?.institutionId) {
-            return { users: [], classes: [], students: [], schedule: [], supportContacts: [], subjects: [], timeSlots: [], rooms: [], timetables: [], academicCalendarEvents: [] };
-        }
-        const institutionId = currentUser.institutionId;
+        const institutionId = effectiveInstitutionId;
         
         return {
-            users: allUsers.filter(u => u.institutionId === institutionId),
-            classes: allClasses.filter(c => c.institutionId === institutionId),
-            students: allStudents.filter(s => s.institutionId === institutionId),
+            users: allUsers.filter(u => !u.institutionId || u.institutionId === institutionId),
+            classes: allClasses.filter(c => !c.institutionId || c.institutionId === institutionId),
+            students: allStudents.filter(s => !s.institutionId || s.institutionId === institutionId),
             schedule: schedule,
-            supportContacts: supportContacts.filter(sc => sc.institutionId === institutionId),
-            subjects: subjects.filter(s => s.institutionId === institutionId),
+            supportContacts: supportContacts.filter(sc => !sc.institutionId || sc.institutionId === institutionId),
+            subjects: subjects.filter(s => !s.institutionId || s.institutionId === institutionId),
             timeSlots: timeSlots,
-            rooms: rooms.filter(r => r.institutionId === institutionId),
-            timetables: timetables.filter(t => t.institutionId === institutionId),
-            academicCalendarEvents: academicCalendarEvents.filter(e => e.institutionId === institutionId),
+            rooms: rooms.filter(r => !r.institutionId || r.institutionId === institutionId),
+            timetables: timetables.filter(t => !t.institutionId || t.institutionId === institutionId),
+            academicCalendarEvents: academicCalendarEvents.filter(e => !e.institutionId || e.institutionId === institutionId),
         };
-    }, [currentUser, allUsers, allClasses, allStudents, schedule, supportContacts, subjects, timeSlots, rooms, timetables, academicCalendarEvents]);
+    }, [effectiveInstitutionId, allUsers, allClasses, allStudents, schedule, supportContacts, subjects, timeSlots, rooms, timetables, academicCalendarEvents]);
 
-    if (!currentUser || ![Role.InstitutionAdmin, Role.InspectorGeneral, Role.Rector].includes(currentUser.role)) {
+    if (!currentUser || ![Role.InstitutionAdmin, Role.InspectorGeneral, Role.Rector, Role.SuperAdmin].includes(currentUser.role)) {
         return <div className="bg-white p-6 rounded-xl shadow-md"><h2 className="text-xl font-bold text-slate-800 mb-4">Gestión del Centro</h2><p>No tiene los permisos necesarios para acceder a esta sección.</p></div>
     }
 
@@ -127,16 +126,45 @@ const ManagePage: React.FC<ManagePageProps> = ({
         setIsEnrollmentOpen(true);
     };
     
-    const handleUpdateInstitutionUsers = (updatedInstUsers: User[]) => { const otherUsers = allUsers.filter(u => u.institutionId !== currentUser.institutionId); onUpdateUsers([...otherUsers, ...updatedInstUsers]); };
-    const handleUpdateInstitutionClasses = (updatedInstClasses: Class[]) => { const otherClasses = allClasses.filter(c => c.institutionId !== currentUser.institutionId); onUpdateClasses([...otherClasses, ...updatedInstClasses]); };
-    const handleUpdateInstitutionSchedule = (updatedInstSchedule: ScheduleEntry[]) => { onUpdateSchedule(updatedInstSchedule); };
-    const handleUpdateInstitutionStudents = (updatedInstStudents: Student[]) => { const otherStudents = allStudents.filter(s => s.institutionId !== currentUser.institutionId); onUpdateStudents([...otherStudents, ...updatedInstStudents]); };
-    const handleUpdateInstitutionSupportContacts = (updatedInstContacts: SupportContact[]) => { const otherContacts = supportContacts.filter(sc => sc.institutionId !== currentUser.institutionId); onUpdateSupportContacts([...otherContacts, ...updatedInstContacts]); }
-    const handleUpdateInstitutionSubjects = (updatedInstSubjects: Subject[]) => { const otherSubjects = subjects.filter(s => s.institutionId !== currentUser.institutionId); onUpdateSubjects([...otherSubjects, ...updatedInstSubjects]); }
-    const handleUpdateInstitutionTimeSlots = (updatedInstTimeSlots: TimeSlot[]) => { const updatedGlobalTimeSlots = timeSlots.filter(ts => ts.institutionId !== currentUser.institutionId); onUpdateTimeSlots([...updatedGlobalTimeSlots, ...updatedInstTimeSlots]); }
-    const handleUpdateInstitutionRooms = (updatedInstRooms: Room[]) => { const otherRooms = rooms.filter(r => r.institutionId !== currentUser.institutionId); onUpdateRooms([...otherRooms, ...updatedInstRooms]); }
-    const handleUpdateInstitutionTimetables = (updatedInstTimetables: Timetable[]) => { const otherTimetables = timetables.filter(t => t.institutionId !== currentUser.institutionId); onUpdateTimetables([...otherTimetables, ...updatedInstTimetables]); };
-    const handleUpdateInstitutionAcademicCalendarEvents = (updatedEvents: AcademicCalendarEvent[]) => { const otherEvents = academicCalendarEvents.filter(e => e.institutionId !== currentUser.institutionId); onUpdateAcademicCalendarEvents([...otherEvents, ...updatedEvents]); };
+    const handleUpdateInstitutionUsers = (updatedInstUsers: User[]) => { 
+        const otherUsers = allUsers.filter(u => u.institutionId && u.institutionId !== effectiveInstitutionId); 
+        onUpdateUsers([...otherUsers, ...updatedInstUsers]); 
+    };
+    const handleUpdateInstitutionClasses = (updatedInstClasses: Class[]) => { 
+        const otherClasses = allClasses.filter(c => c.institutionId && c.institutionId !== effectiveInstitutionId); 
+        onUpdateClasses([...otherClasses, ...updatedInstClasses]); 
+    };
+    const handleUpdateInstitutionSchedule = (updatedInstSchedule: ScheduleEntry[]) => { 
+        onUpdateSchedule(updatedInstSchedule); 
+    };
+    const handleUpdateInstitutionStudents = (updatedInstStudents: Student[]) => { 
+        const otherStudents = allStudents.filter(s => s.institutionId && s.institutionId !== effectiveInstitutionId); 
+        onUpdateStudents([...otherStudents, ...updatedInstStudents]); 
+    };
+    const handleUpdateInstitutionSupportContacts = (updatedInstContacts: SupportContact[]) => { 
+        const otherContacts = supportContacts.filter(sc => sc.institutionId && sc.institutionId !== effectiveInstitutionId); 
+        onUpdateSupportContacts([...otherContacts, ...updatedInstContacts]); 
+    };
+    const handleUpdateInstitutionSubjects = (updatedInstSubjects: Subject[]) => { 
+        const otherSubjects = subjects.filter(s => s.institutionId && s.institutionId !== effectiveInstitutionId); 
+        onUpdateSubjects([...otherSubjects, ...updatedInstSubjects]); 
+    };
+    const handleUpdateInstitutionTimeSlots = (updatedInstTimeSlots: TimeSlot[]) => { 
+        const updatedGlobalTimeSlots = timeSlots.filter(ts => ts.institutionId && ts.institutionId !== effectiveInstitutionId); 
+        onUpdateTimeSlots([...updatedGlobalTimeSlots, ...updatedInstTimeSlots]); 
+    };
+    const handleUpdateInstitutionRooms = (updatedInstRooms: Room[]) => { 
+        const otherRooms = rooms.filter(r => r.institutionId && r.institutionId !== effectiveInstitutionId); 
+        onUpdateRooms([...otherRooms, ...updatedInstRooms]); 
+    };
+    const handleUpdateInstitutionTimetables = (updatedInstTimetables: Timetable[]) => { 
+        const otherTimetables = timetables.filter(t => t.institutionId && t.institutionId !== effectiveInstitutionId); 
+        onUpdateTimetables([...otherTimetables, ...updatedInstTimetables]); 
+    };
+    const handleUpdateInstitutionAcademicCalendarEvents = (updatedEvents: AcademicCalendarEvent[]) => { 
+        const otherEvents = academicCalendarEvents.filter(e => e.institutionId && e.institutionId !== effectiveInstitutionId); 
+        onUpdateAcademicCalendarEvents([...otherEvents, ...updatedEvents]); 
+    };
 
     const renderDashboard = () => (
       <div className="space-y-10 pb-10">
@@ -337,10 +365,10 @@ const ManagePage: React.FC<ManagePageProps> = ({
             case 'quality_standards': return <div><button onClick={() => setView('dashboard')} className="flex items-center gap-2 text-sm font-semibold text-primary-600 hover:underline mb-4">&larr; Volver</button><SchoolStandardsManager /></div>;
             case 'staff_control': return <div><button onClick={() => setView('dashboard')} className="flex items-center gap-2 text-sm font-semibold text-primary-600 hover:underline mb-4">&larr; Volver</button>{renderStaffControl()}</div>;
             case 'users': return <UserManagement users={institutionData.users} allClasses={institutionData.classes} allStudents={institutionData.students} onUpdateUsers={handleUpdateInstitutionUsers} />;
-            case 'classes': return <ClassManagement classes={institutionData.classes} users={institutionData.users} students={institutionData.students} timetables={institutionData.timetables} onUpdateClasses={handleUpdateInstitutionClasses} onBack={() => setView('dashboard')} />;
+            case 'classes': return <ClassManagement classes={institutionData.classes} users={institutionData.users} students={institutionData.students} timetables={institutionData.timetables} onUpdateClasses={handleUpdateInstitutionClasses} onUpdateStudents={handleUpdateInstitutionStudents} onBack={() => setView('dashboard')} />;
             case 'schedule': return <ScheduleManagement schedule={schedule} classes={institutionData.classes} timeSlots={timeSlots} subjects={institutionData.subjects} rooms={institutionData.rooms} timetables={institutionData.timetables} users={institutionData.users} onUpdateSchedule={handleUpdateInstitutionSchedule} onBack={() => setView('dashboard')} />;
             case 'workload': return <WorkloadManagementComponent users={institutionData.users} classes={institutionData.classes} rooms={institutionData.rooms} subjects={institutionData.subjects} schedule={schedule} onBack={() => setView('dashboard')} />;
-            case 'students': return <StudentManagement students={institutionData.students} users={institutionData.users} classes={institutionData.classes} onUpdateStudents={handleUpdateInstitutionStudents} onUpdateUsers={handleUpdateInstitutionUsers} onBack={() => setView('dashboard')} />;
+            case 'students': return <StudentManagement students={institutionData.students} users={institutionData.users} classes={institutionData.classes} onUpdateStudents={handleUpdateInstitutionStudents} onUpdateUsers={handleUpdateInstitutionUsers} onUpdateClasses={handleUpdateInstitutionClasses} onBack={() => setView('dashboard')} />;
             case 'timetables': return <TimetableManagementComponent timetables={institutionData.timetables} timeSlots={institutionData.timeSlots} onUpdateTimetables={handleUpdateInstitutionTimetables} onUpdateTimeSlots={handleUpdateInstitutionTimeSlots} institutionId={currentUser.institutionId!} onBack={() => setView('dashboard')} />;
             case 'subjects': return <SubjectManagement subjects={institutionData.subjects} users={institutionData.users} onUpdateSubjects={handleUpdateInstitutionSubjects} onBack={() => setView('dashboard')} />;
             case 'rooms': return <RoomManagement rooms={institutionData.rooms} onUpdateRooms={handleUpdateInstitutionRooms} onBack={() => setView('dashboard')} />;
