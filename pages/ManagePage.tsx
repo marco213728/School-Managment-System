@@ -1,6 +1,6 @@
 
 import React, { useState, useContext, useMemo } from 'react';
-import { UserContext } from '../contexts/UserContext';
+import { UserContext, InstitutionContext } from '../contexts/UserContext';
 import { Role, User, Class, Student, ScheduleEntry, SupportContact, Subject, TimeSlot, Room, Timetable, AcademicCalendarEvent, StaffAttendanceRecord, Gradebook } from '../types';
 import UserManagement from '../components/management/UserManagement';
 import InstitutionManagement from '../components/management/InstitutionManagement';
@@ -84,27 +84,47 @@ const ManagePage: React.FC<ManagePageProps> = ({
   onUpdateStaffAttendance,
 }) => {
     const { user: currentUser } = useContext(UserContext);
+    const { institution: currentInstitution } = useContext(InstitutionContext);
     const [view, setView] = useState<'dashboard' | 'users' | 'classes' | 'schedule' | 'students' | 'communication' | 'support' | 'subjects' | 'rooms' | 'timetables' | 'calendar' | 'staff_control' | 'quality_standards' | 'pei_builder' | 'workload'>('dashboard');
     
     const [isEnrollmentOpen, setIsEnrollmentOpen] = useState(false);
     const [userToEnroll, setUserToEnroll] = useState<User | null>(null);
     const [isPromotionOpen, setIsPromotionOpen] = useState(false);
 
-    const effectiveInstitutionId = currentUser?.institutionId || 'uemol';
+    const effectiveInstitutionId = currentUser?.institutionId || currentInstitution?.id || 'uemol';
 
     const institutionData = useMemo(() => {
         const institutionId = effectiveInstitutionId;
+        const instTimetables = timetables.filter(t => !t.institutionId || t.institutionId === institutionId);
+        const instTimetableIds = new Set(instTimetables.map(t => t.id));
+        const instClasses = allClasses.filter(c => !c.institutionId || c.institutionId === institutionId);
+        const instClassIds = new Set(instClasses.map(c => c.id));
         
         return {
             users: allUsers.filter(u => !u.institutionId || u.institutionId === institutionId),
-            classes: allClasses.filter(c => !c.institutionId || c.institutionId === institutionId),
+            classes: instClasses,
             students: allStudents.filter(s => !s.institutionId || s.institutionId === institutionId),
-            schedule: schedule,
+            schedule: schedule.filter(s => instClassIds.has(s.classId)),
             supportContacts: supportContacts.filter(sc => !sc.institutionId || sc.institutionId === institutionId),
             subjects: subjects.filter(s => !s.institutionId || s.institutionId === institutionId),
-            timeSlots: timeSlots,
+            timeSlots: timeSlots.filter(ts => {
+                // If it explicitly belongs to another institution, reject
+                if (ts.institutionId && ts.institutionId !== institutionId) {
+                    return false;
+                }
+                // If it explicitly belongs to this institution
+                if (ts.institutionId === institutionId) {
+                    return true;
+                }
+                // If it belongs to one of this institution's timetables
+                if (ts.timetableId && instTimetableIds.has(ts.timetableId)) {
+                    return true;
+                }
+                // Legacy fallback only if institution has no timetables defined
+                return !ts.institutionId && instTimetableIds.size === 0;
+            }),
             rooms: rooms.filter(r => !r.institutionId || r.institutionId === institutionId),
-            timetables: timetables.filter(t => !t.institutionId || t.institutionId === institutionId),
+            timetables: instTimetables,
             academicCalendarEvents: academicCalendarEvents.filter(e => !e.institutionId || e.institutionId === institutionId),
         };
     }, [effectiveInstitutionId, allUsers, allClasses, allStudents, schedule, supportContacts, subjects, timeSlots, rooms, timetables, academicCalendarEvents]);
@@ -366,7 +386,7 @@ const ManagePage: React.FC<ManagePageProps> = ({
             case 'staff_control': return <div><button onClick={() => setView('dashboard')} className="flex items-center gap-2 text-sm font-semibold text-primary-600 hover:underline mb-4">&larr; Volver</button>{renderStaffControl()}</div>;
             case 'users': return <UserManagement users={institutionData.users} allClasses={institutionData.classes} allStudents={institutionData.students} onUpdateUsers={handleUpdateInstitutionUsers} />;
             case 'classes': return <ClassManagement classes={institutionData.classes} users={institutionData.users} students={institutionData.students} timetables={institutionData.timetables} onUpdateClasses={handleUpdateInstitutionClasses} onUpdateStudents={handleUpdateInstitutionStudents} onBack={() => setView('dashboard')} />;
-            case 'schedule': return <ScheduleManagement schedule={schedule} classes={institutionData.classes} timeSlots={timeSlots} subjects={institutionData.subjects} rooms={institutionData.rooms} timetables={institutionData.timetables} users={institutionData.users} onUpdateSchedule={handleUpdateInstitutionSchedule} onBack={() => setView('dashboard')} />;
+            case 'schedule': return <ScheduleManagement schedule={institutionData.schedule} classes={institutionData.classes} timeSlots={institutionData.timeSlots} subjects={institutionData.subjects} rooms={institutionData.rooms} timetables={institutionData.timetables} users={institutionData.users} onUpdateSchedule={handleUpdateInstitutionSchedule} onBack={() => setView('dashboard')} />;
             case 'workload': return <WorkloadManagementComponent users={institutionData.users} classes={institutionData.classes} rooms={institutionData.rooms} subjects={institutionData.subjects} schedule={schedule} onBack={() => setView('dashboard')} />;
             case 'students': return <StudentManagement students={institutionData.students} users={institutionData.users} classes={institutionData.classes} onUpdateStudents={handleUpdateInstitutionStudents} onUpdateUsers={handleUpdateInstitutionUsers} onUpdateClasses={handleUpdateInstitutionClasses} onBack={() => setView('dashboard')} />;
             case 'timetables': return <TimetableManagementComponent timetables={institutionData.timetables} timeSlots={institutionData.timeSlots} onUpdateTimetables={handleUpdateInstitutionTimetables} onUpdateTimeSlots={handleUpdateInstitutionTimeSlots} institutionId={currentUser.institutionId!} onBack={() => setView('dashboard')} />;

@@ -1,12 +1,13 @@
 
 
 
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useContext } from 'react';
 import { ScheduleEntry, Class, TimeSlot, Subject, User, Role, Shift, Room, Timetable } from '../../types';
 import { DAYS_OF_WEEK } from '../../constants';
 import { ArrowLeftIcon, PlusIcon, EditIcon, TrashIcon, PrinterIcon } from '../icons/Icons';
 import ScheduleForm from './ScheduleForm';
 import PrintableSchedule from './PrintableSchedule';
+import { UserContext, InstitutionContext } from '../../contexts/UserContext';
 
 
 interface ScheduleManagementProps {
@@ -67,6 +68,10 @@ const WorkloadSummary: React.FC<{
 };
 
 const ScheduleManagement: React.FC<ScheduleManagementProps> = ({ schedule, classes, timeSlots, subjects, rooms, users, timetables, onUpdateSchedule, onBack }) => {
+    const { user } = useContext(UserContext);
+    const { institution } = useContext(InstitutionContext);
+    const effectiveInstitutionId = user?.institutionId || institution?.id;
+
     const [isFormOpen, setIsFormOpen] = useState(false);
     const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
     
@@ -79,25 +84,74 @@ const ScheduleManagement: React.FC<ScheduleManagementProps> = ({ schedule, class
     } | null>(null);
 
     const [selectedClassId, setSelectedClassId] = useState<string>('');
+    const [selectedTimetableId, setSelectedTimetableId] = useState<string>('');
+
+    // Filter timetables strictly for this institution
+    const institutionTimetables = useMemo(() => {
+        return timetables.filter(t => !t.institutionId || !effectiveInstitutionId || t.institutionId === effectiveInstitutionId);
+    }, [timetables, effectiveInstitutionId]);
+
+    const institutionTimetableIds = useMemo(() => {
+        return new Set(institutionTimetables.map(t => t.id));
+    }, [institutionTimetables]);
+
+    // Filter timeSlots strictly for this institution, removing any foreign institution slots
+    const institutionTimeSlots = useMemo(() => {
+        return timeSlots.filter(ts => {
+            // Must not belong to another institution
+            if (effectiveInstitutionId && ts.institutionId && ts.institutionId !== effectiveInstitutionId) {
+                return false;
+            }
+            // If it belongs to one of this institution's timetables
+            if (institutionTimetableIds.size > 0 && ts.timetableId) {
+                return institutionTimetableIds.has(ts.timetableId);
+            }
+            // If it explicitly belongs to this institution
+            if (effectiveInstitutionId && ts.institutionId === effectiveInstitutionId) {
+                return true;
+            }
+            // Fallback only if no timetables or institutionId specified
+            return !effectiveInstitutionId || !ts.institutionId;
+        });
+    }, [timeSlots, effectiveInstitutionId, institutionTimetableIds]);
+
+    const selectedClass = useMemo(() => {
+        return classes.find(c => c.id === selectedClassId);
+    }, [classes, selectedClassId]);
+
+    const classTimetable = useMemo(() => {
+        if (!selectedClass?.timetableId) return null;
+        return institutionTimetables.find(t => t.id === selectedClass.timetableId);
+    }, [selectedClass, institutionTimetables]);
 
     const classMap = useMemo(() => new Map(classes.map(c => [c.id, c.name])), [classes]);
     const subjectMap = useMemo(() => new Map(subjects.map(s => [s.id, s])), [subjects]);
     const teacherMap = useMemo(() => new Map(users.filter(u => u.role === Role.Teacher).map(t => [t.id, t.name])), [users]);
-    const timeSlotMap = useMemo(() => new Map(timeSlots.map(ts => [ts.id, ts])), [timeSlots]);
+    const timeSlotMap = useMemo(() => new Map(institutionTimeSlots.map(ts => [ts.id, ts])), [institutionTimeSlots]);
     const roomMap = useMemo(() => new Map(rooms.map(r => [r.id, r.name])), [rooms]);
     
     const availableShifts = useMemo(() => {
-        const shifts = new Set(timeSlots.map(ts => ts.shift));
+        const shifts = new Set(institutionTimeSlots.map(ts => ts.shift));
+        if (shifts.size === 0) {
+            institutionTimetables.forEach(t => shifts.add(t.shift));
+        }
         return Array.from(shifts).sort();
-    }, [timeSlots]);
+    }, [institutionTimeSlots, institutionTimetables]);
     
     const [selectedShift, setSelectedShift] = useState<Shift | undefined>(availableShifts[0]);
     
     useEffect(() => {
-        if (!selectedShift || !availableShifts.includes(selectedShift)) {
+        if (classTimetable?.shift) {
+            setSelectedShift(classTimetable.shift);
+        } else if (!selectedShift || !availableShifts.includes(selectedShift)) {
             setSelectedShift(availableShifts[0]);
         }
-    }, [availableShifts, selectedShift]);
+    }, [availableShifts, selectedShift, classTimetable]);
+
+    const timetablesForShift = useMemo(() => {
+        if (!selectedShift) return institutionTimetables;
+        return institutionTimetables.filter(t => t.shift === selectedShift);
+    }, [institutionTimetables, selectedShift]);
 
     const workload = useMemo(() => {
         const subjectLoads = subjects
@@ -185,12 +239,42 @@ const ScheduleManagement: React.FC<ScheduleManagementProps> = ({ schedule, class
         if (window.confirm('¿Está seguro de que desea eliminar esta clase del horario?')) {
             onUpdateSchedule(schedule.filter(e => !(e.day === day && e.timeSlotId === timeSlotId && e.classId === classId)));
         }
-    }
+    };
     
     const visibleTimeSlots = useMemo(() => {
         if (!selectedShift) return [];
-        return timeSlots.filter(ts => ts.shift === selectedShift).sort((a,b) => a.startTime.localeCompare(b.startTime));
-    }, [timeSlots, selectedShift]);
+        
+        let shiftSlots = institutionTimeSlots.filter(ts => ts.shift === selectedShift);
+
+        // 1. If a specific class is selected and has a timetable, only show that timetable's slots!
+        if (selectedClass?.timetableId) {
+            const classSlots = shiftSlots.filter(ts => ts.timetableId === selectedClass.timetableId);
+            if (classSlots.length > 0) {
+                return classSlots.sort((a,b) => a.startTime.localeCompare(b.startTime));
+            }
+        }
+
+        // 2. In General View (or class without timetable), if an active timetable is selected:
+        const activeTtId = selectedTimetableId || timetablesForShift[0]?.id;
+        if (activeTtId) {
+            const ttSlots = shiftSlots.filter(ts => ts.timetableId === activeTtId);
+            if (ttSlots.length > 0) {
+                return ttSlots.sort((a,b) => a.startTime.localeCompare(b.startTime));
+            }
+        }
+
+        // 3. Fallback: deduplicate by startTime-endTime to avoid visual overlaps
+        const seen = new Set<string>();
+        const deduped: TimeSlot[] = [];
+        shiftSlots.forEach(slot => {
+            const key = `${slot.startTime}-${slot.endTime}`;
+            if (!seen.has(key)) {
+                seen.add(key);
+                deduped.push(slot);
+            }
+        });
+        return deduped.sort((a,b) => a.startTime.localeCompare(b.startTime));
+    }, [institutionTimeSlots, selectedShift, selectedClass, selectedTimetableId, timetablesForShift]);
 
     return (
         <div className="bg-white p-6 rounded-xl shadow-md">
@@ -199,15 +283,21 @@ const ScheduleManagement: React.FC<ScheduleManagementProps> = ({ schedule, class
                 Volver a Gestión del Centro
             </button>
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 gap-4">
-                <h3 className="text-lg font-semibold text-gray-700">Configurar Horario Semanal</h3>
-                <div className="flex items-center gap-2">
+                <div>
+                    <h3 className="text-lg font-semibold text-gray-700">Configurar Horario Semanal</h3>
+                    <p className="text-xs text-gray-500">Gestión de distribución horaria institucional</p>
+                </div>
+                <div className="flex flex-wrap items-center gap-3">
                     {availableShifts.length > 0 && (
-                        <div>
-                            <label htmlFor="shift-selector" className="sr-only">Seleccionar Jornada</label>
+                        <div className="flex items-center gap-2">
+                            <label htmlFor="shift-selector" className="text-xs font-medium text-gray-600">Jornada:</label>
                             <select
                                 id="shift-selector"
                                 value={selectedShift || ''}
-                                onChange={(e) => setSelectedShift(e.target.value as Shift)}
+                                onChange={(e) => {
+                                    setSelectedShift(e.target.value as Shift);
+                                    setSelectedTimetableId('');
+                                }}
                                 className="px-3 py-1.5 border border-gray-300 text-sm font-medium bg-white text-gray-700 hover:bg-gray-50 rounded-md shadow-sm"
                             >
                                 {availableShifts.map(shift => (
@@ -216,43 +306,82 @@ const ScheduleManagement: React.FC<ScheduleManagementProps> = ({ schedule, class
                             </select>
                         </div>
                     )}
+
+                    {!selectedClass?.timetableId && timetablesForShift.length > 1 && (
+                        <div className="flex items-center gap-2">
+                            <label htmlFor="timetable-selector" className="text-xs font-medium text-gray-600">Plantilla:</label>
+                            <select
+                                id="timetable-selector"
+                                value={selectedTimetableId || timetablesForShift[0]?.id || ''}
+                                onChange={(e) => setSelectedTimetableId(e.target.value)}
+                                className="px-3 py-1.5 border border-gray-300 text-sm font-medium bg-white text-gray-700 hover:bg-gray-50 rounded-md shadow-sm"
+                            >
+                                {timetablesForShift.map(tt => (
+                                    <option key={tt.id} value={tt.id}>{tt.name}</option>
+                                ))}
+                            </select>
+                        </div>
+                    )}
                 </div>
             </div>
 
-            <div className="my-4 flex items-end gap-4">
-                <div className="flex-grow">
-                    <label htmlFor="class-selector" className="block text-sm font-medium text-gray-700">
+            <div className="my-4 flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+                <div className="flex-grow max-w-md">
+                    <label htmlFor="class-selector" className="block text-sm font-medium text-gray-700 mb-1">
                         Filtrar por Clase
                     </label>
                     <select
                         id="class-selector"
                         value={selectedClassId}
                         onChange={(e) => setSelectedClassId(e.target.value)}
-                        className="mt-1 block w-full md:w-2/3 p-2 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                        className="block w-full p-2 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 text-sm"
                     >
                         <option value="">-- Vista General (Todas las clases) --</option>
                         {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                     </select>
+
+                    {selectedClass && (
+                        <div className="mt-1.5 text-xs flex items-center gap-1.5">
+                            <span className="text-gray-500">Plantilla:</span>
+                            {classTimetable ? (
+                                <span className="font-medium text-primary-700 bg-primary-50 px-2 py-0.5 rounded border border-primary-200">
+                                    {classTimetable.name} ({classTimetable.shift})
+                                </span>
+                            ) : (
+                                <span className="text-amber-700 bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
+                                    Sin plantilla asignada (utilizando horario general)
+                                </span>
+                            )}
+                        </div>
+                    )}
                 </div>
                 {selectedClassId && (
                     <button
                         onClick={() => setIsPrintModalOpen(true)}
-                        className="flex items-center gap-2 px-4 py-2 bg-gray-600 text-white font-semibold rounded-md hover:bg-gray-700 flex-shrink-0"
+                        className="flex items-center gap-2 px-4 py-2 bg-gray-600 text-white font-semibold rounded-md hover:bg-gray-700 flex-shrink-0 text-sm self-start sm:self-auto"
                     >
-                        <PrinterIcon className="h-5 w-5" />
+                        <PrinterIcon className="h-4 w-4" />
                         Imprimir Horario
                     </button>
                 )}
             </div>
             {selectedClassId && <WorkloadSummary subjectLoads={workload.subjectLoads} teacherLoads={workload.teacherLoads} />}
 
+            {visibleTimeSlots.length === 0 ? (
+                <div className="p-8 text-center bg-slate-50 border border-slate-200 rounded-lg my-6">
+                    <p className="text-base font-semibold text-slate-700 mb-1">No hay franjas horarias registradas para esta jornada.</p>
+                    <p className="text-sm text-slate-500">
+                        Configure las franjas horarias institucionales en la sección <strong>"Gestionar Plantillas de Horario"</strong> en Gestión del Centro.
+                    </p>
+                </div>
+            ) : (
             <div className="overflow-x-auto border rounded-lg">
                 <table className="min-w-full divide-y divide-gray-200">
                     <thead className="bg-gray-50">
                         <tr>
-                            <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase">Franja Horaria</th>
+                            <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Franja Horaria</th>
                             {DAYS_OF_WEEK.map(day => (
-                                <th key={day} className="px-2 py-3 text-center text-xs font-medium text-gray-500 uppercase">{day}</th>
+                                <th key={day} className="px-2 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">{day}</th>
                             ))}
                         </tr>
                     </thead>
@@ -261,14 +390,14 @@ const ScheduleManagement: React.FC<ScheduleManagementProps> = ({ schedule, class
                             if (slot.isBreak) {
                                 return (
                                     <tr key={slot.id}>
-                                        <td className="px-2 py-2 text-sm font-medium text-gray-500 bg-gray-100">{slot.startTime} - {slot.endTime}</td>
+                                        <td className="px-3 py-2 text-sm font-medium text-gray-500 bg-gray-100">{slot.startTime} - {slot.endTime}</td>
                                         <td colSpan={5} className="text-center text-sm font-semibold text-gray-600 bg-gray-100">D E S C A N S O</td>
                                     </tr>
                                 );
                             }
                             return (
                                 <tr key={slot.id}>
-                                    <td className="px-2 py-4 whitespace-nowrap text-sm font-medium text-gray-900 align-top">{slot.startTime} - {slot.endTime}</td>
+                                    <td className="px-3 py-4 whitespace-nowrap text-sm font-medium text-gray-900 align-top">{slot.startTime} - {slot.endTime}</td>
                                     {DAYS_OF_WEEK.map(day => {
                                         const allEntriesInSlot = schedule.filter(e => e.day === day && e.timeSlotId === slot.id);
                                         const entryForSelectedClass = selectedClassId ? allEntriesInSlot.find(e => e.classId === selectedClassId) : null;
@@ -279,7 +408,7 @@ const ScheduleManagement: React.FC<ScheduleManagementProps> = ({ schedule, class
                                                     {selectedClassId ? (
                                                         // Focused View: Only show selected class's entry or an add button
                                                         entryForSelectedClass ? (
-                                                            <div className="bg-primary-100 text-primary-800 p-1 rounded-md text-xs group relative text-center">
+                                                            <div className="bg-primary-100 text-primary-800 p-1.5 rounded-md text-xs group relative text-center">
                                                                 <p className="font-bold">{subjectMap.get(entryForSelectedClass.subjectId)?.name}</p>
                                                                 <p className="text-gray-600">{teacherMap.get(subjectMap.get(entryForSelectedClass.subjectId)?.teacherId || '')}</p>
                                                                 <p className="text-gray-500 font-semibold">@{roomMap.get(entryForSelectedClass.roomId)}</p>
@@ -292,8 +421,8 @@ const ScheduleManagement: React.FC<ScheduleManagementProps> = ({ schedule, class
                                                             <button onClick={() => handleOpenForm(day, slot.id)} className="w-full flex-grow flex items-center justify-center rounded-md text-gray-400 hover:bg-gray-50 border-2 border-dashed hover:border-gray-300"><PlusIcon className="h-5 w-5"/></button>
                                                         )
                                                     ) : (
-                                                        // General View: Show all classes
-                                                        allEntriesInSlot.map(entry => {
+                                                        // General View: Show only classes of this institution
+                                                        allEntriesInSlot.filter(e => classMap.has(e.classId)).map(entry => {
                                                             const subject = subjectMap.get(entry.subjectId);
                                                             return(
                                                                 <div key={entry.classId} className="bg-gray-100 text-gray-700 p-1 rounded-md text-xs text-center">
@@ -313,6 +442,7 @@ const ScheduleManagement: React.FC<ScheduleManagementProps> = ({ schedule, class
                     </tbody>
                 </table>
             </div>
+            )}
 
             {isFormOpen && editingData && (
                 <ScheduleForm
