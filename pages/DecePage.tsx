@@ -1,12 +1,13 @@
 
 import React, { useContext, useState, useMemo } from 'react';
 import { UserContext } from '../contexts/UserContext';
-import { Role, Student, User, Class, OvpAxis, OvpActivity, SupportContact, ScheduleEntry, Subject, TimeSlot, Room, Timetable, ViccIntervention, ConflictMediation, Intervention } from '../types';
+import { Role, Student, User, Class, OvpAxis, OvpActivity, SupportContact, ScheduleEntry, Subject, TimeSlot, Room, Timetable, ViccIntervention, ConflictMediation, Intervention, HealthRecord, MedicalVisit } from '../types';
 import { MOCK_OVP_ACTIVITIES } from '../constants';
 import SupportNetwork from '../components/dece/SupportNetwork';
 import StudentProfileCard from '../components/student/StudentProfileCard';
 import { SearchIcon, CloseIcon, UsersIcon, ReportIcon, ClipboardListIcon, PlusIcon, TrashIcon, AlertTriangleIcon } from '../components/icons/Icons';
 import InterventionForm from '../components/dece/InterventionForm';
+import { saveDocument } from '../lib/firebase';
 
 interface DecePageProps {
     students: Student[];
@@ -23,6 +24,12 @@ interface DecePageProps {
     onUpdateViccInterventions: (interventions: ViccIntervention[]) => void;
     conflictMediations?: ConflictMediation[];
     onUpdateConflictMediations?: (conflicts: ConflictMediation[]) => void;
+    interventions?: Intervention[];
+    onUpdateInterventions?: (interventions: Intervention[]) => void;
+    healthRecords?: HealthRecord[];
+    onUpdateHealthRecords?: (records: HealthRecord[]) => void;
+    medicalVisits?: MedicalVisit[];
+    onUpdateMedicalVisits?: (visits: MedicalVisit[]) => void;
 }
 
 interface DeceCardProps {
@@ -235,7 +242,28 @@ const StudentOvpProfile: React.FC<{
 };
 
 
-const DecePage: React.FC<DecePageProps> = ({ students, onUpdateStudents, users, classes, supportContacts, schedule, subjects, timeSlots, rooms, timetables, viccInterventions, onUpdateViccInterventions, conflictMediations = [], onUpdateConflictMediations }) => {
+const DecePage: React.FC<DecePageProps> = ({ 
+    students, 
+    onUpdateStudents, 
+    users, 
+    classes, 
+    supportContacts, 
+    schedule, 
+    subjects, 
+    timeSlots, 
+    rooms, 
+    timetables, 
+    viccInterventions, 
+    onUpdateViccInterventions, 
+    conflictMediations = [], 
+    onUpdateConflictMediations,
+    interventions = [],
+    onUpdateInterventions,
+    healthRecords = [],
+    onUpdateHealthRecords,
+    medicalVisits = [],
+    onUpdateMedicalVisits
+}) => {
     const { user } = useContext(UserContext);
     const [view, setView] = useState<'dashboard' | 'student-list' | 'ovp-list' | 'referred-cases'>('dashboard');
     const [selectedStudentForFile, setSelectedStudentForFile] = useState<string | null>(null);
@@ -245,18 +273,20 @@ const DecePage: React.FC<DecePageProps> = ({ students, onUpdateStudents, users, 
     const [isInterventionFormOpen, setIsInterventionFormOpen] = useState(false);
     const [conflictToProcess, setConflictToProcess] = useState<ConflictMediation | null>(null);
 
-    const institutionStudents = useMemo(() => students.filter(s => s.institutionId === user?.institutionId), [students, user]);
-    const institutionClasses = useMemo(() => classes.filter(c => c.institutionId === user?.institutionId), [classes, user]);
-    const institutionSupportContacts = useMemo(() => supportContacts.filter(sc => sc.institutionId === user?.institutionId), [supportContacts, user]);
+    const effectiveInstitutionId = user?.institutionId || 'uemol';
+
+    const institutionStudents = useMemo(() => students.filter(s => !s.institutionId || s.institutionId === effectiveInstitutionId), [students, effectiveInstitutionId]);
+    const institutionClasses = useMemo(() => classes.filter(c => !c.institutionId || c.institutionId === effectiveInstitutionId), [classes, effectiveInstitutionId]);
+    const institutionSupportContacts = useMemo(() => supportContacts.filter(sc => !sc.institutionId || sc.institutionId === effectiveInstitutionId), [supportContacts, effectiveInstitutionId]);
 
     const studentsWithClass = useMemo(() => institutionStudents.map(student => {
         const classInfo = institutionClasses.find(c => c.id === student.classId);
         return { ...student, className: classInfo?.name || 'Sin clase asignada' };
     }).sort((a,b) => a.name.localeCompare(b.name)), [institutionStudents, institutionClasses]);
 
-    const deceRoles = [Role.InstitutionAdmin, Role.JefeDECE, Role.PsicologoEducativo, Role.TrabajadorSocial];
+    const deceRoles = [Role.InstitutionAdmin, Role.JefeDECE, Role.PsicologoEducativo, Role.TrabajadorSocial, Role.SuperAdmin];
 
-    const referredConflicts = useMemo(() => conflictMediations.filter(c => c.derivedToDece && c.institutionId === user?.institutionId), [conflictMediations]);
+    const referredConflicts = useMemo(() => conflictMediations.filter(c => c.derivedToDece && (!c.institutionId || c.institutionId === effectiveInstitutionId)), [conflictMediations, effectiveInstitutionId]);
 
     if (!user || !deceRoles.includes(user.role)) {
         return (
@@ -276,13 +306,25 @@ const DecePage: React.FC<DecePageProps> = ({ students, onUpdateStudents, users, 
         setIsInterventionFormOpen(true);
     };
 
-    const handleSaveIntervention = (intervention: any) => {
-        // Here we would normally save the intervention to the backend/state
-        // For prototype, we'll just log and maybe clear the conflict processing state
-        console.log("Intervention saved:", intervention);
+    const handleSaveIntervention = async (intervention: any) => {
+        const professionalId = user?.id || 'dece-unknown';
+        const newInt: Intervention = {
+            id: intervention.id || `int-${Date.now()}`,
+            institutionId: effectiveInstitutionId,
+            studentId: conflictToProcess?.partiesInvolved?.[0] || intervention.studentId,
+            deceProfessionalId: professionalId,
+            date: intervention.date || new Date().toISOString().split('T')[0],
+            type: intervention.type,
+            summary: intervention.summary,
+            participants: intervention.participants || [],
+            agreements: intervention.agreements || ''
+        };
+        await saveDocument('interventions', newInt.id, newInt);
+        if (onUpdateInterventions) {
+            onUpdateInterventions([...interventions, newInt]);
+        }
         setIsInterventionFormOpen(false);
         setConflictToProcess(null);
-        alert("Intervención registrada para el caso derivado.");
     };
 
     const renderReferredCases = () => (
@@ -408,6 +450,12 @@ const DecePage: React.FC<DecePageProps> = ({ students, onUpdateStudents, users, 
                     onUpdateStudents={onUpdateStudents}
                     allUsers={users}
                     allClasses={classes}
+                    allInterventions={interventions}
+                    onUpdateInterventions={onUpdateInterventions}
+                    allHealthRecords={healthRecords}
+                    onUpdateHealthRecords={onUpdateHealthRecords}
+                    allMedicalVisits={medicalVisits}
+                    onUpdateMedicalVisits={onUpdateMedicalVisits}
                     schedule={schedule}
                     subjects={subjects}
                     timeSlots={timeSlots}

@@ -2,7 +2,7 @@
 import React, { useState, useContext, useMemo } from 'react';
 import { UserContext } from '../contexts/UserContext';
 import { MOCK_STUDENTS, MOCK_CLASSES } from '../constants';
-import { AttendanceStatus, AttendanceRecord, Student, AcademicCalendarEvent, Class, TimeSlot, Timetable, User, Subject, ScheduleEntry, Gradebook } from '../types';
+import { AttendanceStatus, AttendanceRecord, Student, AcademicCalendarEvent, Class, TimeSlot, Timetable, User, Subject, ScheduleEntry, Gradebook, Intervention, HealthRecord, ViccIntervention } from '../types';
 import PieChart from '../components/reports/PieChart';
 import { DownloadIcon, PrinterIcon } from '../components/icons/Icons';
 import StudentComprehensiveReport from '../components/reports/StudentComprehensiveReport';
@@ -32,10 +32,13 @@ interface ReportsPageProps {
     users: User[];
     subjects: Subject[];
     gradebooks?: Gradebook[];
+    interventions?: Intervention[];
+    healthRecords?: HealthRecord[];
+    viccInterventions?: ViccIntervention[];
 }
 
 const ReportsPage: React.FC<ReportsPageProps> = (props) => {
-    const { attendanceRecords, academicCalendarEvents, students, classes, schedule, timeSlots, timetables, users, subjects, gradebooks = [] } = props;
+    const { attendanceRecords, academicCalendarEvents, students, classes, schedule, timeSlots, timetables, users, subjects, gradebooks = [], interventions = [], healthRecords = [], viccInterventions = [] } = props;
     const { user } = useContext(UserContext);
     const [reportType, setReportType] = useState<'student' | 'class' | 'comprehensive_student' | 'attendance_matrix' | 'daily_attendance_behavior' | 'student_report_card' | ''>('');
     const [selectedId, setSelectedId] = useState('');
@@ -228,7 +231,15 @@ const ReportsPage: React.FC<ReportsPageProps> = (props) => {
             )}
 
             {comprehensiveReportStudentId && (
-                <StudentComprehensiveReport studentId={comprehensiveReportStudentId} />
+                <StudentComprehensiveReport 
+                    studentId={comprehensiveReportStudentId} 
+                    allStudents={students}
+                    allClasses={classes}
+                    allUsers={users}
+                    allInterventions={interventions}
+                    allHealthRecords={healthRecords}
+                    allViccInterventions={viccInterventions}
+                />
             )}
 
             {matrixReportData && startDate && endDate && (

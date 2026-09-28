@@ -13,7 +13,7 @@ import {
   MOCK_INSTITUTIONS, MOCK_USERS, MOCK_CLASSES, MOCK_STUDENTS, 
   MOCK_SUBJECTS, MOCK_ROOMS, MOCK_TIMETABLES, MOCK_NOTIFICATIONS,
   MOCK_FORMAL_REQUESTS, MOCK_STAFF_ATTENDANCE, MOCK_INSTITUTIONAL_DOCUMENTS,
-  MOCK_MEETING_RECORDS
+  MOCK_MEETING_RECORDS, MOCK_HEALTH_RECORDS, MOCK_MEDICAL_VISITS, MOCK_INTERVENTIONS
 } from '../constants';
 import { Institution, User } from '../types';
 
@@ -131,7 +131,7 @@ export async function deleteDocument(collectionName: string, id: string): Promis
 /**
  * Subscribe to real-time changes in a collection
  */
-export function subscribeToCollection<T extends { id: string }>(
+export function subscribeToCollection<T = any>(
   collectionName: string, 
   onUpdate: (items: T[]) => void
 ): Unsubscribe {
@@ -243,6 +243,21 @@ export async function seedInitialFirestoreData(): Promise<{ institutionsCount: n
     // 12. Seed Formal Requests
     for (const f of MOCK_FORMAL_REQUESTS) {
       await saveDocument('formal_requests', f.id, f);
+    }
+
+    // 13. Seed Health Records
+    for (const hr of MOCK_HEALTH_RECORDS) {
+      await saveDocument('health_records', hr.id, hr);
+    }
+
+    // 14. Seed Medical Visits
+    for (const mv of MOCK_MEDICAL_VISITS) {
+      await saveDocument('medical_visits', mv.id, mv);
+    }
+
+    // 15. Seed Interventions (DECE)
+    for (const intv of MOCK_INTERVENTIONS) {
+      await saveDocument('interventions', intv.id, intv);
     }
 
     console.log(`Firestore seeded successfully with all initial collections.`);

@@ -135,6 +135,12 @@ service cloud.firestore {
     match /medical_visits/{visitId} {
       allow read, write: if isValidId(visitId);
     }
+    match /interventions/{interventionId} {
+      allow read, write: if isValidId(interventionId);
+    }
+    match /vicc_interventions/{interventionId} {
+      allow read, write: if isValidId(interventionId);
+    }
 
     // Fallback for any other educational collection
     match /{collection}/{document=**} {

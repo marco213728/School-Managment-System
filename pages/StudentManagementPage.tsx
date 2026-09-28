@@ -1,5 +1,5 @@
 import React from 'react';
-import { Student, User, Class, ScheduleEntry, Subject, TimeSlot, Room, Timetable, ViccIntervention } from '../types';
+import { Student, User, Class, ScheduleEntry, Subject, TimeSlot, Room, Timetable, ViccIntervention, HealthRecord, MedicalVisit, Intervention } from '../types';
 import StudentManagement from '../components/management/StudentManagement';
 
 interface StudentManagementPageProps {
@@ -8,6 +8,13 @@ interface StudentManagementPageProps {
     classes: Class[];
     onUpdateStudents: (students: Student[]) => void;
     onUpdateUsers: (users: User[]) => void;
+    onUpdateClasses?: (classes: Class[]) => void;
+    healthRecords?: HealthRecord[];
+    onUpdateHealthRecords?: (records: HealthRecord[]) => void;
+    medicalVisits?: MedicalVisit[];
+    onUpdateMedicalVisits?: (visits: MedicalVisit[]) => void;
+    interventions?: Intervention[];
+    onUpdateInterventions?: (interventions: Intervention[]) => void;
     schedule: ScheduleEntry[];
     subjects: Subject[];
     timeSlots: TimeSlot[];
@@ -17,7 +24,27 @@ interface StudentManagementPageProps {
     onUpdateViccInterventions: (interventions: ViccIntervention[]) => void;
 }
 
-const StudentManagementPage: React.FC<StudentManagementPageProps> = ({ students, users, classes, onUpdateStudents, onUpdateUsers, schedule, subjects, timeSlots, rooms, timetables, viccInterventions, onUpdateViccInterventions }) => {
+const StudentManagementPage: React.FC<StudentManagementPageProps> = ({ 
+    students, 
+    users, 
+    classes, 
+    onUpdateStudents, 
+    onUpdateUsers, 
+    onUpdateClasses,
+    healthRecords,
+    onUpdateHealthRecords,
+    medicalVisits,
+    onUpdateMedicalVisits,
+    interventions,
+    onUpdateInterventions,
+    schedule, 
+    subjects, 
+    timeSlots, 
+    rooms, 
+    timetables, 
+    viccInterventions, 
+    onUpdateViccInterventions 
+}) => {
     return (
         <div>
             <h2 className="text-2xl font-bold text-gray-800 mb-6">Gestión de Alumnos</h2>
@@ -27,6 +54,13 @@ const StudentManagementPage: React.FC<StudentManagementPageProps> = ({ students,
                 classes={classes}
                 onUpdateStudents={onUpdateStudents}
                 onUpdateUsers={onUpdateUsers}
+                onUpdateClasses={onUpdateClasses}
+                allHealthRecords={healthRecords}
+                onUpdateHealthRecords={onUpdateHealthRecords}
+                allMedicalVisits={medicalVisits}
+                onUpdateMedicalVisits={onUpdateMedicalVisits}
+                allInterventions={interventions}
+                onUpdateInterventions={onUpdateInterventions}
                 showBackButton={false}
                 schedule={schedule}
                 subjects={subjects}

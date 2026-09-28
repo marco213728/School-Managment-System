@@ -1,6 +1,6 @@
 import React, { useContext, useState, useMemo } from 'react';
 import { UserContext } from '../contexts/UserContext';
-import { Role, Student, User, Class, HealthRecord, MedicalVisit, ScheduleEntry, Subject, TimeSlot, Room, Timetable, ViccIntervention } from '../types';
+import { Role, Student, User, Class, HealthRecord, MedicalVisit, ScheduleEntry, Subject, TimeSlot, Room, Timetable, ViccIntervention, Intervention } from '../types';
 import StudentProfileCard from '../components/student/StudentProfileCard';
 import { SearchIcon } from '../components/icons/Icons';
 
@@ -20,27 +20,56 @@ interface HealthPageProps {
     timetables: Timetable[];
     viccInterventions: ViccIntervention[];
     onUpdateViccInterventions: (interventions: ViccIntervention[]) => void;
+    interventions?: Intervention[];
+    onUpdateInterventions?: (interventions: Intervention[]) => void;
 }
 
-const HealthPage: React.FC<HealthPageProps> = ({ students, onUpdateStudents, users, classes, healthRecords, onUpdateHealthRecords, medicalVisits, onUpdateMedicalVisits, schedule, subjects, timeSlots, rooms, timetables, viccInterventions, onUpdateViccInterventions }) => {
+const HealthPage: React.FC<HealthPageProps> = ({ 
+    students, 
+    onUpdateStudents, 
+    users, 
+    classes, 
+    healthRecords, 
+    onUpdateHealthRecords, 
+    medicalVisits, 
+    onUpdateMedicalVisits, 
+    schedule, 
+    subjects, 
+    timeSlots, 
+    rooms, 
+    timetables, 
+    viccInterventions, 
+    onUpdateViccInterventions,
+    interventions = [],
+    onUpdateInterventions
+}) => {
     const { user } = useContext(UserContext);
     const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
 
-    const authorizedRoles = [Role.InstitutionAdmin, Role.HealthProfessional];
+    const authorizedRoles = [Role.InstitutionAdmin, Role.HealthProfessional, Role.SuperAdmin, Role.Rector, Role.Vicerrector];
+    const effectiveInstitutionId = user?.institutionId || 'uemol';
 
-    const institutionStudents = useMemo(() => students.filter(s => s.institutionId === user?.institutionId), [students, user]);
-    const institutionClasses = useMemo(() => classes.filter(c => c.institutionId === user?.institutionId), [classes, user]);
+    const institutionStudents = useMemo(() => students.filter(s => !s.institutionId || s.institutionId === effectiveInstitutionId), [students, effectiveInstitutionId]);
+    const institutionClasses = useMemo(() => classes.filter(c => !c.institutionId || c.institutionId === effectiveInstitutionId), [classes, effectiveInstitutionId]);
 
     const studentsWithClass = useMemo(() => institutionStudents.map(student => {
         const classInfo = institutionClasses.find(c => c.id === student.classId);
-        return { ...student, className: classInfo?.name || 'Sin clase asignada' };
-    }), [institutionStudents, institutionClasses]);
+        const hasHealthRecord = healthRecords.some(hr => hr.studentId === student.id);
+        const visitCount = medicalVisits.filter(mv => mv.studentId === student.id).length;
+        return { 
+            ...student, 
+            className: classInfo?.name || 'Sin clase asignada',
+            hasHealthRecord,
+            visitCount
+        };
+    }), [institutionStudents, institutionClasses, healthRecords, medicalVisits]);
 
     const filteredStudents = useMemo(() => {
         if (!searchTerm) return studentsWithClass;
         return studentsWithClass.filter(student => 
-            student.name.toLowerCase().includes(searchTerm.toLowerCase())
+            student.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            (student.className && student.className.toLowerCase().includes(searchTerm.toLowerCase()))
         );
     }, [searchTerm, studentsWithClass]);
 
@@ -61,7 +90,7 @@ const HealthPage: React.FC<HealthPageProps> = ({ students, onUpdateStudents, use
                 <div className="relative mb-4">
                      <input 
                         type="text"
-                        placeholder="Buscar estudiante por nombre..."
+                        placeholder="Buscar estudiante por nombre o grado..."
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                         className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
@@ -73,9 +102,21 @@ const HealthPage: React.FC<HealthPageProps> = ({ students, onUpdateStudents, use
                 <ul className="divide-y divide-gray-200 max-h-96 overflow-y-auto">
                     {filteredStudents.length > 0 ? (
                         filteredStudents.map(student => (
-                            <li key={student.id} onClick={() => setSelectedStudentId(student.id)} className="p-4 hover:bg-gray-50 cursor-pointer">
-                                <p className="font-medium text-gray-900">{student.name}</p>
-                                <p className="text-sm text-gray-500">{student.className}</p>
+                            <li key={student.id} onClick={() => setSelectedStudentId(student.id)} className="p-4 hover:bg-gray-50 cursor-pointer flex justify-between items-center">
+                                <div>
+                                    <p className="font-medium text-gray-900">{student.name}</p>
+                                    <p className="text-sm text-gray-500">{student.className}</p>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    {student.hasHealthRecord ? (
+                                        <span className="text-xs bg-green-100 text-green-800 font-semibold px-2 py-0.5 rounded-full">Ficha Activa</span>
+                                    ) : (
+                                        <span className="text-xs bg-gray-100 text-gray-600 font-semibold px-2 py-0.5 rounded-full">Sin Ficha</span>
+                                    )}
+                                    {student.visitCount > 0 && (
+                                        <span className="text-xs bg-blue-100 text-blue-800 font-semibold px-2 py-0.5 rounded-full">{student.visitCount} visitas</span>
+                                    )}
+                                </div>
                             </li>
                         ))
                     ) : (
@@ -98,6 +139,8 @@ const HealthPage: React.FC<HealthPageProps> = ({ students, onUpdateStudents, use
                     onUpdateHealthRecords={onUpdateHealthRecords}
                     allMedicalVisits={medicalVisits}
                     onUpdateMedicalVisits={onUpdateMedicalVisits}
+                    allInterventions={interventions}
+                    onUpdateInterventions={onUpdateInterventions}
                     schedule={schedule}
                     subjects={subjects}
                     timeSlots={timeSlots}

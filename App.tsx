@@ -1,7 +1,7 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
-import { User, Institution, Role, Class, Student, ScheduleEntry, Notification, SupportContact, HealthRecord, MedicalVisit, Subject, TimeSlot, Room, Timetable, ViccIntervention, AttendanceRecord, ExitPass, Citacion, AcademicCalendarEvent, LeccionarioEntry, MicroPlan, Dcd, EvaluationCriterion, EvaluationIndicator, Gradebook, Activity, ReinforcementPlan, StaffAttendanceRecord, PunchType, FormalRequest, TrainingPlan, InstitutionalDocument, MeetingRecord, Rubric, ConflictMediation, CronogramaEvent } from './types';
-import { MOCK_USERS, MOCK_INSTITUTIONS, MOCK_CLASSES, MOCK_STUDENTS, MOCK_SCHEDULE_ENTRIES, MOCK_NOTIFICATIONS, MOCK_SUPPORT_CONTACTS, MOCK_HEALTH_RECORDS, MOCK_MEDICAL_VISITS, MOCK_SUBJECTS, MOCK_TIME_SLOTS, MOCK_ROOMS, MOCK_TIMETABLES, MOCK_VICC_INTERVENTIONS, MOCK_ATTENDANCE, MOCK_EXIT_PASSES, MOCK_CITACIONES, MOCK_ACADEMIC_CALENDAR_EVENTS, MOCK_LECCIONARIO_ENTRIES, MOCK_MICRO_PLANS, MOCK_DCDS, MOCK_EVALUATION_CRITERIA, MOCK_EVALUATION_INDICATORS, MOCK_GRADEBOOKS, MOCK_ACTIVITIES, MOCK_REINFORCEMENT_PLANS, MOCK_STAFF_ATTENDANCE, MOCK_FORMAL_REQUESTS, MOCK_TRAINING_PLANS, MOCK_INSTITUTIONAL_DOCUMENTS, MOCK_MEETING_RECORDS, MOCK_RUBRICS, MOCK_CONFLICT_MEDIATIONS, MOCK_CRONOGRAMA_EVENTS } from './constants';
+import { User, Institution, Role, Class, Student, ScheduleEntry, Notification, SupportContact, HealthRecord, MedicalVisit, Subject, TimeSlot, Room, Timetable, ViccIntervention, Intervention, AttendanceRecord, ExitPass, Citacion, AcademicCalendarEvent, LeccionarioEntry, MicroPlan, Dcd, EvaluationCriterion, EvaluationIndicator, Gradebook, Activity, ReinforcementPlan, StaffAttendanceRecord, PunchType, FormalRequest, TrainingPlan, InstitutionalDocument, MeetingRecord, Rubric, ConflictMediation, CronogramaEvent } from './types';
+import { MOCK_USERS, MOCK_INSTITUTIONS, MOCK_CLASSES, MOCK_STUDENTS, MOCK_SCHEDULE_ENTRIES, MOCK_NOTIFICATIONS, MOCK_SUPPORT_CONTACTS, MOCK_HEALTH_RECORDS, MOCK_MEDICAL_VISITS, MOCK_INTERVENTIONS, MOCK_SUBJECTS, MOCK_TIME_SLOTS, MOCK_ROOMS, MOCK_TIMETABLES, MOCK_VICC_INTERVENTIONS, MOCK_ATTENDANCE, MOCK_EXIT_PASSES, MOCK_CITACIONES, MOCK_ACADEMIC_CALENDAR_EVENTS, MOCK_LECCIONARIO_ENTRIES, MOCK_MICRO_PLANS, MOCK_DCDS, MOCK_EVALUATION_CRITERIA, MOCK_EVALUATION_INDICATORS, MOCK_GRADEBOOKS, MOCK_ACTIVITIES, MOCK_REINFORCEMENT_PLANS, MOCK_STAFF_ATTENDANCE, MOCK_FORMAL_REQUESTS, MOCK_TRAINING_PLANS, MOCK_INSTITUTIONAL_DOCUMENTS, MOCK_MEETING_RECORDS, MOCK_RUBRICS, MOCK_CONFLICT_MEDIATIONS, MOCK_CRONOGRAMA_EVENTS } from './constants';
 import LoginPage from './pages/LoginPage';
 import DashboardLayout from './components/layout/DashboardLayout';
 import { UserContext, InstitutionContext } from './contexts/UserContext';
@@ -50,6 +50,7 @@ export default function App() {
   const [rooms, setRooms] = useState<Room[]>(MOCK_ROOMS);
   const [timetables, setTimetables] = useState<Timetable[]>(MOCK_TIMETABLES);
   const [viccInterventions, setViccInterventions] = useState<ViccIntervention[]>(MOCK_VICC_INTERVENTIONS);
+  const [interventions, setInterventions] = useState<Intervention[]>(MOCK_INTERVENTIONS);
   const [attendanceRecords, setAttendanceRecords] = useState<AttendanceRecord[]>(MOCK_ATTENDANCE);
   const [exitPasses, setExitPasses] = useState<ExitPass[]>(MOCK_EXIT_PASSES);
   const [citaciones, setCitaciones] = useState<Citacion[]>(MOCK_CITACIONES);
@@ -223,6 +224,7 @@ export default function App() {
     const unsubSchedule = subscribeToCollection<ScheduleEntry>('schedule', items => items.length > 0 && setSchedule(items));
     const unsubSupport = subscribeToCollection<SupportContact>('support_contacts', items => items.length > 0 && setSupportContacts(items));
     const unsubVicc = subscribeToCollection<ViccIntervention>('vicc_interventions', items => items.length > 0 && setViccInterventions(items));
+    const unsubInterventions = subscribeToCollection<Intervention>('interventions', items => items.length > 0 && setInterventions(items));
 
     return () => {
       unsubInstitutions();
@@ -259,6 +261,7 @@ export default function App() {
       unsubSchedule();
       unsubSupport();
       unsubVicc();
+      unsubInterventions();
     };
   }, []);
 
@@ -326,13 +329,36 @@ export default function App() {
   };
 
   const handleUpdateHealthRecords = (updatedRecords: HealthRecord[]) => {
+    const currentIds = new Set(updatedRecords.map(r => r.id));
+    healthRecords.forEach(r => {
+      if (!currentIds.has(r.id)) {
+        deleteDocument('health_records', r.id);
+      }
+    });
     setHealthRecords(updatedRecords);
     updatedRecords.forEach(h => saveDocument('health_records', h.id, h));
   };
 
   const handleUpdateMedicalVisits = (updatedVisits: MedicalVisit[]) => {
+    const currentIds = new Set(updatedVisits.map(v => v.id));
+    medicalVisits.forEach(v => {
+      if (!currentIds.has(v.id)) {
+        deleteDocument('medical_visits', v.id);
+      }
+    });
     setMedicalVisits(updatedVisits);
     updatedVisits.forEach(m => saveDocument('medical_visits', m.id, m));
+  };
+
+  const handleUpdateInterventions = (updatedInterventions: Intervention[]) => {
+    const currentIds = new Set(updatedInterventions.map(i => i.id));
+    interventions.forEach(i => {
+      if (!currentIds.has(i.id)) {
+        deleteDocument('interventions', i.id);
+      }
+    });
+    setInterventions(updatedInterventions);
+    updatedInterventions.forEach(i => saveDocument('interventions', i.id, i));
   };
   
   const handleUpdateSubjects = (updatedSubjects: Subject[]) => {
@@ -595,6 +621,7 @@ export default function App() {
             rooms={rooms}
             timetables={timetables}
             viccInterventions={viccInterventions}
+            interventions={interventions}
             attendanceRecords={attendanceRecords}
             exitPasses={exitPasses}
             citaciones={citaciones}
@@ -636,6 +663,7 @@ export default function App() {
             onUpdateRooms={handleUpdateRooms}
             onUpdateTimetables={handleUpdateTimetables}
             onUpdateViccInterventions={handleUpdateViccInterventions}
+            onUpdateInterventions={handleUpdateInterventions}
             onUpdateAttendance={handleUpdateAttendance}
             onUpdateExitPasses={handleUpdateExitPasses}
             onUpdateCitaciones={handleUpdateCitaciones}

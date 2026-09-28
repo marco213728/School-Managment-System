@@ -1,35 +1,54 @@
 
 import React, { useMemo } from 'react';
 import { MOCK_STUDENTS, MOCK_CLASSES, MOCK_USERS, MOCK_INTERVENTIONS, MOCK_OVP_ACTIVITIES, MOCK_HEALTH_RECORDS, MOCK_VICC_INTERVENTIONS } from '../../constants';
+import { Student, Class, User, Intervention, HealthRecord, ViccIntervention } from '../../types';
 import { PrinterIcon, PhoneIcon, EmailIcon, LocationMarkerIcon, VicerrectoradoIcon, ClipboardListIcon } from '../icons/Icons';
 
 interface ReportProps {
     studentId: string;
+    allStudents?: Student[];
+    allClasses?: Class[];
+    allUsers?: User[];
+    allInterventions?: Intervention[];
+    allHealthRecords?: HealthRecord[];
+    allViccInterventions?: ViccIntervention[];
 }
 
-const StudentComprehensiveReport: React.FC<ReportProps> = ({ studentId }) => {
+const StudentComprehensiveReport: React.FC<ReportProps> = ({ 
+    studentId,
+    allStudents,
+    allClasses,
+    allUsers,
+    allInterventions,
+    allHealthRecords,
+    allViccInterventions
+}) => {
     const reportData = useMemo(() => {
-        const student = MOCK_STUDENTS.find(s => s.id === studentId);
+        const student = (allStudents || MOCK_STUDENTS).find(s => s.id === studentId);
         if (!student) return null;
 
-        const classInfo = MOCK_CLASSES.find(c => c.id === student.classId);
-        const parent = MOCK_USERS.find(u => u.id === student.parentId);
+        const classInfo = (allClasses || MOCK_CLASSES).find(c => c.id === student.classId);
+        const parent = (allUsers || MOCK_USERS).find(u => u.id === student.parentId);
         
         // DECE Interventions
-        const interventions = MOCK_INTERVENTIONS.filter(i => i.studentId === studentId)
+        const interventionsList = allInterventions || MOCK_INTERVENTIONS;
+        const interventions = interventionsList.filter(i => i.studentId === studentId)
             .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
             
         // Vicerrectorado Interventions
-        const viccInterventions = MOCK_VICC_INTERVENTIONS.filter(i => i.studentId === studentId)
+        const viccList = allViccInterventions || MOCK_VICC_INTERVENTIONS;
+        const viccInterventions = viccList.filter(i => i.studentId === studentId)
             .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
         const ovpActivities = MOCK_OVP_ACTIVITIES.filter(a => a.studentId === studentId);
-        const healthRecord = MOCK_HEALTH_RECORDS.find(hr => hr.studentId === studentId);
+        const healthList = allHealthRecords || MOCK_HEALTH_RECORDS;
+        const healthRecord = healthList.find(hr => hr.studentId === studentId);
         
-        const staffMap = new Map(MOCK_USERS.map(u => [u.id, u.name]));
+        const staffUsers = allUsers || MOCK_USERS;
+        const staffMap = new Map(staffUsers.map(u => [u.id, u.name]));
 
         return { student, classInfo, parent, interventions, viccInterventions, ovpActivities, healthRecord, staffMap };
-    }, [studentId]);
+    }, [studentId, allStudents, allClasses, allUsers, allInterventions, allHealthRecords, allViccInterventions]);
 
     const handlePrint = () => {
         window.print();

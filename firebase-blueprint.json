@@ -112,6 +112,50 @@
         "status": { "type": "string", "maxLength": 50 }
       },
       "required": ["status"]
+    },
+    "HealthRecord": {
+      "title": "HealthRecord",
+      "description": "Student health card and medical history",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "studentId": { "type": "string", "maxLength": 128 },
+        "institutionId": { "type": "string", "maxLength": 128 },
+        "allergies": { "type": "array" },
+        "conditions": { "type": "array" },
+        "medications": { "type": "array" },
+        "lastCheckup": { "type": "string", "maxLength": 50 }
+      },
+      "required": ["id", "studentId"]
+    },
+    "MedicalVisit": {
+      "title": "MedicalVisit",
+      "description": "Medical nurse/clinic visit log",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "studentId": { "type": "string", "maxLength": 128 },
+        "institutionId": { "type": "string", "maxLength": 128 },
+        "healthProfessionalId": { "type": "string", "maxLength": 128 },
+        "date": { "type": "string", "maxLength": 50 }
+      },
+      "required": ["id", "studentId", "date"]
+    },
+    "Intervention": {
+      "title": "Intervention",
+      "description": "DECE counseling session and psychological intervention record",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "studentId": { "type": "string", "maxLength": 128 },
+        "institutionId": { "type": "string", "maxLength": 128 },
+        "deceProfessionalId": { "type": "string", "maxLength": 128 },
+        "date": { "type": "string", "maxLength": 50 },
+        "type": { "type": "string", "maxLength": 100 },
+        "summary": { "type": "string", "maxLength": 3000 },
+        "agreements": { "type": "string", "maxLength": 3000 }
+      },
+      "required": ["id", "studentId", "date", "type", "summary"]
     }
   },
   "firestore": {
@@ -130,6 +174,18 @@
     "/students/{studentId}": {
       "schema": "Student",
       "description": "Student records"
+    },
+    "/health_records/{recordId}": {
+      "schema": "HealthRecord",
+      "description": "Student medical cards"
+    },
+    "/medical_visits/{visitId}": {
+      "schema": "MedicalVisit",
+      "description": "Clinical visits and consultations"
+    },
+    "/interventions/{interventionId}": {
+      "schema": "Intervention",
+      "description": "DECE psychological interventions and student files"
     },
     "/subjects/{subjectId}": {
       "schema": "GenericDocument",

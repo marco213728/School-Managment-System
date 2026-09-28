@@ -12,6 +12,7 @@ import MedicalVisitCertificate from '../health/MedicalVisitCertificate';
 import ScheduleView from '../schedule/ScheduleView';
 import ViccInterventionForm from '../vicerrectorado/ViccInterventionForm';
 import ViccAgreementPrint from '../vicerrectorado/ViccAgreementPrint';
+import { saveDocument, deleteDocument } from '../../lib/firebase';
 
 
 // FIX: Changed 'vicerrectorate' to support the Vice-Rectorate module.
@@ -32,6 +33,8 @@ interface StudentProfileCardProps {
     onUpdateHealthRecords?: (records: HealthRecord[]) => void;
     allMedicalVisits?: MedicalVisit[];
     onUpdateMedicalVisits?: (visits: MedicalVisit[]) => void;
+    allInterventions?: Intervention[];
+    onUpdateInterventions?: (interventions: Intervention[]) => void;
     schedule?: ScheduleEntry[];
     subjects?: Subject[];
     timeSlots?: TimeSlot[];
@@ -144,7 +147,31 @@ const ContactForm: React.FC<ContactFormProps> = ({ isOpen, onClose, onSave, cont
 
 
 // FIX: Update component signature to accept new props.
-const StudentProfileCard: React.FC<StudentProfileCardProps> = ({ studentId, onClose, isEditable, initialTab = 'info', isModal = true, allStudents, onUpdateStudents, allUsers, onUpdateUsers, allClasses, allHealthRecords, onUpdateHealthRecords, allMedicalVisits, onUpdateMedicalVisits, schedule, subjects, timeSlots, rooms, timetables, viccInterventions, onUpdateViccInterventions }) => {
+const StudentProfileCard: React.FC<StudentProfileCardProps> = ({ 
+    studentId, 
+    onClose, 
+    isEditable, 
+    initialTab = 'info', 
+    isModal = true, 
+    allStudents, 
+    onUpdateStudents, 
+    allUsers, 
+    onUpdateUsers, 
+    allClasses, 
+    allHealthRecords, 
+    onUpdateHealthRecords, 
+    allMedicalVisits, 
+    onUpdateMedicalVisits, 
+    allInterventions,
+    onUpdateInterventions,
+    schedule, 
+    subjects, 
+    timeSlots, 
+    rooms, 
+    timetables, 
+    viccInterventions, 
+    onUpdateViccInterventions 
+}) => {
     const { user } = useContext(UserContext);
     const { institution } = useContext(InstitutionContext);
     const [activeTab, setActiveTab] = useState<DeceFileTab>(initialTab);
@@ -162,19 +189,28 @@ const StudentProfileCard: React.FC<StudentProfileCardProps> = ({ studentId, onCl
 
     const [studentData, setStudentData] = useState<Student | null>(null);
     
+    const effectiveInstitutionId = user?.institutionId || studentData?.institutionId || institution?.id || 'uemol';
+
     // Derived memoized data
     const profileData = useMemo(() => {
       if (!studentData) return null;
-      const institutionId = user?.institutionId;
-      const classInfo = (allClasses || MOCK_CLASSES).find(c => c.id === studentData.classId && c.institutionId === institutionId);
-      const parentInfo = (allUsers || MOCK_USERS).find(u => u.id === studentData.parentId && u.institutionId === institutionId);
-      const interventions = MOCK_INTERVENTIONS.filter(i => i.studentId === studentId && i.institutionId === institutionId)
+      const classInfo = (allClasses || MOCK_CLASSES).find(c => c.id === studentData.classId && (!c.institutionId || c.institutionId === effectiveInstitutionId));
+      const parentInfo = (allUsers || MOCK_USERS).find(u => u.id === studentData.parentId && (!u.institutionId || u.institutionId === effectiveInstitutionId));
+      
+      const interventionsList = (allInterventions && allInterventions.length > 0) ? allInterventions : MOCK_INTERVENTIONS;
+      const interventions = interventionsList.filter(i => i.studentId === studentId && (!i.institutionId || i.institutionId === effectiveInstitutionId || !effectiveInstitutionId))
           .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-      const ovpActivities = MOCK_OVP_ACTIVITIES.filter(a => a.studentId === studentId && a.institutionId === institutionId);
-      const healthRecord = (allHealthRecords || MOCK_HEALTH_RECORDS).find(hr => hr.studentId === studentId && hr.institutionId === institutionId);
-      const medicalVisits = (allMedicalVisits || MOCK_MEDICAL_VISITS).filter(mv => mv.studentId === studentId && mv.institutionId === institutionId)
+      
+      const ovpActivities = MOCK_OVP_ACTIVITIES.filter(a => a.studentId === studentId && (!a.institutionId || a.institutionId === effectiveInstitutionId));
+      
+      const healthList = (allHealthRecords && allHealthRecords.length > 0) ? allHealthRecords : MOCK_HEALTH_RECORDS;
+      const healthRecord = healthList.find(hr => hr.studentId === studentId && (!hr.institutionId || hr.institutionId === effectiveInstitutionId || !effectiveInstitutionId));
+      
+      const visitsList = (allMedicalVisits && allMedicalVisits.length > 0) ? allMedicalVisits : MOCK_MEDICAL_VISITS;
+      const medicalVisits = visitsList.filter(mv => mv.studentId === studentId && (!mv.institutionId || mv.institutionId === effectiveInstitutionId || !effectiveInstitutionId))
             .sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-      const studentViccInterventions = (viccInterventions || MOCK_VICC_INTERVENTIONS).filter(i => i.studentId === studentId && i.institutionId === institutionId)
+      
+      const studentViccInterventions = (viccInterventions || MOCK_VICC_INTERVENTIONS).filter(i => i.studentId === studentId && (!i.institutionId || i.institutionId === effectiveInstitutionId))
           .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
       return {
@@ -187,7 +223,7 @@ const StudentProfileCard: React.FC<StudentProfileCardProps> = ({ studentId, onCl
           medicalVisits,
           viccInterventions: studentViccInterventions,
       }
-    }, [studentData, studentId, user, allUsers, allClasses, allHealthRecords, allMedicalVisits, viccInterventions]);
+    }, [studentData, studentId, effectiveInstitutionId, allUsers, allClasses, allHealthRecords, allMedicalVisits, allInterventions, viccInterventions]);
 
     const formattedBirthDate = useMemo(() => {
         if (!profileData?.birthDate) return 'No registrada';
@@ -211,23 +247,44 @@ const StudentProfileCard: React.FC<StudentProfileCardProps> = ({ studentId, onCl
         setIsInterventionModalOpen(true);
     };
 
-    const handleSaveIntervention = (intervention: { id?: string; date: string; type: InterventionType; summary: string; participants: string[]; agreements: string; }) => {
-        if (!profileData) return;
+    const handleSaveIntervention = async (intervention: { id?: string; date: string; type: InterventionType; summary: string; participants: string[]; agreements: string; }) => {
+        if (!studentData) return;
         const professionalId = user?.id || 'dece-unknown';
+        const targetInstId = studentData.institutionId || effectiveInstitutionId;
         
-        if (intervention.id) { // Editing existing
-            console.log("Updating intervention:", intervention);
-        } else { // Adding new
-            const newIntervention: Intervention = {
-                ...intervention,
-                id: `int-${Date.now()}`,
-                institutionId: profileData.institutionId,
-                studentId: profileData.id,
-                deceProfessionalId: professionalId,
-            };
-             console.log("Adding new intervention:", newIntervention);
+        const newIntervention: Intervention = {
+            ...intervention,
+            id: intervention.id || `int-${Date.now()}`,
+            institutionId: targetInstId,
+            studentId: studentData.id,
+            deceProfessionalId: professionalId,
+            date: intervention.date || new Date().toISOString().split('T')[0],
+            summary: intervention.summary || '',
+            participants: intervention.participants || [],
+            agreements: intervention.agreements || ''
+        };
+
+        await saveDocument('interventions', newIntervention.id, newIntervention);
+
+        if (onUpdateInterventions) {
+            const currentList = allInterventions || [];
+            const exists = currentList.some(i => i.id === newIntervention.id);
+            const updated = exists 
+                ? currentList.map(i => i.id === newIntervention.id ? newIntervention : i)
+                : [newIntervention, ...currentList];
+            onUpdateInterventions(updated);
         }
         setIsInterventionModalOpen(false);
+        setEditingIntervention(null);
+    };
+
+    const handleDeleteIntervention = async (interventionId: string) => {
+        if (window.confirm('¿Está seguro de que desea eliminar esta intervención?')) {
+            await deleteDocument('interventions', interventionId);
+            if (onUpdateInterventions) {
+                onUpdateInterventions((allInterventions || []).filter(i => i.id !== interventionId));
+            }
+        }
     };
 
     const handleOpenViccInterventionForm = (intervention: ViccIntervention | null) => {
@@ -235,53 +292,83 @@ const StudentProfileCard: React.FC<StudentProfileCardProps> = ({ studentId, onCl
         setIsViccInterventionModalOpen(true);
     };
 
-    const handleSaveViccIntervention = (intervention: { id?: string; date: string; type: ViccInterventionType; summary: string; participants: string[]; agreements: string; }) => {
+    const handleSaveViccIntervention = async (intervention: { id?: string; date: string; type: ViccInterventionType; summary: string; participants: string[]; agreements: string; }) => {
         if (!profileData || !onUpdateViccInterventions) return;
         const professionalId = user?.id || 'vicerrector-unknown';
+        const targetInstId = profileData.institutionId || effectiveInstitutionId;
         
-        let updatedInterventions;
+        let updatedInterventions: ViccIntervention[];
         if (intervention.id) { // Editing existing
-            updatedInterventions = (viccInterventions || []).map(i => i.id === intervention.id ? { ...i, ...intervention } as ViccIntervention : i);
+            const updatedItem: ViccIntervention = { ...intervention, id: intervention.id, institutionId: targetInstId, studentId: profileData.id, vicerrectorId: professionalId } as ViccIntervention;
+            await saveDocument('vicc_interventions', updatedItem.id, updatedItem);
+            updatedInterventions = (viccInterventions || []).map(i => i.id === intervention.id ? updatedItem : i);
         } else { // Adding new
             const newIntervention: ViccIntervention = {
                 ...intervention,
                 id: `vicc-${Date.now()}`,
-                institutionId: profileData.institutionId,
+                institutionId: targetInstId,
                 studentId: profileData.id,
                 vicerrectorId: professionalId,
             };
+            await saveDocument('vicc_interventions', newIntervention.id, newIntervention);
             updatedInterventions = [...(viccInterventions || []), newIntervention];
         }
         onUpdateViccInterventions(updatedInterventions);
         setIsViccInterventionModalOpen(false);
     };
 
-    const handleSaveHealthRecord = (record: HealthRecord) => {
-        if (onUpdateHealthRecords && allHealthRecords) {
-            const existingRecord = allHealthRecords.find(hr => hr.id === record.id);
-            let updatedRecords;
-            if (existingRecord) {
-                updatedRecords = allHealthRecords.map(hr => hr.id === record.id ? record : hr);
-            } else {
-                updatedRecords = [...allHealthRecords, record];
-            }
-            onUpdateHealthRecords(updatedRecords);
+    const handleSaveHealthRecord = async (record: HealthRecord) => {
+        const targetInstId = studentData?.institutionId || effectiveInstitutionId;
+        const finalRecord: HealthRecord = {
+            ...record,
+            id: record.id || `hr-${Date.now()}`,
+            institutionId: record.institutionId || targetInstId,
+            studentId: studentId,
+        };
+
+        await saveDocument('health_records', finalRecord.id, finalRecord);
+
+        if (onUpdateHealthRecords) {
+            const currentList = allHealthRecords || [];
+            const exists = currentList.some(hr => hr.id === finalRecord.id);
+            const updated = exists
+                ? currentList.map(hr => hr.id === finalRecord.id ? finalRecord : hr)
+                : [finalRecord, ...currentList];
+            onUpdateHealthRecords(updated);
         }
         setIsHealthFormOpen(false);
     };
 
-    const handleSaveMedicalVisit = (visit: MedicalVisit) => {
-        if (onUpdateMedicalVisits && allMedicalVisits) {
-            const existingVisit = allMedicalVisits.find(v => v.id === visit.id);
-            let updatedVisits;
-            if (existingVisit) {
-                updatedVisits = allMedicalVisits.map(v => v.id === visit.id ? visit : v);
-            } else {
-                updatedVisits = [...allMedicalVisits, visit];
-            }
-            onUpdateMedicalVisits(updatedVisits);
+    const handleSaveMedicalVisit = async (visit: MedicalVisit) => {
+        const targetInstId = studentData?.institutionId || effectiveInstitutionId;
+        const finalVisit: MedicalVisit = {
+            ...visit,
+            id: visit.id || `visit-${Date.now()}`,
+            institutionId: visit.institutionId || targetInstId,
+            studentId: studentId,
+            healthProfessionalId: visit.healthProfessionalId || user?.id || 'prof-salud',
+        };
+
+        await saveDocument('medical_visits', finalVisit.id, finalVisit);
+
+        if (onUpdateMedicalVisits) {
+            const currentList = allMedicalVisits || [];
+            const exists = currentList.some(v => v.id === finalVisit.id);
+            const updated = exists
+                ? currentList.map(v => v.id === finalVisit.id ? finalVisit : v)
+                : [finalVisit, ...currentList];
+            onUpdateMedicalVisits(updated);
         }
         setIsVisitFormOpen(false);
+    };
+
+    const handleDeleteMedicalVisit = async (visitId: string) => {
+        if (window.confirm('¿Está seguro de que desea eliminar esta visita médica?')) {
+            await deleteDocument('medical_visits', visitId);
+            if (onUpdateMedicalVisits) {
+                onUpdateMedicalVisits((allMedicalVisits || []).filter(v => v.id !== visitId));
+            }
+        }
     };
 
     const handleOpenContactForm = (contact: RelatedContact | null) => {
@@ -309,6 +396,7 @@ const StudentProfileCard: React.FC<StudentProfileCardProps> = ({ studentId, onCl
         const updatedStudent = { ...studentData, relatedContacts: updatedContacts };
         
         setStudentData(updatedStudent);
+        saveDocument('students', updatedStudent.id, updatedStudent);
 
         const updatedAllStudents = allStudents.map(s =>
             s.id === studentData.id ? updatedStudent : s
@@ -323,6 +411,7 @@ const StudentProfileCard: React.FC<StudentProfileCardProps> = ({ studentId, onCl
             const updatedContacts = (studentData.relatedContacts || []).filter(c => c.id !== contactId);
             const updatedStudent = { ...studentData, relatedContacts: updatedContacts };
             setStudentData(updatedStudent);
+            saveDocument('students', updatedStudent.id, updatedStudent);
 
             const updatedAllStudents = allStudents.map(s =>
                 s.id === studentData.id ? updatedStudent : s
@@ -455,6 +544,9 @@ const StudentProfileCard: React.FC<StudentProfileCardProps> = ({ studentId, onCl
                                          )}
                                         <button onClick={() => handleOpenInterventionForm(item)} className="p-1.5 text-gray-500 hover:text-blue-600 rounded-full hover:bg-blue-100" title="Editar">
                                             <EditIcon className="h-5 w-5" />
+                                        </button>
+                                        <button onClick={() => handleDeleteIntervention(item.id)} className="p-1.5 text-gray-500 hover:text-red-600 rounded-full hover:bg-red-100" title="Eliminar Intervención">
+                                            <TrashIcon className="h-5 w-5" />
                                         </button>
                                     </div>
                                 )}
@@ -626,12 +718,20 @@ const StudentProfileCard: React.FC<StudentProfileCardProps> = ({ studentId, onCl
                                     <div className="flex items-center">
                                       {visit.isReferred && <span className="text-xs font-semibold bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded-full mr-2">Referido</span>}
                                       {isEditable && (
-                                          <button 
-                                              onClick={() => setPrintingVisit(visit)} 
-                                              className="p-1.5 text-gray-400 hover:text-blue-600 rounded-full hover:bg-blue-100 opacity-0 group-hover:opacity-100 transition-opacity" 
-                                              title="Imprimir Certificado">
-                                              <PrinterIcon className="h-5 w-5" />
-                                          </button>
+                                          <div className="flex items-center gap-1">
+                                              <button 
+                                                  onClick={() => setPrintingVisit(visit)} 
+                                                  className="p-1.5 text-gray-400 hover:text-blue-600 rounded-full hover:bg-blue-100 opacity-0 group-hover:opacity-100 transition-opacity" 
+                                                  title="Imprimir Certificado">
+                                                  <PrinterIcon className="h-5 w-5" />
+                                              </button>
+                                              <button 
+                                                  onClick={() => handleDeleteMedicalVisit(visit.id)} 
+                                                  className="p-1.5 text-gray-400 hover:text-red-600 rounded-full hover:bg-red-100 opacity-0 group-hover:opacity-100 transition-opacity" 
+                                                  title="Eliminar Visita Médica">
+                                                  <TrashIcon className="h-5 w-5" />
+                                              </button>
+                                          </div>
                                       )}
                                     </div>
                                 </div>
@@ -818,17 +918,17 @@ const StudentProfileCard: React.FC<StudentProfileCardProps> = ({ studentId, onCl
                     onSave={handleSaveHealthRecord}
                     recordToEdit={profileData.healthRecord}
                     studentId={studentId}
-                    institutionId={profileData.institutionId}
+                    institutionId={studentData?.institutionId || effectiveInstitutionId}
                 />
             )}
-            {isVisitFormOpen && user && (
+            {isVisitFormOpen && (
                 <MedicalVisitForm
                     isOpen={isVisitFormOpen}
                     onClose={() => setIsVisitFormOpen(false)}
                     onSave={handleSaveMedicalVisit}
                     studentId={studentId}
-                    institutionId={profileData.institutionId}
-                    healthProfessionalId={user.id}
+                    institutionId={studentData?.institutionId || effectiveInstitutionId}
+                    healthProfessionalId={user?.id || 'prof-salud'}
                 />
             )}
             {printingVisit && studentData && institution && (

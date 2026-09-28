@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useContext } from 'react';
-import { Student, User, Class, Role, ScheduleEntry, Subject, TimeSlot, Room, Timetable, ViccIntervention } from '../../types';
+import { Student, User, Class, Role, ScheduleEntry, Subject, TimeSlot, Room, Timetable, ViccIntervention, HealthRecord, MedicalVisit, Intervention } from '../../types';
 import { PlusIcon, EditIcon, TrashIcon, SearchIcon, UsersIcon } from '../icons/Icons';
 import StudentForm from './StudentForm';
 import StudentProfileCard from '../student/StudentProfileCard';
@@ -14,6 +14,12 @@ interface StudentManagementProps {
     onUpdateStudents: (students: Student[]) => void;
     onUpdateUsers: (users: User[]) => void;
     onUpdateClasses?: (classes: Class[]) => void;
+    allHealthRecords?: HealthRecord[];
+    onUpdateHealthRecords?: (records: HealthRecord[]) => void;
+    allMedicalVisits?: MedicalVisit[];
+    onUpdateMedicalVisits?: (visits: MedicalVisit[]) => void;
+    allInterventions?: Intervention[];
+    onUpdateInterventions?: (interventions: Intervention[]) => void;
     onBack?: () => void;
     showBackButton?: boolean;
     schedule?: ScheduleEntry[];
@@ -32,6 +38,12 @@ const StudentManagement: React.FC<StudentManagementProps> = ({
     onUpdateStudents, 
     onUpdateUsers, 
     onUpdateClasses,
+    allHealthRecords,
+    onUpdateHealthRecords,
+    allMedicalVisits,
+    onUpdateMedicalVisits,
+    allInterventions,
+    onUpdateInterventions,
     onBack, 
     showBackButton = true, 
     schedule, 
@@ -368,6 +380,12 @@ const StudentManagement: React.FC<StudentManagementProps> = ({
                     allUsers={users}
                     onUpdateUsers={handleUserUpdate}
                     allClasses={classes}
+                    allHealthRecords={allHealthRecords}
+                    onUpdateHealthRecords={onUpdateHealthRecords}
+                    allMedicalVisits={allMedicalVisits}
+                    onUpdateMedicalVisits={onUpdateMedicalVisits}
+                    allInterventions={allInterventions}
+                    onUpdateInterventions={onUpdateInterventions}
                     schedule={schedule}
                     subjects={subjects}
                     timeSlots={timeSlots}
