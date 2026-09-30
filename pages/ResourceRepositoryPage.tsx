@@ -82,8 +82,10 @@ const ResourceRepositoryPage: React.FC<ResourceRepositoryPageProps> = ({ dcds, r
             const canView = isSuperAdmin || isMyResource || isShared;
             if (!canView) return false;
 
-            const matchesSearch = res.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                                  res.description.toLowerCase().includes(searchTerm.toLowerCase());
+            const term = (searchTerm || '').toLowerCase();
+            const matchesSearch = !term || 
+                                  (res.title || '').toLowerCase().includes(term) || 
+                                  (res.description || '').toLowerCase().includes(term);
             const matchesType = filterType === 'All' || res.type === filterType;
             return matchesSearch && matchesType;
         });

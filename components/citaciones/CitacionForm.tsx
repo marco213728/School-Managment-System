@@ -44,7 +44,8 @@ const CitacionForm: React.FC<CitacionFormProps> = ({ isOpen, onClose, onSave, st
 
     const filteredStudents = useMemo(() => {
         if (!searchTerm) return students;
-        return students.filter(s => s.name.toLowerCase().includes(searchTerm.toLowerCase()));
+        const term = searchTerm.toLowerCase();
+        return students.filter(s => s && (s.name || '').toLowerCase().includes(term));
     }, [students, searchTerm]);
 
     const handleSelectStudent = (student: Student) => {

@@ -18,7 +18,8 @@ interface ExitPassManagementProps {
 const StudentSelector: React.FC<{ students: Student[], onSelect: (studentId: string) => void, onCancel: () => void }> = ({ students, onSelect, onCancel }) => {
     const [searchTerm, setSearchTerm] = useState('');
     const filteredStudents = useMemo(() => {
-        return students.filter(s => s.name.toLowerCase().includes(searchTerm.toLowerCase()));
+        const term = (searchTerm || '').toLowerCase();
+        return students.filter(s => s && (s.name || '').toLowerCase().includes(term));
     }, [students, searchTerm]);
 
     return (

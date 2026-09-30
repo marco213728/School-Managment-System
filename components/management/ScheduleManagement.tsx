@@ -8,6 +8,7 @@ import { ArrowLeftIcon, PlusIcon, EditIcon, TrashIcon, PrinterIcon } from '../ic
 import ScheduleForm from './ScheduleForm';
 import PrintableSchedule from './PrintableSchedule';
 import { UserContext, InstitutionContext } from '../../contexts/UserContext';
+import { saveDocument, deleteDocument } from '../../lib/firebase';
 
 
 interface ScheduleManagementProps {
@@ -83,8 +84,46 @@ const ScheduleManagement: React.FC<ScheduleManagementProps> = ({ schedule, class
         unavailableRoomIds: string[],
     } | null>(null);
 
-    const [selectedClassId, setSelectedClassId] = useState<string>('');
+    const storageKey = effectiveInstitutionId ? `amauta_schedule_selected_class_${effectiveInstitutionId}` : 'amauta_schedule_selected_class';
+
+    const [selectedClassId, setSelectedClassId] = useState<string>(() => {
+        try {
+            const saved = localStorage.getItem(storageKey);
+            if (saved && classes.some(c => c.id === saved)) return saved;
+        } catch (e) {
+            // ignore
+        }
+        // Auto-select class with existing entries if available
+        const classWithEntries = classes.find(c => schedule.some(s => s.classId === c.id));
+        if (classWithEntries) return classWithEntries.id;
+        return classes[0]?.id || '';
+    });
+
     const [selectedTimetableId, setSelectedTimetableId] = useState<string>('');
+    const [saveStatus, setSaveStatus] = useState<string | null>(null);
+
+    const handleSelectClass = (classId: string) => {
+        setSelectedClassId(classId);
+        try {
+            if (classId) {
+                localStorage.setItem(storageKey, classId);
+            } else {
+                localStorage.removeItem(storageKey);
+            }
+        } catch (e) {
+            // ignore
+        }
+    };
+
+    // If classes load later and current selectedClassId is empty, try to auto-select
+    useEffect(() => {
+        if (!selectedClassId && classes.length > 0) {
+            const classWithEntries = classes.find(c => schedule.some(s => s.classId === c.id));
+            const targetId = classWithEntries ? classWithEntries.id : classes[0].id;
+            setSelectedClassId(targetId);
+            try { localStorage.setItem(storageKey, targetId); } catch(e) {}
+        }
+    }, [classes, schedule, selectedClassId, storageKey]);
 
     // Filter timetables strictly for this institution
     const institutionTimetables = useMemo(() => {
@@ -213,21 +252,29 @@ const ScheduleManagement: React.FC<ScheduleManagementProps> = ({ schedule, class
         setIsFormOpen(true);
     };
 
-    const handleSave = (subjectId: string, roomId: string) => {
+    const handleSave = async (subjectId: string, roomId: string) => {
         if (!editingData || !selectedClassId) return;
 
         const { day, timeSlotId, entryToEdit } = editingData;
+        const entryId = `sch-${selectedClassId}-${day}-${timeSlotId}`;
         let updatedSchedule = [...schedule];
 
-        const oldEntryIndex = entryToEdit ? updatedSchedule.findIndex(e => e.day === day && e.timeSlotId === timeSlotId && e.classId === selectedClassId) : -1;
+        const oldEntryIndex = updatedSchedule.findIndex(e => e.day === day && e.timeSlotId === timeSlotId && e.classId === selectedClassId);
 
         if (oldEntryIndex > -1) {
             updatedSchedule.splice(oldEntryIndex, 1);
         }
 
         if (subjectId && roomId) {
-            const newEntry: ScheduleEntry = { day, timeSlotId, classId: selectedClassId, subjectId, roomId };
+            const newEntry: ScheduleEntry = { id: entryId, day, timeSlotId, classId: selectedClassId, subjectId, roomId };
             updatedSchedule.push(newEntry);
+            await saveDocument('schedule', entryId, newEntry);
+            setSaveStatus(`✓ Asignado correctamente a las ${timeSlotMap.get(timeSlotId)?.startTime || ''} en ${classMap.get(selectedClassId) || ''}`);
+            setTimeout(() => setSaveStatus(null), 3500);
+        } else {
+            await deleteDocument('schedule', entryId);
+            setSaveStatus(`✓ Franja horaria liberada`);
+            setTimeout(() => setSaveStatus(null), 3500);
         }
 
         onUpdateSchedule(updatedSchedule);
@@ -235,38 +282,64 @@ const ScheduleManagement: React.FC<ScheduleManagementProps> = ({ schedule, class
         setEditingData(null);
     };
     
-    const handleRemove = (day: ScheduleEntry['day'], timeSlotId: string, classId: string) => {
+    const handleRemove = async (day: ScheduleEntry['day'], timeSlotId: string, classId: string) => {
         if (window.confirm('¿Está seguro de que desea eliminar esta clase del horario?')) {
+            const entryId = `sch-${classId}-${day}-${timeSlotId}`;
+            await deleteDocument('schedule', entryId);
             onUpdateSchedule(schedule.filter(e => !(e.day === day && e.timeSlotId === timeSlotId && e.classId === classId)));
+            setSaveStatus(`✓ Clase eliminada del horario`);
+            setTimeout(() => setSaveStatus(null), 3500);
         }
     };
     
     const visibleTimeSlots = useMemo(() => {
-        if (!selectedShift) return [];
-        
-        let shiftSlots = institutionTimeSlots.filter(ts => ts.shift === selectedShift);
+        // Collect any slot IDs used by entries of the selected class to prevent entries from disappearing
+        const usedSlotIdsForClass = new Set(
+            selectedClassId ? schedule.filter(e => e.classId === selectedClassId).map(e => e.timeSlotId) : []
+        );
 
-        // 1. If a specific class is selected and has a timetable, only show that timetable's slots!
+        let candidateSlots = institutionTimeSlots;
+        if (selectedShift) {
+            candidateSlots = institutionTimeSlots.filter(ts => ts.shift === selectedShift || usedSlotIdsForClass.has(ts.id));
+        }
+
+        // 1. If a specific class is selected and has a timetable, show that timetable's slots + any used slots
         if (selectedClass?.timetableId) {
-            const classSlots = shiftSlots.filter(ts => ts.timetableId === selectedClass.timetableId);
+            const classSlots = candidateSlots.filter(ts => ts.timetableId === selectedClass.timetableId || usedSlotIdsForClass.has(ts.id));
             if (classSlots.length > 0) {
-                return classSlots.sort((a,b) => a.startTime.localeCompare(b.startTime));
+                const seen = new Set<string>();
+                const deduped: TimeSlot[] = [];
+                classSlots.forEach(s => {
+                    if (!seen.has(s.id)) {
+                        seen.add(s.id);
+                        deduped.push(s);
+                    }
+                });
+                return deduped.sort((a,b) => a.startTime.localeCompare(b.startTime));
             }
         }
 
         // 2. In General View (or class without timetable), if an active timetable is selected:
         const activeTtId = selectedTimetableId || timetablesForShift[0]?.id;
         if (activeTtId) {
-            const ttSlots = shiftSlots.filter(ts => ts.timetableId === activeTtId);
+            const ttSlots = candidateSlots.filter(ts => ts.timetableId === activeTtId || usedSlotIdsForClass.has(ts.id));
             if (ttSlots.length > 0) {
-                return ttSlots.sort((a,b) => a.startTime.localeCompare(b.startTime));
+                const seen = new Set<string>();
+                const deduped: TimeSlot[] = [];
+                ttSlots.forEach(s => {
+                    if (!seen.has(s.id)) {
+                        seen.add(s.id);
+                        deduped.push(s);
+                    }
+                });
+                return deduped.sort((a,b) => a.startTime.localeCompare(b.startTime));
             }
         }
 
         // 3. Fallback: deduplicate by startTime-endTime to avoid visual overlaps
         const seen = new Set<string>();
         const deduped: TimeSlot[] = [];
-        shiftSlots.forEach(slot => {
+        candidateSlots.forEach(slot => {
             const key = `${slot.startTime}-${slot.endTime}`;
             if (!seen.has(key)) {
                 seen.add(key);
@@ -274,7 +347,7 @@ const ScheduleManagement: React.FC<ScheduleManagementProps> = ({ schedule, class
             }
         });
         return deduped.sort((a,b) => a.startTime.localeCompare(b.startTime));
-    }, [institutionTimeSlots, selectedShift, selectedClass, selectedTimetableId, timetablesForShift]);
+    }, [institutionTimeSlots, selectedShift, selectedClass, selectedTimetableId, timetablesForShift, schedule, selectedClassId]);
 
     return (
         <div className="bg-white p-6 rounded-xl shadow-md">
@@ -325,6 +398,62 @@ const ScheduleManagement: React.FC<ScheduleManagementProps> = ({ schedule, class
                 </div>
             </div>
 
+            {saveStatus && (
+                <div className="mb-4 p-3 bg-emerald-50 border border-emerald-300 text-emerald-800 rounded-lg text-xs font-semibold flex items-center justify-between animate-fade-in shadow-xs">
+                    <div className="flex items-center gap-2">
+                        <span className="text-emerald-600 text-sm">✓</span>
+                        <span>{saveStatus}</span>
+                        <span className="text-emerald-600 font-normal">| Sincronizado en la nube (Firestore)</span>
+                    </div>
+                    <button onClick={() => setSaveStatus(null)} className="text-emerald-700 hover:text-emerald-900 font-bold">&times;</button>
+                </div>
+            )}
+
+            {/* Selector Rápido de Cursos con Contadores de Horas */}
+            <div className="mb-4 p-3 bg-slate-50 border border-slate-200 rounded-xl">
+                <div className="flex flex-wrap items-center gap-1.5">
+                    <span className="text-xs font-bold text-slate-600 mr-2 uppercase tracking-wider">Cursos:</span>
+                    <button
+                        onClick={() => handleSelectClass('')}
+                        className={`px-3 py-1 rounded-lg text-xs font-semibold border transition ${
+                            !selectedClassId 
+                                ? 'bg-primary-600 text-white border-primary-600 shadow-xs' 
+                                : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-100'
+                        }`}
+                    >
+                        Vista General (Todas)
+                    </button>
+                    {classes.map(c => {
+                        const count = schedule.filter(s => s.classId === c.id).length;
+                        const isSelected = selectedClassId === c.id;
+                        return (
+                            <button
+                                key={c.id}
+                                onClick={() => handleSelectClass(c.id)}
+                                className={`px-3 py-1 rounded-lg text-xs font-semibold border transition flex items-center gap-1.5 ${
+                                    isSelected 
+                                        ? 'bg-primary-600 text-white border-primary-600 shadow-xs font-bold' 
+                                        : count > 0 
+                                            ? 'bg-primary-50 text-primary-800 border-primary-200 hover:bg-primary-100' 
+                                            : 'bg-white text-slate-600 border-slate-300 hover:bg-slate-100'
+                                }`}
+                            >
+                                <span>{c.name}</span>
+                                <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${
+                                    isSelected 
+                                        ? 'bg-white/30 text-white' 
+                                        : count > 0 
+                                            ? 'bg-primary-200 text-primary-900' 
+                                            : 'bg-slate-100 text-slate-500'
+                                }`}>
+                                    {count} hrs
+                                </span>
+                            </button>
+                        );
+                    })}
+                </div>
+            </div>
+
             <div className="my-4 flex flex-col sm:flex-row sm:items-end justify-between gap-4">
                 <div className="flex-grow max-w-md">
                     <label htmlFor="class-selector" className="block text-sm font-medium text-gray-700 mb-1">
@@ -333,11 +462,18 @@ const ScheduleManagement: React.FC<ScheduleManagementProps> = ({ schedule, class
                     <select
                         id="class-selector"
                         value={selectedClassId}
-                        onChange={(e) => setSelectedClassId(e.target.value)}
+                        onChange={(e) => handleSelectClass(e.target.value)}
                         className="block w-full p-2 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 text-sm"
                     >
                         <option value="">-- Vista General (Todas las clases) --</option>
-                        {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                        {classes.map(c => {
+                            const count = schedule.filter(s => s.classId === c.id).length;
+                            return (
+                                <option key={c.id} value={c.id}>
+                                    {c.name} {count > 0 ? `(${count} horas registradas)` : ''}
+                                </option>
+                            );
+                        })}
                     </select>
 
                     {selectedClass && (

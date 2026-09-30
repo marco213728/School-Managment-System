@@ -182,11 +182,14 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ absenceRequests = [
         if (!currentUser) return null;
 
         const teacherSubjects = subjects.filter(s => s.teacherId === currentUser.id);
-        const teacherSubjectIds = teacherSubjects.map(s => s.id);
+        const teacherSubjectIds = new Set(teacherSubjects.map(s => s.id));
         
-        const teacherScheduleEntries = schedule.filter(e => teacherSubjectIds.includes(e.subjectId));
+        const teacherScheduleEntries = schedule.filter(e => teacherSubjectIds.has(e.subjectId));
 
-        const teacherClassIds = new Set<string>();
+        const teacherClassIds = new Set<string>(currentUser.classIds || []);
+        classes.forEach(c => {
+            if (c.tutorId === currentUser.id) teacherClassIds.add(c.id);
+        });
         teacherScheduleEntries.forEach(e => teacherClassIds.add(e.classId));
         
         const teacherTimetableIds = new Set<string>();
@@ -196,13 +199,45 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ absenceRequests = [
             }
         });
 
-        const relevantTimeSlots = timeSlots.filter(ts => teacherTimetableIds.has(ts.timetableId));
+        // If no class timetables found, find institution's timetables
+        const instTimetables = timetables.filter(t => !t.institutionId || t.institutionId === currentUser.institutionId);
+        if (teacherTimetableIds.size === 0 && instTimetables.length > 0) {
+            instTimetables.forEach(t => teacherTimetableIds.add(t.id));
+        }
+
+        const primaryTimetable = instTimetables.find(t => teacherTimetableIds.has(t.id)) || instTimetables[0] || timetables[0] || null;
+
+        let candidateSlots = timeSlots.filter(ts => {
+            if (ts.timetableId && teacherTimetableIds.has(ts.timetableId)) return true;
+            if (teacherScheduleEntries.some(e => e.timeSlotId === ts.id)) return true;
+            return false;
+        });
+
+        if (candidateSlots.length === 0 && primaryTimetable?.shift) {
+            candidateSlots = timeSlots.filter(ts => ts.shift === primaryTimetable.shift);
+        }
+
+        if (candidateSlots.length === 0) {
+            candidateSlots = timeSlots;
+        }
+
+        const seen = new Set<string>();
+        const relevantTimeSlots: TimeSlot[] = [];
+        candidateSlots.forEach(ts => {
+            if (!seen.has(ts.id)) {
+                seen.add(ts.id);
+                relevantTimeSlots.push(ts);
+            }
+        });
+        relevantTimeSlots.sort((a, b) => a.startTime.localeCompare(b.startTime));
 
         return {
             teacherScheduleEntries,
             relevantTimeSlots,
+            primaryTimetable,
+            teacherSubjects,
         };
-    }, [currentUser, schedule, subjects, classes, timeSlots]);
+    }, [currentUser, schedule, subjects, classes, timeSlots, timetables]);
     
     const handleAddEvent = (event: Omit<CronogramaEvent, 'id' | 'status' | 'institutionId'>) => {
         const newEvent: CronogramaEvent = {
@@ -219,6 +254,38 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ absenceRequests = [
     return (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div className="lg:col-span-2 space-y-6">
+                {/* Banner de Plantilla Horaria Asignada */}
+                <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs flex flex-wrap items-center justify-between gap-3">
+                    <div className="flex items-center gap-3">
+                        <div className="p-2.5 bg-primary-50 text-primary-600 rounded-lg">
+                            <CalendarIcon className="h-6 w-6" />
+                        </div>
+                        <div>
+                            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Plantilla Horaria Oficial</span>
+                            <h4 className="text-base font-bold text-slate-800">
+                                {teacherData.primaryTimetable ? `${teacherData.primaryTimetable.name} (${teacherData.primaryTimetable.shift})` : 'Plantilla Institucional Matutina'}
+                            </h4>
+                        </div>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2">
+                        <span className="text-xs bg-primary-50 text-primary-700 border border-primary-200 font-bold px-3 py-1 rounded-full">
+                            {teacherData.teacherScheduleEntries.length} horas semanales
+                        </span>
+                        <span className="text-xs bg-slate-100 text-slate-700 border border-slate-200 font-medium px-2.5 py-1 rounded-full">
+                            {teacherData.relevantTimeSlots.length} franjas horarias
+                        </span>
+                    </div>
+                </div>
+
+                {teacherData.teacherScheduleEntries.length === 0 && (
+                    <div className="p-3.5 bg-blue-50 border border-blue-200 text-blue-900 rounded-xl text-xs flex items-center gap-2">
+                        <span>ℹ️</span>
+                        <span>
+                            Su usuario docente está vinculado a la jornada oficial institucional. Aún no se han cargado horas específicas en el distributivo semanal. A continuación se presentan las franjas horarias configuradas.
+                        </span>
+                    </div>
+                )}
+
                 <ScheduleView
                     title="Mi Horario Semanal"
                     scheduleEntries={teacherData.teacherScheduleEntries}

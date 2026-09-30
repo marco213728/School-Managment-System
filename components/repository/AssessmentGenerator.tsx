@@ -45,9 +45,11 @@ const AssessmentGenerator: React.FC<AssessmentGeneratorProps> = ({ isOpen, onClo
     // Filter DCDs based on search term and selected subject
     const filteredDcds = useMemo(() => {
         if (!dcdSearchTerm) return [];
+        const term = dcdSearchTerm.toLowerCase();
         return dcds.filter(d => {
-            const matchesSearch = d.code.toLowerCase().includes(dcdSearchTerm.toLowerCase()) || 
-                                  d.description.toLowerCase().includes(dcdSearchTerm.toLowerCase());
+            if (!d) return false;
+            const matchesSearch = (d.code || '').toLowerCase().includes(term) || 
+                                  (d.description || '').toLowerCase().includes(term);
             const matchesSubject = subjectId ? d.subjectId === subjectId : true;
             return matchesSearch && matchesSubject;
         }).slice(0, 5); // Limit to 5 suggestions

@@ -27,10 +27,12 @@ const ProtocolManagement: React.FC<ProtocolManagementProps> = ({ students, users
     
     // Filter logic
     const filteredCases = useMemo(() => {
+        const term = (searchTerm || '').toLowerCase();
         return cases.filter(c => {
-            const studentName = studentMap.get(c.studentId)?.name.toLowerCase() || '';
-            const typeMatch = c.violenceType.toLowerCase().includes(searchTerm.toLowerCase());
-            return studentName.includes(searchTerm.toLowerCase()) || typeMatch;
+            if (!c) return false;
+            const studentName = (studentMap.get(c.studentId)?.name || '').toLowerCase();
+            const typeMatch = (c.violenceType || '').toLowerCase().includes(term);
+            return studentName.includes(term) || typeMatch;
         });
     }, [cases, searchTerm, studentMap]);
 

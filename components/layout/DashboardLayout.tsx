@@ -144,7 +144,11 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = (props) => {
   } = props;
 
   const institutionTimetables = useMemo(() => {
-    return (props.timetables || []).filter(t => !t.institutionId || !effectiveInstitutionId || t.institutionId === effectiveInstitutionId);
+    const all = props.timetables || [];
+    if (!effectiveInstitutionId) return all;
+    const direct = all.filter(t => t.institutionId === effectiveInstitutionId);
+    if (direct.length > 0) return direct;
+    return all.filter(t => !t.institutionId);
   }, [props.timetables, effectiveInstitutionId]);
 
   const institutionTimetableIds = useMemo(() => {
@@ -153,16 +157,20 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = (props) => {
 
   const institutionTimeSlots = useMemo(() => {
     return (timeSlots || []).filter(ts => {
+      // Reject if explicitly assigned to another institution
       if (effectiveInstitutionId && ts.institutionId && ts.institutionId !== effectiveInstitutionId) {
         return false;
       }
-      if (effectiveInstitutionId && ts.institutionId === effectiveInstitutionId) {
-        return true;
-      }
+      // Accept if belonging to one of this institution's timetables
       if (ts.timetableId && institutionTimetableIds.has(ts.timetableId)) {
         return true;
       }
-      return !effectiveInstitutionId || !ts.institutionId;
+      // Accept if explicitly belongs to this institution
+      if (effectiveInstitutionId && ts.institutionId === effectiveInstitutionId) {
+        return true;
+      }
+      // Only fallback to slots without institution if no institutional timetables exist
+      return (!effectiveInstitutionId || !ts.institutionId) && institutionTimetableIds.size === 0;
     });
   }, [timeSlots, effectiveInstitutionId, institutionTimetableIds]);
 
@@ -284,7 +292,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = (props) => {
                 onUpdateEvaluationCriteria={restProps.onUpdateEvaluationCriteria} 
                 evaluationIndicators={restProps.evaluationIndicators} 
                 onUpdateEvaluationIndicators={restProps.onUpdateEvaluationIndicators}
-                readOnly={user?.role !== Role.SuperAdmin} // READ-ONLY para todos menos SuperAdmin
+                readOnly={![Role.SuperAdmin, Role.InstitutionAdmin, Role.Rector, Role.Vicerrector].includes(user?.role as any)}
             />;
         case 'juntas':
             return (

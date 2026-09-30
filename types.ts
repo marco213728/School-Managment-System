@@ -344,6 +344,7 @@ export interface Subject {
 }
 
 export interface ScheduleEntry { 
+    id?: string;
     day: 'Lunes' | 'Martes' | 'Miércoles' | 'Jueves' | 'Viernes'; 
     timeSlotId: string; 
     classId: string; 

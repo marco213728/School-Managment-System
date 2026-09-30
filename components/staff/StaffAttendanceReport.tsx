@@ -58,9 +58,10 @@ const StaffAttendanceReport: React.FC<StaffAttendanceReportProps> = ({ records, 
         // Safety check again, though processedRecords should be safe now
         if (!processedRecords) return [];
 
+        const term = searchTerm.toLowerCase();
         return processedRecords.filter(record => {
             const user = userMap.get(record.userId);
-            const nameMatch = user?.name.toLowerCase().includes(searchTerm.toLowerCase()) || false;
+            const nameMatch = (user?.name || '').toLowerCase().includes(term);
             const dateMatch = filterDate ? record.date === filterDate : true;
             return nameMatch && dateMatch;
         }).sort((a, b) => {

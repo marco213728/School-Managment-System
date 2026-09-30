@@ -5,7 +5,7 @@ import {
   User as FirebaseUser 
 } from 'firebase/auth';
 import { 
-  getFirestore, doc, getDocFromServer, collection, getDocs, setDoc, getDoc,
+  getFirestore, initializeFirestore, doc, getDocFromServer, collection, getDocs, setDoc, getDoc,
   deleteDoc, onSnapshot, writeBatch, Unsubscribe
 } from 'firebase/firestore';
 import firebaseConfig from '../firebase-applet-config.json';
@@ -18,7 +18,9 @@ import {
 import { Institution, User } from '../types';
 
 const app = initializeApp(firebaseConfig);
-export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId); /* CRITICAL: The app will break without this line */
+export const db = initializeFirestore(app, {
+  experimentalForceLongPolling: true,
+}, firebaseConfig.firestoreDatabaseId); /* CRITICAL: The app will break without this line */
 export const auth = getAuth(app);
 export const googleProvider = new GoogleAuthProvider();
 export { signInWithEmailAndPassword, sendPasswordResetEmail, signInWithPopup, signOut, onAuthStateChanged };

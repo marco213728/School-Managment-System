@@ -67,9 +67,12 @@ const HealthPage: React.FC<HealthPageProps> = ({
 
     const filteredStudents = useMemo(() => {
         if (!searchTerm) return studentsWithClass;
+        const term = searchTerm.toLowerCase();
         return studentsWithClass.filter(student => 
-            student.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            (student.className && student.className.toLowerCase().includes(searchTerm.toLowerCase()))
+            student && (
+                (student.name || '').toLowerCase().includes(term) ||
+                (student.className && student.className.toLowerCase().includes(term))
+            )
         );
     }, [searchTerm, studentsWithClass]);
 

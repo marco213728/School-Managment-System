@@ -74,9 +74,10 @@ const StudentManagement: React.FC<StudentManagementProps> = ({
     const filteredStudents = useMemo(() => {
         const lowercasedTerm = searchTerm.toLowerCase();
         return students.filter(student => {
+            if (!student) return false;
             const matchesClass = selectedClassFilter === 'all' || student.classId === selectedClassFilter;
             const matchesSearch = 
-                student.name.toLowerCase().includes(lowercasedTerm) ||
+                (student.name || '').toLowerCase().includes(lowercasedTerm) ||
                 (student.nationalId && student.nationalId.includes(lowercasedTerm)) ||
                 (classMap.get(student.classId) || '').toLowerCase().includes(lowercasedTerm) ||
                 (parentMap.get(student.parentId) || '').toLowerCase().includes(lowercasedTerm);

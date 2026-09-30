@@ -63,6 +63,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentPage, setCurrentPage, isSideba
     ],
     [Role.Teacher]: [
       ...commonLinks,
+      { page: 'schedule', icon: <CalendarIcon className="h-6 w-6" />, text: 'Mi Horario' },
       { page: 'leccionario', icon: <LeccionarioIcon className="h-6 w-6" />, text: 'Leccionario' },
       { page: 'gradebook', icon: <ClipboardListIcon className="h-6 w-6" />, text: 'Registro Docente' },
       { page: 'curricular_planning', icon: <ClipboardDocumentCheckIcon className="h-6 w-6" />, text: 'Planificación' },

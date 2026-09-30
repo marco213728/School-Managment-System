@@ -76,7 +76,7 @@ export default function App() {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (fbUser) => {
       if (fbUser && fbUser.email) {
-        const existing = users.find(u => u.email.toLowerCase() === fbUser.email!.toLowerCase());
+        const existing = users.find(u => (u.email || '').toLowerCase() === (fbUser.email || '').toLowerCase());
         if (existing) {
           setCurrentUser(existing);
           const inst = (existing.institutionId && institutions.find(i => i.id === existing.institutionId)) || institutions[0] || MOCK_INSTITUTIONS[0];
@@ -104,7 +104,7 @@ export default function App() {
   }, [users, institutions]);
 
   const handleLogin = (email: string, password: string): boolean => {
-    const user = users.find(u => u.email.toLowerCase() === email.toLowerCase());
+    const user = users.find(u => (u.email || '').toLowerCase() === (email || '').toLowerCase());
     if (!user) return false;
 
     // Check credentials:
@@ -131,7 +131,7 @@ export default function App() {
       const cred = await signInWithPopup(auth, googleProvider);
       const fbUser = cred.user;
       if (fbUser && fbUser.email) {
-        const existing = users.find(u => u.email.toLowerCase() === fbUser.email!.toLowerCase());
+        const existing = users.find(u => (u.email || '').toLowerCase() === (fbUser.email || '').toLowerCase());
         if (existing) {
           setCurrentUser(existing);
           const inst = (existing.institutionId && institutions.find(i => i.id === existing.institutionId)) || institutions[0] || MOCK_INSTITUTIONS[0];
@@ -303,8 +303,21 @@ export default function App() {
   };
 
   const handleUpdateSchedule = (updatedSchedule: ScheduleEntry[]) => {
-    setSchedule(updatedSchedule);
-    updatedSchedule.forEach(s => saveDocument('schedule', s.id, s));
+    const finalizedSchedule = updatedSchedule.map(s => {
+      const entryId = s.id || `sch-${s.classId}-${s.day}-${s.timeSlotId}`;
+      return { ...s, id: entryId };
+    });
+
+    const currentEntryIds = new Set(finalizedSchedule.map(s => s.id!));
+    schedule.forEach(existing => {
+      const existingId = existing.id || `sch-${existing.classId}-${existing.day}-${existing.timeSlotId}`;
+      if (!currentEntryIds.has(existingId)) {
+        deleteDocument('schedule', existingId);
+      }
+    });
+
+    setSchedule(finalizedSchedule);
+    finalizedSchedule.forEach(s => saveDocument('schedule', s.id!, s));
   };
   
   const handleUpdateStudents = (updatedStudents: Student[]) => {

@@ -69,7 +69,7 @@ const ClassForm: React.FC<ClassFormProps> = ({
                 letra: classToEdit.letra || 'A',
                 tutorId: classToEdit.tutorId || '',
                 academicYear: classToEdit.academicYear || '2024-2025',
-                timetableId: classToEdit.timetableId || '',
+                timetableId: classToEdit.timetableId || (timetables.length > 0 ? timetables[0].id : ''),
                 studentIds: classToEdit.studentIds || [],
             });
         } else {
@@ -80,7 +80,7 @@ const ClassForm: React.FC<ClassFormProps> = ({
                 letra: 'A',
                 tutorId: '',
                 academicYear: '2024-2025',
-                timetableId: '',
+                timetableId: timetables.length > 0 ? timetables[0].id : '',
                 studentIds: [],
             });
         }
@@ -144,7 +144,7 @@ const ClassForm: React.FC<ClassFormProps> = ({
         if (!studentSearch.trim()) return allStudents;
         const q = studentSearch.toLowerCase();
         return allStudents.filter(s => 
-            s.name.toLowerCase().includes(q) || 
+            (s.name || '').toLowerCase().includes(q) || 
             (s.nationalId && s.nationalId.includes(q))
         );
     }, [allStudents, studentSearch]);

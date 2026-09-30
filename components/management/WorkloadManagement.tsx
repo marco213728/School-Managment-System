@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import { User, Class, Room, Subject, ScheduleEntry, Role } from '../../types';
+import { User, Class, Room, Subject, ScheduleEntry, Role, TimeSlot, Timetable } from '../../types';
 import { CargasDocentes } from './CargasDocentes';
 import { SparklesIcon } from '../icons/Icons';
 import { GETHBalanceCard } from './GETHBalanceCard';
 import { DistributivoDocenteGETH } from '../../types/amauta_geth';
+import TeacherProfileModal from '../teacher/TeacherProfileModal';
 
 interface WorkloadManagementProps {
   users: User[];
@@ -11,12 +12,24 @@ interface WorkloadManagementProps {
   rooms: Room[];
   subjects: Subject[];
   schedule: ScheduleEntry[];
+  timeSlots?: TimeSlot[];
+  timetables?: Timetable[];
   onBack: () => void;
 }
 
-export const WorkloadManagement: React.FC<WorkloadManagementProps> = ({ users, classes, rooms, subjects, schedule, onBack }) => {
+export const WorkloadManagement: React.FC<WorkloadManagementProps> = ({ 
+  users, 
+  classes, 
+  rooms, 
+  subjects, 
+  schedule, 
+  timeSlots = [], 
+  timetables = [], 
+  onBack 
+}) => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [message, setMessage] = useState('');
+  const [selectedTeacherForProfile, setSelectedTeacherForProfile] = useState<User | null>(null);
 
   const teachers = users.filter(u => u.role === Role.Teacher).map(u => {
     // Calculate current assigned hours based on schedule entries for this teacher's subjects
@@ -122,8 +135,29 @@ export const WorkloadManagement: React.FC<WorkloadManagementProps> = ({ users, c
 
       <CargasDocentes 
         docentes={teachers} 
-        onSeleccionarDocente={(docente) => console.log('Seleccionado:', docente.nombre)} 
+        onSeleccionarDocente={(docente) => {
+          const userObj = users.find(u => u.id === docente.id);
+          if (userObj) {
+            setSelectedTeacherForProfile(userObj);
+          }
+        }} 
       />
+
+      {/* Ficha y Horario Asignado del Docente */}
+      {selectedTeacherForProfile && (
+        <TeacherProfileModal
+          isOpen={!!selectedTeacherForProfile}
+          onClose={() => setSelectedTeacherForProfile(null)}
+          teacher={selectedTeacherForProfile}
+          classes={classes}
+          subjects={subjects}
+          schedule={schedule}
+          timeSlots={timeSlots}
+          timetables={timetables}
+          rooms={rooms}
+          users={users}
+        />
+      )}
 
       <div className="mt-8 border-t pt-8">
         <h3 className="text-lg font-bold text-gray-900 mb-4">Control de Permanencia Presencial (GETH)</h3>

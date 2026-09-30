@@ -26,9 +26,11 @@ const DcdSelectionModal: React.FC<DcdSelectionModalProps> = ({ isOpen, onClose, 
     }, [initialSelectedIds, isOpen]);
 
     const filteredDcds = useMemo(() => {
+        const term = (searchTerm || '').toLowerCase();
         return allDcds.filter(dcd => {
+            if (!dcd) return false;
             const subjectMatch = dcd.subjectId === subjectId;
-            const searchMatch = dcd.code.toLowerCase().includes(searchTerm.toLowerCase()) || dcd.description.toLowerCase().includes(searchTerm.toLowerCase());
+            const searchMatch = !term || (dcd.code || '').toLowerCase().includes(term) || (dcd.description || '').toLowerCase().includes(term);
             return subjectMatch && searchMatch;
         });
     }, [allDcds, subjectId, searchTerm]);

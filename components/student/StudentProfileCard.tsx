@@ -433,6 +433,18 @@ const StudentProfileCard: React.FC<StudentProfileCardProps> = ({
     if (!profileData || !studentData) return null;
 
     const renderInfoTab = () => {
+        const currentClasses = allClasses || MOCK_CLASSES;
+        const currentTimetables = timetables || MOCK_TIMETABLES;
+        const currentUsers = allUsers || MOCK_USERS;
+
+        const studentClass = currentClasses.find(c => c.id === profileData.classId);
+        const instTimetables = currentTimetables.filter(t => !t.institutionId || (studentClass?.institutionId && t.institutionId === studentClass.institutionId));
+        const classTimetable = studentClass?.timetableId 
+            ? currentTimetables.find(t => t.id === studentClass.timetableId)
+            : (instTimetables[0] || currentTimetables[0] || null);
+
+        const tutor = studentClass?.tutorId ? currentUsers.find(u => u.id === studentClass.tutorId) : null;
+
         return (
             <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
                 {/* Left Column: Student Details */}
@@ -442,7 +454,7 @@ const StudentProfileCard: React.FC<StudentProfileCardProps> = ({
                     </div>
     
                     <div className="bg-white p-4 rounded-lg border space-y-4">
-                        <InfoItem label="Grado">{profileData.grade || 'No asignado'}</InfoItem>
+                        <InfoItem label="Grado">{profileData.grade || studentClass?.name || 'No asignado'}</InfoItem>
                         <InfoItem label="No de Lista">{profileData.listNumber || 'N/A'}</InfoItem>
                         <InfoItem label="Cédula">{profileData.nationalId || 'No registrada'}</InfoItem>
                         <InfoItem label="Fecha de Nacimiento">{formattedBirthDate}</InfoItem>
@@ -455,6 +467,40 @@ const StudentProfileCard: React.FC<StudentProfileCardProps> = ({
                                 </a>
                             </InfoItem>
                         )}
+                    </div>
+
+                    {/* Asignación Académica y Horario Oficial */}
+                    <div className="bg-white p-4 rounded-lg border border-primary-200 bg-primary-50/20 space-y-3">
+                        <div className="flex items-center justify-between border-b pb-2">
+                            <h4 className="text-xs font-bold text-primary-800 uppercase tracking-wider flex items-center gap-1.5">
+                                <CalendarIcon className="h-4 w-4 text-primary-600" />
+                                Asignación Académica y Horario
+                            </h4>
+                            <button 
+                                onClick={() => setActiveTab('schedule')}
+                                className="text-xs font-bold text-primary-600 hover:underline"
+                            >
+                                Ver Horario &rarr;
+                            </button>
+                        </div>
+                        <div className="space-y-2 text-xs">
+                            <div>
+                                <span className="font-semibold text-gray-600">Paralelo / Aula:</span>
+                                <p className="font-bold text-gray-800">{studentClass ? studentClass.name : 'Sin paralelo asignado'}</p>
+                            </div>
+                            {tutor && (
+                                <div>
+                                    <span className="font-semibold text-gray-600">Docente Tutor:</span>
+                                    <p className="text-gray-800">{tutor.name} ({tutor.email})</p>
+                                </div>
+                            )}
+                            <div>
+                                <span className="font-semibold text-gray-600">Plantilla de Horario Asignada:</span>
+                                <p className="font-bold text-primary-700">
+                                    {classTimetable ? `${classTimetable.name} (${classTimetable.shift})` : 'Plantilla Institucional Matutina'}
+                                </p>
+                            </div>
+                        </div>
                     </div>
                 </div>
     
@@ -776,29 +822,118 @@ const StudentProfileCard: React.FC<StudentProfileCardProps> = ({
     );
 
     const renderScheduleTab = () => {
-        if (!profileData || !schedule || !subjects || !timeSlots || !rooms || !timetables || !allUsers || !allClasses) {
-            return <p>Faltan datos para mostrar el horario.</p>;
+        if (!profileData) {
+            return <p className="text-gray-500 py-4 text-center">Cargando datos del estudiante...</p>;
         }
         
-        const studentClass = allClasses.find(c => c.id === profileData.classId);
-        if (!studentClass || !studentClass.timetableId) {
-            return <p>El alumno no tiene un horario asignado.</p>;
+        const currentClasses = allClasses || MOCK_CLASSES;
+        const currentSchedule = schedule || [];
+        const currentSubjects = subjects || [];
+        const currentTimeSlots = timeSlots || [];
+        const currentRooms = rooms || [];
+        const currentTimetables = timetables || MOCK_TIMETABLES;
+        const currentUsers = allUsers || MOCK_USERS;
+
+        const studentClass = currentClasses.find(c => c.id === profileData.classId);
+        if (!studentClass) {
+            return (
+                <div className="p-8 text-center bg-white rounded-xl border border-gray-200">
+                    <CalendarIcon className="h-10 w-10 text-gray-400 mx-auto mb-2" />
+                    <p className="text-base font-semibold text-gray-700">Sin paralelo asignado</p>
+                    <p className="text-sm text-gray-500 mt-1">El estudiante no está matriculado en ninguna clase o paralelo actualmente.</p>
+                </div>
+            );
         }
 
-        const relevantTimeSlots = timeSlots.filter(ts => ts.timetableId === studentClass.timetableId);
-        const classScheduleEntries = schedule.filter(e => e.classId === studentClass.id);
+        const classScheduleEntries = currentSchedule.filter(e => e.classId === studentClass.id);
+        const usedSlotIds = new Set(classScheduleEntries.map(e => e.timeSlotId));
+
+        // Find timetable template for this class or fallback to institution's timetable
+        const instTimetables = currentTimetables.filter(t => !t.institutionId || (studentClass.institutionId && t.institutionId === studentClass.institutionId));
+        const classTimetable = studentClass.timetableId 
+            ? currentTimetables.find(t => t.id === studentClass.timetableId)
+            : (instTimetables[0] || currentTimetables[0] || null);
+
+        // Gather relevant time slots: matching timetableId, used in schedule, or matching shift
+        let candidateSlots = currentTimeSlots.filter(ts => {
+            if (classTimetable && ts.timetableId === classTimetable.id) return true;
+            if (usedSlotIds.has(ts.id)) return true;
+            return false;
+        });
+
+        // Fallback: if candidateSlots is empty, try matching by shift of the timetable or all available institution slots
+        if (candidateSlots.length === 0) {
+            if (classTimetable?.shift) {
+                candidateSlots = currentTimeSlots.filter(ts => ts.shift === classTimetable.shift);
+            }
+            if (candidateSlots.length === 0) {
+                candidateSlots = currentTimeSlots;
+            }
+        }
+
+        // Deduplicate time slots by id and sort chronologically
+        const seenSlotIds = new Set<string>();
+        const relevantTimeSlots: TimeSlot[] = [];
+        candidateSlots.forEach(ts => {
+            if (!seenSlotIds.has(ts.id)) {
+                seenSlotIds.add(ts.id);
+                relevantTimeSlots.push(ts);
+            }
+        });
+        relevantTimeSlots.sort((a, b) => a.startTime.localeCompare(b.startTime));
+
+        if (relevantTimeSlots.length === 0) {
+            return (
+                <div className="p-8 text-center bg-white rounded-xl border border-gray-200">
+                    <CalendarIcon className="h-10 w-10 text-gray-400 mx-auto mb-2" />
+                    <p className="text-base font-semibold text-gray-700">Horario no configurado</p>
+                    <p className="text-sm text-gray-500 mt-1">
+                        El paralelo <strong>{studentClass.name}</strong> aún no cuenta con franjas horarias configuradas en la institución.
+                    </p>
+                </div>
+            );
+        }
 
         return (
-            <ScheduleView
-                title={`Horario Semanal - ${studentClass.name}`}
-                scheduleEntries={classScheduleEntries}
-                timeSlots={relevantTimeSlots}
-                subjects={subjects}
-                classes={allClasses}
-                rooms={rooms}
-                users={allUsers}
-                viewType="student"
-            />
+            <div className="space-y-4">
+                <div className="flex flex-wrap items-center justify-between gap-3 bg-white p-3.5 rounded-lg border border-gray-200">
+                    <div>
+                        <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Paralelo Asignado:</span>
+                        <h4 className="text-sm font-bold text-gray-800">{studentClass.name}</h4>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2">
+                        <span className="text-xs bg-primary-50 text-primary-700 border border-primary-200 font-semibold px-2.5 py-1 rounded-full">
+                            Plantilla: {classTimetable ? `${classTimetable.name} (${classTimetable.shift})` : 'Plantilla General'}
+                        </span>
+                        <span className="text-xs bg-slate-100 text-slate-700 border border-slate-200 font-medium px-2.5 py-1 rounded-full">
+                            {classScheduleEntries.length} horas programadas
+                        </span>
+                        <span className="text-xs bg-slate-100 text-slate-700 border border-slate-200 font-medium px-2.5 py-1 rounded-full">
+                            {relevantTimeSlots.length} franjas horarias
+                        </span>
+                    </div>
+                </div>
+
+                {classScheduleEntries.length === 0 && (
+                    <div className="p-3.5 bg-blue-50 border border-blue-200 text-blue-900 rounded-lg text-xs flex items-center gap-2">
+                        <span>ℹ️</span>
+                        <span>
+                            El paralelo está vinculado a la plantilla horaria oficial <strong>{classTimetable ? `${classTimetable.name} (${classTimetable.shift})` : 'Institucional'}</strong>. Aún no se han registrado asignaciones de asignaturas en el distributivo semanal. A continuación se presentan las franjas horarias oficiales de su jornada.
+                        </span>
+                    </div>
+                )}
+
+                <ScheduleView
+                    title={`Horario Semanal - ${studentClass.name}`}
+                    scheduleEntries={classScheduleEntries}
+                    timeSlots={relevantTimeSlots}
+                    subjects={currentSubjects}
+                    classes={currentClasses}
+                    rooms={currentRooms}
+                    users={currentUsers}
+                    viewType="student"
+                />
+            </div>
         );
     };
 

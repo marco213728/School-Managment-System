@@ -27,7 +27,8 @@ const ProtocolRepository: React.FC<ProtocolRepositoryProps> = ({ isOpen, onClose
     const [newDoc, setNewDoc] = useState({ title: '', category: 'Normativa Legal', type: 'PDF', file: null as File | null });
 
     const filteredDocs = documents.filter(doc => {
-        const matchesSearch = doc.title.toLowerCase().includes(searchTerm.toLowerCase());
+        if (!doc) return false;
+        const matchesSearch = (doc.title || '').toLowerCase().includes(searchTerm.toLowerCase());
         const matchesCategory = filterCategory === 'Todas' || doc.category === filterCategory;
         return matchesSearch && matchesCategory;
     });

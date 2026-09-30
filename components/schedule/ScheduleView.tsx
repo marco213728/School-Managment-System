@@ -65,12 +65,12 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
 
                     return (
                       <td key={day} className="px-1 py-1 align-top border-l h-24">
-                        {entry && subject ? (
-                          <div className="bg-primary-100 text-primary-800 p-1 rounded-md text-xs text-center h-full flex flex-col justify-center">
-                            <p className="font-bold">{subject.name}</p>
-                            {viewType === 'teacher' && <p className="text-gray-700 font-semibold">{className || 'N/A'}</p>}
-                            {viewType === 'student' && <p className="text-gray-600">{teacher || 'N/A'}</p>}
-                            <p className="text-gray-500 italic">@{room || 'N/A'}</p>
+                        {entry ? (
+                          <div className="bg-primary-100 text-primary-800 p-1.5 rounded-lg text-xs text-center h-full flex flex-col justify-center border border-primary-200 shadow-xs">
+                            <p className="font-bold text-primary-900">{subject ? subject.name : (entry.subjectId || 'Clase Asignada')}</p>
+                            {viewType === 'teacher' && <p className="text-primary-800 font-semibold">{className || 'Paralelo'}</p>}
+                            {viewType === 'student' && <p className="text-primary-700">{teacher || 'Docente'}</p>}
+                            {room && <p className="text-primary-600 italic text-[11px]">@{room}</p>}
                           </div>
                         ) : (
                           <div className="h-full w-full"></div>

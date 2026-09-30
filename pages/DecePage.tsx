@@ -68,8 +68,9 @@ const StudentSelector = ({ students, onSelectStudent, title }: { students: (Stud
 
     const filteredStudents = useMemo(() => {
         if (!searchTerm) return students;
+        const term = searchTerm.toLowerCase();
         return students.filter(student =>
-            student.name.toLowerCase().includes(searchTerm.toLowerCase())
+            student && (student.name || '').toLowerCase().includes(term)
         );
     }, [searchTerm, students]);
 

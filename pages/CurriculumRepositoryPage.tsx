@@ -3,7 +3,8 @@ import React, { useState, useMemo, useContext, useEffect } from 'react';
 import { Dcd, Subject, GradeLevel, EvaluationCriterion, EvaluationIndicator, Competency, CurricularInsertion } from '../types';
 import { GRADE_LEVELS, COMPETENCIES, CURRICULAR_INSERTIONS } from '../constants';
 import { UserContext } from '../contexts/UserContext';
-import { PlusIcon, EditIcon, TrashIcon, CloseIcon, UploadIcon, SearchIcon } from '../components/icons/Icons';
+import { PlusIcon, EditIcon, TrashIcon, CloseIcon, UploadIcon, SearchIcon, DownloadIcon } from '../components/icons/Icons';
+import CurriculumImportModal from '../components/repository/CurriculumImportModal';
 
 // #region FORMS (Internos para gestión)
 interface EvaluationCriterionFormProps {
@@ -105,50 +106,6 @@ const EvaluationIndicatorForm: React.FC<EvaluationIndicatorFormProps> = ({ isOpe
     );
 };
 
-interface ImportModalProps {
-    isOpen: boolean; onClose: () => void; onImport: (type: 'ce' | 'dcd' | 'ie', data: any[]) => void;
-}
-const ImportModal: React.FC<ImportModalProps> = ({ isOpen, onClose, onImport }) => {
-    const [importType, setImportType] = useState<'ce' | 'dcd' | 'ie'>('ce');
-    const [file, setFile] = useState<File | null>(null);
-    const [isProcessing, setIsProcessing] = useState(false);
-    if (!isOpen) return null;
-    const handleImport = () => {
-        if (!file) return;
-        setIsProcessing(true);
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            const text = e.target?.result as string;
-            const lines = text.split('\n').filter(line => line.trim() !== '');
-            const headers = lines.shift()?.split(',').map(h => h.trim()) || [];
-            const data = lines.map(line => {
-                const values = line.split(',');
-                const obj: any = {};
-                headers.forEach((h, i) => obj[h] = values[i]?.trim());
-                return obj;
-            });
-            onImport(importType, data);
-            setIsProcessing(false);
-            onClose();
-        };
-        reader.readAsText(file);
-    };
-    return (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-center items-center p-4" onClick={onClose}>
-            <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-lg relative" onClick={e => e.stopPropagation()}>
-                <button onClick={onClose} className="absolute top-4 right-4 text-gray-500 hover:text-gray-800"><CloseIcon className="h-6 w-6" /></button>
-                <h2 className="text-xl font-bold mb-4">Importación Masiva</h2>
-                <select value={importType} onChange={(e) => setImportType(e.target.value as any)} className="w-full p-2 border rounded-md mb-4">
-                    <option value="ce">Criterios (CE)</option>
-                    <option value="dcd">Destrezas (DCD)</option>
-                    <option value="ie">Indicadores (IE)</option>
-                </select>
-                <input type="file" accept=".csv" onChange={e => setFile(e.target.files?.[0] || null)} className="w-full mb-4" />
-                <div className="flex justify-end gap-2"><button onClick={onClose} className="px-4 py-2 bg-gray-200 rounded">Cancelar</button><button onClick={handleImport} disabled={!file || isProcessing} className="px-4 py-2 bg-primary-600 text-white rounded">Importar</button></div>
-            </div>
-        </div>
-    );
-};
 // #endregion
 
 interface CurriculumRepositoryPageProps {
@@ -164,6 +121,8 @@ const CurriculumRepositoryPage: React.FC<CurriculumRepositoryPageProps> = (props
     const { user: currentUser } = useContext(UserContext);
     const [activeTab, setActiveTab] = useState<'ce' | 'dcd' | 'ie'>('ce');
     const [searchTerm, setSearchTerm] = useState('');
+    const [selectedSubjectFilter, setSelectedSubjectFilter] = useState('');
+    const [selectedGradeFilter, setSelectedGradeFilter] = useState('');
 
     const [isCeModalOpen, setIsCeModalOpen] = useState(false);
     const [isDcdModalOpen, setIsDcdModalOpen] = useState(false);
@@ -175,14 +134,37 @@ const CurriculumRepositoryPage: React.FC<CurriculumRepositoryPageProps> = (props
     const criterionMap = useMemo(() => new Map(evaluationCriteria.map(c => [c.id, c.code])), [evaluationCriteria]);
 
     const filteredData = useMemo(() => {
-        const term = searchTerm.toLowerCase();
-        if (activeTab === 'ce') return evaluationCriteria.filter(i => i.code.toLowerCase().includes(term) || i.description.toLowerCase().includes(term));
-        if (activeTab === 'dcd') return dcds.filter(i => i.code.toLowerCase().includes(term) || i.description.toLowerCase().includes(term));
-        return evaluationIndicators.filter(i => i.code.toLowerCase().includes(term) || i.description.toLowerCase().includes(term));
-    }, [activeTab, evaluationCriteria, dcds, evaluationIndicators, searchTerm]);
+        const term = (searchTerm || '').toLowerCase();
+        if (activeTab === 'ce') {
+            return evaluationCriteria.filter(i => {
+                if (!i) return false;
+                const matchesTerm = !term || (i.code || '').toLowerCase().includes(term) || (i.description || '').toLowerCase().includes(term);
+                const matchesSubject = !selectedSubjectFilter || i.subjectId === selectedSubjectFilter;
+                const matchesGrade = !selectedGradeFilter || i.gradeLevel === selectedGradeFilter;
+                return matchesTerm && matchesSubject && matchesGrade;
+            });
+        }
+        if (activeTab === 'dcd') {
+            return dcds.filter(i => {
+                if (!i) return false;
+                const matchesTerm = !term || (i.code || '').toLowerCase().includes(term) || (i.description || '').toLowerCase().includes(term);
+                const matchesSubject = !selectedSubjectFilter || i.subjectId === selectedSubjectFilter;
+                const matchesGrade = !selectedGradeFilter || i.gradeLevel === selectedGradeFilter;
+                return matchesTerm && matchesSubject && matchesGrade;
+            });
+        }
+        return evaluationIndicators.filter(i => {
+            if (!i) return false;
+            const matchesTerm = !term || (i.code || '').toLowerCase().includes(term) || (i.description || '').toLowerCase().includes(term);
+            const parentCriterion = evaluationCriteria.find(c => c && c.id === i.criterionId);
+            const matchesSubject = !selectedSubjectFilter || parentCriterion?.subjectId === selectedSubjectFilter;
+            const matchesGrade = !selectedGradeFilter || parentCriterion?.gradeLevel === selectedGradeFilter;
+            return matchesTerm && matchesSubject && matchesGrade;
+        });
+    }, [activeTab, evaluationCriteria, dcds, evaluationIndicators, searchTerm, selectedSubjectFilter, selectedGradeFilter]);
 
     const handleSave = (type: 'ce' | 'dcd' | 'ie', data: any) => {
-        const institutionId = currentUser!.institutionId || 'GLOBAL';
+        const institutionId = currentUser?.institutionId || 'GLOBAL';
         const newItem = { ...data, id: data.id || `${type}-${Date.now()}`, institutionId };
         if (type === 'ce') onUpdateEvaluationCriteria(data.id ? evaluationCriteria.map(i => i.id === data.id ? newItem : i) : [...evaluationCriteria, newItem]);
         else if (type === 'dcd') onUpdateDcds(data.id ? dcds.map(i => i.id === data.id ? newItem : i) : [...dcds, newItem]);
@@ -196,31 +178,80 @@ const CurriculumRepositoryPage: React.FC<CurriculumRepositoryPageProps> = (props
         if (type === 'ie') onUpdateEvaluationIndicators(evaluationIndicators.filter(i => i.id !== id));
     };
 
+    const handleBulkImportSuccess = (imported: {
+        criteria: EvaluationCriterion[];
+        dcds: Dcd[];
+        indicators: EvaluationIndicator[];
+    }) => {
+        onUpdateEvaluationCriteria(imported.criteria);
+        onUpdateDcds(imported.dcds);
+        onUpdateEvaluationIndicators(imported.indicators);
+    };
+
     return (
         <div className="space-y-6">
             <div className="bg-white p-6 rounded-xl shadow-md border border-slate-200">
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
                     <div>
                         <h2 className="text-xl font-bold text-gray-800">{readOnly ? 'Consulta de Malla Curricular' : 'Repositorio Curricular Maestro'}</h2>
-                        <p className="text-sm text-gray-500">{readOnly ? 'Base de datos referencial de destrezas e indicadores.' : 'Gestión global de contenidos curriculares para todas las sedes.'}</p>
+                        <p className="text-sm text-gray-500">{readOnly ? 'Base de datos referencial de destrezas e indicadores.' : 'Gestión global de contenidos curriculares compatibles con la normativa MinEduc Ecuador.'}</p>
                     </div>
                     {!readOnly && (
                         <div className="flex items-center gap-2">
-                            <button onClick={() => setIsImportModalOpen(true)} className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm font-semibold"><UploadIcon className="h-4 w-4" />Importar</button>
+                            <button 
+                                onClick={() => setIsImportModalOpen(true)} 
+                                className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-md hover:bg-emerald-700 text-sm font-semibold shadow-xs transition"
+                                title="Alimentar repositorio mediante archivos Excel, CSV o texto copiado"
+                            >
+                                <UploadIcon className="h-4 w-4" />
+                                Importar Documento Curricular
+                            </button>
                             <button onClick={() => { setEditingItem(null); if(activeTab==='ce') setIsCeModalOpen(true); else if(activeTab==='dcd') setIsDcdModalOpen(true); else setIsIeModalOpen(true); }} className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 text-sm font-semibold"><PlusIcon className="h-4 w-4" />Nuevo</button>
                         </div>
                     )}
                 </div>
 
-                <div className="flex flex-col md:flex-row gap-4 mb-6">
+                {/* Filter and Navigation bar */}
+                <div className="flex flex-col lg:flex-row gap-3 mb-6 items-stretch lg:items-center justify-between">
                     <nav className="flex bg-gray-100 p-1 rounded-lg self-start">
-                        <button onClick={() => setActiveTab('ce')} className={`px-4 py-1.5 rounded-md text-sm font-medium ${activeTab === 'ce' ? 'bg-white shadow text-primary-600' : 'text-gray-500'}`}>Criterios (CE)</button>
-                        <button onClick={() => setActiveTab('dcd')} className={`px-4 py-1.5 rounded-md text-sm font-medium ${activeTab === 'dcd' ? 'bg-white shadow text-primary-600' : 'text-gray-500'}`}>Destrezas (DCD)</button>
-                        <button onClick={() => setActiveTab('ie')} className={`px-4 py-1.5 rounded-md text-sm font-medium ${activeTab === 'ie' ? 'bg-white shadow text-primary-600' : 'text-gray-500'}`}>Indicadores (IE)</button>
+                        <button onClick={() => setActiveTab('ce')} className={`px-4 py-1.5 rounded-md text-sm font-medium transition ${activeTab === 'ce' ? 'bg-white shadow text-primary-600 font-bold' : 'text-gray-500 hover:text-gray-800'}`}>
+                            Criterios ({evaluationCriteria.length})
+                        </button>
+                        <button onClick={() => setActiveTab('dcd')} className={`px-4 py-1.5 rounded-md text-sm font-medium transition ${activeTab === 'dcd' ? 'bg-white shadow text-primary-600 font-bold' : 'text-gray-500 hover:text-gray-800'}`}>
+                            Destrezas ({dcds.length})
+                        </button>
+                        <button onClick={() => setActiveTab('ie')} className={`px-4 py-1.5 rounded-md text-sm font-medium transition ${activeTab === 'ie' ? 'bg-white shadow text-primary-600 font-bold' : 'text-gray-500 hover:text-gray-800'}`}>
+                            Indicadores ({evaluationIndicators.length})
+                        </button>
                     </nav>
-                    <div className="relative flex-grow">
-                        <input type="text" placeholder="Buscar por código o descripción..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="w-full pl-10 pr-4 py-2 border rounded-md text-sm" />
-                        <SearchIcon className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
+
+                    <div className="flex flex-wrap items-center gap-2 flex-grow max-w-2xl">
+                        <div className="relative flex-grow min-w-[200px]">
+                            <input 
+                                type="text" 
+                                placeholder="Buscar por código o descripción..." 
+                                value={searchTerm} 
+                                onChange={e => setSearchTerm(e.target.value)} 
+                                className="w-full pl-9 pr-3 py-1.5 border border-slate-300 rounded-md text-sm bg-white" 
+                            />
+                            <SearchIcon className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-400" />
+                        </div>
+                        <select
+                            value={selectedSubjectFilter}
+                            onChange={e => setSelectedSubjectFilter(e.target.value)}
+                            className="p-1.5 border border-slate-300 rounded-md text-xs bg-white text-slate-700"
+                        >
+                            <option value="">Todas las asignaturas</option>
+                            {subjects.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                        </select>
+                        <select
+                            value={selectedGradeFilter}
+                            onChange={e => setSelectedGradeFilter(e.target.value)}
+                            className="p-1.5 border border-slate-300 rounded-md text-xs bg-white text-slate-700"
+                        >
+                            <option value="">Todos los subniveles</option>
+                            {GRADE_LEVELS.map(g => <option key={g} value={g}>{g}</option>)}
+                        </select>
                     </div>
                 </div>
 
@@ -230,26 +261,49 @@ const CurriculumRepositoryPage: React.FC<CurriculumRepositoryPageProps> = (props
                             <tr>
                                 <th className="px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase">Código</th>
                                 <th className="px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase">Descripción</th>
-                                <th className="px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase">{activeTab === 'ie' ? 'Criterio Ref.' : 'Asignatura'}</th>
+                                <th className="px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase">
+                                    {activeTab === 'ie' ? 'Criterio Vinculado' : 'Asignatura'}
+                                </th>
                                 {!readOnly && <th className="px-4 py-3 text-right text-xs font-bold text-gray-600 uppercase">Acciones</th>}
                             </tr>
                         </thead>
                         <tbody className="bg-white divide-y divide-gray-200 text-sm">
-                            {filteredData.map(item => (
-                                <tr key={item.id} className="hover:bg-gray-50">
-                                    <td className="px-4 py-3 font-mono font-bold text-primary-700">{item.code}</td>
-                                    <td className="px-4 py-3 text-gray-700 max-w-xl">{item.description}</td>
-                                    <td className="px-4 py-3 text-gray-500">
-                                        {activeTab === 'ie' ? criterionMap.get(item.criterionId) : subjectMap.get(item.subjectId)}
-                                    </td>
-                                    {!readOnly && (
-                                        <td className="px-4 py-3 text-right space-x-2">
-                                            <button onClick={() => { setEditingItem(item); if(activeTab==='ce') setIsCeModalOpen(true); else if(activeTab==='dcd') setIsDcdModalOpen(true); else setIsIeModalOpen(true); }} className="text-blue-600 hover:bg-blue-50 p-1 rounded"><EditIcon className="h-4 w-4"/></button>
-                                            <button onClick={() => handleDelete(activeTab, item.id)} className="text-red-600 hover:bg-red-50 p-1 rounded"><TrashIcon className="h-4 w-4"/></button>
+                            {filteredData.length > 0 ? (
+                                filteredData.map(item => (
+                                    <tr key={item.id} className="hover:bg-gray-50">
+                                        <td className="px-4 py-3 font-mono font-bold text-primary-700 whitespace-nowrap">{item.code}</td>
+                                        <td className="px-4 py-3 text-gray-700 max-w-xl">
+                                            <div className="line-clamp-3 hover:line-clamp-none">{item.description}</div>
+                                            {activeTab === 'dcd' && (item as Dcd).competencies && (item as Dcd).competencies.length > 0 && (
+                                                <div className="flex flex-wrap gap-1 mt-1">
+                                                    {(item as Dcd).competencies.map(c => (
+                                                        <span key={c} className="text-[10px] bg-indigo-50 text-indigo-700 font-medium px-1.5 py-0.5 rounded">
+                                                            {c}
+                                                        </span>
+                                                    ))}
+                                                </div>
+                                            )}
                                         </td>
-                                    )}
+                                        <td className="px-4 py-3 text-gray-500 whitespace-nowrap">
+                                            {activeTab === 'ie' 
+                                                ? (criterionMap.get(item.criterionId) || 'Sin asignar') 
+                                                : (subjectMap.get(item.subjectId) || 'General')}
+                                        </td>
+                                        {!readOnly && (
+                                            <td className="px-4 py-3 text-right space-x-2 whitespace-nowrap">
+                                                <button onClick={() => { setEditingItem(item); if(activeTab==='ce') setIsCeModalOpen(true); else if(activeTab==='dcd') setIsDcdModalOpen(true); else setIsIeModalOpen(true); }} className="text-blue-600 hover:bg-blue-50 p-1 rounded"><EditIcon className="h-4 w-4"/></button>
+                                                <button onClick={() => handleDelete(activeTab, item.id)} className="text-red-600 hover:bg-red-50 p-1 rounded"><TrashIcon className="h-4 w-4"/></button>
+                                            </td>
+                                        )}
+                                    </tr>
+                                ))
+                            ) : (
+                                <tr>
+                                    <td colSpan={readOnly ? 3 : 4} className="text-center py-10 text-slate-500 text-sm">
+                                        No se encontraron registros curriculares con los filtros seleccionados.
+                                    </td>
                                 </tr>
-                            ))}
+                            )}
                         </tbody>
                     </table>
                 </div>
@@ -261,7 +315,16 @@ const CurriculumRepositoryPage: React.FC<CurriculumRepositoryPageProps> = (props
                     <EvaluationCriterionForm isOpen={isCeModalOpen} onClose={() => setIsCeModalOpen(false)} onSave={d => handleSave('ce', d)} itemToEdit={editingItem} subjects={subjects} />
                     <DcdForm isOpen={isDcdModalOpen} onClose={() => setIsDcdModalOpen(false)} onSave={d => handleSave('dcd', d)} itemToEdit={editingItem} subjects={subjects} criteria={evaluationCriteria} />
                     <EvaluationIndicatorForm isOpen={isIeModalOpen} onClose={() => setIsIeModalOpen(false)} onSave={d => handleSave('ie', d)} itemToEdit={editingItem} criteria={evaluationCriteria} />
-                    <ImportModal isOpen={isImportModalOpen} onClose={() => setIsImportModalOpen(false)} onImport={handleSave} />
+                    <CurriculumImportModal
+                        isOpen={isImportModalOpen}
+                        onClose={() => setIsImportModalOpen(false)}
+                        subjects={subjects}
+                        existingCriteria={evaluationCriteria}
+                        existingDcds={dcds}
+                        existingIndicators={evaluationIndicators}
+                        institutionId={currentUser?.institutionId || 'GLOBAL'}
+                        onImportSuccess={handleBulkImportSuccess}
+                    />
                 </>
             )}
         </div>

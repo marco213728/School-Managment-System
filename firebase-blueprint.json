@@ -219,6 +219,14 @@
       "schema": "GenericDocument",
       "description": "Meeting minutes and records"
     },
+    "/schedule/{scheduleId}": {
+      "schema": "GenericDocument",
+      "description": "Weekly class schedule entries"
+    },
+    "/time_slots/{slotId}": {
+      "schema": "GenericDocument",
+      "description": "Institutional time slots and class periods"
+    },
     "/test/{docId}": {
       "schema": "TestDoc",
       "description": "Test connectivity collection"

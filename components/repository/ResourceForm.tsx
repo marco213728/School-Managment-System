@@ -65,7 +65,8 @@ const ResourceForm: React.FC<ResourceFormProps> = ({ isOpen, onClose, onSave, re
 
     const filteredDcds = useMemo(() => {
         if (!dcdSearch) return [];
-        return dcds.filter(d => d.code.toLowerCase().includes(dcdSearch.toLowerCase()) || d.description.toLowerCase().includes(dcdSearch.toLowerCase())).slice(0, 5);
+        const term = dcdSearch.toLowerCase();
+        return dcds.filter(d => d && ((d.code || '').toLowerCase().includes(term) || (d.description || '').toLowerCase().includes(term))).slice(0, 5);
     }, [dcds, dcdSearch]);
 
     const handleSubmit = (e: React.FormEvent) => {

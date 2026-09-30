@@ -141,8 +141,8 @@ const StudentImportModal: React.FC<StudentImportModalProps> = ({
     const [importSuccessMessage, setImportSuccessMessage] = useState<string | null>(null);
     const [isDragOver, setIsDragOver] = useState(false);
 
-    const normalizeHeader = (header: string): string => {
-        return header
+    const normalizeHeader = (header: any): string => {
+        return String(header || "")
             .toLowerCase()
             .trim()
             .normalize("NFD")
@@ -375,7 +375,7 @@ const StudentImportModal: React.FC<StudentImportModalProps> = ({
             const getOrCreateClass = (targetName: string): Class => {
                 const trimmed = targetName.trim();
                 let found = Array.from(updatedClassesMap.values()).find(c => 
-                    c.name.toLowerCase().trim() === trimmed.toLowerCase().trim()
+                    (c.name || '').toLowerCase().trim() === trimmed.toLowerCase().trim()
                 );
 
                 if (!found && autoCreateClasses && trimmed) {
@@ -424,8 +424,8 @@ const StudentImportModal: React.FC<StudentImportModalProps> = ({
                 if (row.parentName || row.parentEmail) {
                     // Check if parent user with this email or name already exists
                     const existingParent = existingUsers.find(u => 
-                        (row.parentEmail && u.email.toLowerCase() === row.parentEmail.toLowerCase()) ||
-                        (row.parentName && u.name.toLowerCase() === row.parentName.toLowerCase() && u.role === Role.Parent)
+                        (row.parentEmail && (u.email || '').toLowerCase() === row.parentEmail.toLowerCase()) ||
+                        (row.parentName && (u.name || '').toLowerCase() === row.parentName.toLowerCase() && u.role === Role.Parent)
                     );
 
                     if (existingParent) {

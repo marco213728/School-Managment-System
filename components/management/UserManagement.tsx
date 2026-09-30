@@ -1,22 +1,39 @@
 import React, { useState, useMemo, useContext } from 'react';
 import { UserContext } from '../../contexts/UserContext';
-import { User, Role, Class, Student } from '../../types';
-import { PlusIcon, EditIcon, TrashIcon, SearchIcon, UsersIcon } from '../icons/Icons';
+import { User, Role, Class, Student, ScheduleEntry, Subject, TimeSlot, Room, Timetable } from '../../types';
+import { PlusIcon, EditIcon, TrashIcon, SearchIcon, UsersIcon, CalendarIcon } from '../icons/Icons';
 import UserForm from './UserForm';
 import { FormularioCaracterizacionDocente } from './FormularioCaracterizacion';
+import TeacherProfileModal from '../teacher/TeacherProfileModal';
 
 interface UserManagementProps {
   users: User[];
   allClasses: Class[];
   allStudents: Student[];
   onUpdateUsers: (users: User[]) => void;
+  schedule?: ScheduleEntry[];
+  subjects?: Subject[];
+  timeSlots?: TimeSlot[];
+  rooms?: Room[];
+  timetables?: Timetable[];
 }
 
-const UserManagement: React.FC<UserManagementProps> = ({ users, allClasses, allStudents, onUpdateUsers }) => {
+const UserManagement: React.FC<UserManagementProps> = ({ 
+  users, 
+  allClasses, 
+  allStudents, 
+  onUpdateUsers,
+  schedule = [],
+  subjects = [],
+  timeSlots = [],
+  rooms = [],
+  timetables = []
+}) => {
     const { user: currentUser } = useContext(UserContext);
 
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isGethModalOpen, setIsGethModalOpen] = useState(false);
+    const [selectedTeacherForProfile, setSelectedTeacherForProfile] = useState<User | null>(null);
     const [editingUser, setEditingUser] = useState<User | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
 
@@ -24,9 +41,11 @@ const UserManagement: React.FC<UserManagementProps> = ({ users, allClasses, allS
         if (!searchTerm) return users;
         const lowercasedTerm = searchTerm.toLowerCase();
         return users.filter(user => 
-            user.name.toLowerCase().includes(lowercasedTerm) ||
-            user.email.toLowerCase().includes(lowercasedTerm) ||
-            user.role.toLowerCase().includes(lowercasedTerm)
+            user && (
+                (user.name || '').toLowerCase().includes(lowercasedTerm) ||
+                (user.email || '').toLowerCase().includes(lowercasedTerm) ||
+                (user.role || '').toLowerCase().includes(lowercasedTerm)
+            )
         );
     }, [searchTerm, users]);
 
@@ -132,14 +151,23 @@ const UserManagement: React.FC<UserManagementProps> = ({ users, allClasses, allS
                                         {user.phone && <a href={`tel:${user.phone}`} className="text-slate-500 hover:underline block">{user.phone}</a>}
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">{user.role}</td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-1">
                                         {user.role === Role.Teacher && (
-                                            <button onClick={() => handleGeth(user)} className="p-2 text-indigo-500 hover:text-indigo-600 rounded-full hover:bg-indigo-100" title="Caracterización GETH">
-                                                <UsersIcon className="h-5 w-5" />
-                                            </button>
+                                            <>
+                                                <button 
+                                                    onClick={() => setSelectedTeacherForProfile(user)} 
+                                                    className="p-2 text-primary-600 hover:text-primary-700 rounded-full hover:bg-primary-50 transition" 
+                                                    title="Ver Ficha y Horario Asignado del Docente"
+                                                >
+                                                    <CalendarIcon className="h-5 w-5" />
+                                                </button>
+                                                <button onClick={() => handleGeth(user)} className="p-2 text-indigo-500 hover:text-indigo-600 rounded-full hover:bg-indigo-100 transition" title="Caracterización GETH">
+                                                    <UsersIcon className="h-5 w-5" />
+                                                </button>
+                                            </>
                                         )}
-                                        <button onClick={() => handleEdit(user)} className="p-2 text-slate-500 hover:text-primary-600 rounded-full hover:bg-primary-100"><EditIcon className="h-5 w-5" /></button>
-                                        <button onClick={() => handleDelete(user.id)} className="p-2 text-slate-500 hover:text-rose-600 rounded-full hover:bg-rose-100"><TrashIcon className="h-5 w-5" /></button>
+                                        <button onClick={() => handleEdit(user)} className="p-2 text-slate-500 hover:text-primary-600 rounded-full hover:bg-primary-100 transition" title="Editar Usuario"><EditIcon className="h-5 w-5" /></button>
+                                        <button onClick={() => handleDelete(user.id)} className="p-2 text-slate-500 hover:text-rose-600 rounded-full hover:bg-rose-100 transition" title="Eliminar Usuario"><TrashIcon className="h-5 w-5" /></button>
                                     </td>
                                 </tr>
                             ))}
@@ -168,6 +196,23 @@ const UserManagement: React.FC<UserManagementProps> = ({ users, allClasses, allS
                     </div>
                 )}
             </div>
+
+            {/* Ficha y Horario del Docente */}
+            {selectedTeacherForProfile && (
+                <TeacherProfileModal
+                    isOpen={!!selectedTeacherForProfile}
+                    onClose={() => setSelectedTeacherForProfile(null)}
+                    teacher={selectedTeacherForProfile}
+                    classes={allClasses}
+                    subjects={subjects}
+                    schedule={schedule}
+                    timeSlots={timeSlots}
+                    timetables={timetables}
+                    rooms={rooms}
+                    users={users}
+                    onEdit={handleEdit}
+                />
+            )}
 
             {isModalOpen && (
                 <UserForm

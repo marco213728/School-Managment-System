@@ -44,7 +44,7 @@ const ClassManagement: React.FC<ClassManagementProps> = ({
         if (!searchTerm.trim()) return classes;
         const q = searchTerm.toLowerCase();
         return classes.filter(c => 
-            c.name.toLowerCase().includes(q) ||
+            (c.name || '').toLowerCase().includes(q) ||
             (c.gradoCurso && c.gradoCurso.toLowerCase().includes(q)) ||
             (c.letra && c.letra.toLowerCase().includes(q)) ||
             (c.tutorId && (teacherMap.get(c.tutorId) || '').toLowerCase().includes(q))

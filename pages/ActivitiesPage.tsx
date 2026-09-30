@@ -21,9 +21,12 @@ const ResourceSelectorModal: React.FC<ResourceSelectorModalProps> = ({ isOpen, o
     const resources = MOCK_REPOSITORY_ITEMS; 
 
     const filteredResources = useMemo(() => {
+        const term = (searchTerm || '').toLowerCase();
         return resources.filter(r => 
-            r.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
-            r.description.toLowerCase().includes(searchTerm.toLowerCase())
+            r && (
+                (r.title || '').toLowerCase().includes(term) || 
+                (r.description || '').toLowerCase().includes(term)
+            )
         );
     }, [resources, searchTerm]);
 
