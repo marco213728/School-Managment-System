@@ -171,26 +171,26 @@ const PlanForm: React.FC<PlanFormProps> = ({ isOpen, onClose, onSave, planToEdit
     }, [planToEdit, isOpen]);
     
     useEffect(() => {
-        if (formData.dcdIds.length > 0) {
-            const selectedDcds = formData.dcdIds.map(id => dcds.find(d => d.id === id)).filter(Boolean) as Dcd[];
-            const uniqueCriterionIds = [...new Set(selectedDcds.map(d => d.criterionId))];
-            const relevantCriteria = evaluationCriteria.filter(c => uniqueCriterionIds.includes(c.id));
-            const objectivesText = relevantCriteria.map(c => `(${c.code}) ${c.description}`).join('\n\n');
-            const relevantIndicators = evaluationIndicators.filter(i => uniqueCriterionIds.includes(i.criterionId));
-            const evaluationText = relevantIndicators.map(i => `(${i.code}) ${i.description}`).join('\n\n');
+        if (formData.dcdIds && formData.dcdIds.length > 0) {
+            const selectedDcds = formData.dcdIds.map(id => dcds.find(d => d && d.id === id)).filter(Boolean) as Dcd[];
+            const uniqueCriterionIds = [...new Set(selectedDcds.map(d => d.criterionId).filter(Boolean))];
+            const relevantCriteria = evaluationCriteria.filter(c => c && uniqueCriterionIds.includes(c.id));
+            const objectivesText = relevantCriteria.map(c => `(${c.code || ''}) ${c.description || ''}`).join('\n\n');
+            const relevantIndicators = evaluationIndicators.filter(i => i && i.criterionId && uniqueCriterionIds.includes(i.criterionId));
+            const evaluationText = relevantIndicators.map(i => `(${i.code || ''}) ${i.description || ''}`).join('\n\n');
             setFormData(prev => ({ ...prev, unitObjectives: objectivesText, evaluation: evaluationText }));
         }
     }, [formData.dcdIds, dcds, evaluationCriteria, evaluationIndicators]);
 
-    const studentsInClass = useMemo(() => students.filter(s => s.classId === formData.classId), [formData.classId, students]);
-    const selectedDcdObjects = useMemo(() => formData.dcdIds.map(id => dcds.find(d => d.id === id)).filter(Boolean) as Dcd[], [formData.dcdIds, dcds]);
+    const studentsInClass = useMemo(() => students.filter(s => s && s.classId === formData.classId), [formData.classId, students]);
+    const selectedDcdObjects = useMemo(() => (formData.dcdIds || []).map(id => dcds.find(d => d && d.id === id)).filter(Boolean) as Dcd[], [formData.dcdIds, dcds]);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement|HTMLSelectElement|HTMLTextAreaElement>) => setFormData(p => ({ ...p, [e.target.name]: e.target.value }));
-    const handleAdaptationChange = (studentId: string, dcdModificada: string) => setFormData(p => ({ ...p, adaptations: p.adaptations.some(a => a.studentId === studentId) ? p.adaptations.map(a => a.studentId === studentId ? { ...a, dcdModificada, grade: '3' } : a) : [...p.adaptations, { studentId, dcdModificada, grade: '3' }] }));
+    const handleAdaptationChange = (studentId: string, dcdModificada: string) => setFormData(p => ({ ...p, adaptations: (p.adaptations || []).some(a => a.studentId === studentId) ? (p.adaptations || []).map(a => a.studentId === studentId ? { ...a, dcdModificada, grade: '3' } : a) : [...(p.adaptations || []), { studentId, dcdModificada, grade: '3' }] }));
     
     const handleSubmit = (e: React.FormEvent) => { 
         e.preventDefault(); 
-        const basePlan: MicroPlan = { id: planToEdit?.id || `mp-${Date.now()}`, institutionId, teacherId, status: planToEdit?.status || CurricularPlanStatus.Draft, creationDate: planToEdit?.creationDate || new Date().toISOString(), ...formData, adaptations: formData.adaptations.filter(a => a.dcdModificada.trim() !== '') };
+        const basePlan: MicroPlan = { id: planToEdit?.id || `mp-${Date.now()}`, institutionId, teacherId, status: planToEdit?.status || CurricularPlanStatus.Draft, creationDate: planToEdit?.creationDate || new Date().toISOString(), ...formData, adaptations: (formData.adaptations || []).filter(a => a && a.dcdModificada && a.dcdModificada.trim() !== '') };
         
         if (replicateClassIds.length > 0 && !planToEdit) {
             const plansToSave: MicroPlan[] = [basePlan];
@@ -217,7 +217,7 @@ const PlanForm: React.FC<PlanFormProps> = ({ isOpen, onClose, onSave, planToEdit
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <select name="classId" value={formData.classId} onChange={handleChange} required className="w-full p-2 border rounded-md">
                     <option value="">Seleccionar Clase</option>
-                    {institutionClasses.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                    {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                 </select>
                 <select name="subjectId" value={formData.subjectId} onChange={handleChange} required className="w-full p-2 border rounded-md">
                     <option value="">Seleccionar Asignatura</option>
@@ -286,7 +286,7 @@ const PlanForm: React.FC<PlanFormProps> = ({ isOpen, onClose, onSave, planToEdit
             </fieldset>
             
             <div className="flex justify-end gap-4 pt-4"><button type="button" onClick={onClose} className="px-4 py-2 bg-gray-200 rounded-md">Cancelar</button><button type="submit" className="px-4 py-2 bg-primary-600 text-white rounded-md">Guardar Plan</button></div></form></div></div>
-        <DcdSelectionModal isOpen={isDcdModalOpen} onClose={() => setIsDcdModalOpen(false)} onSave={(ids) => setFormData(p => ({...p, dcdIds: ids}))} allDcds={dcds} subjectId={formData.subjectId} classId={formData.classId} classes={institutionClasses} initialSelectedIds={formData.dcdIds} />
+        <DcdSelectionModal isOpen={isDcdModalOpen} onClose={() => setIsDcdModalOpen(false)} onSave={(ids) => setFormData(p => ({...p, dcdIds: ids}))} allDcds={dcds} subjectId={formData.subjectId} classId={formData.classId} classes={classes} initialSelectedIds={formData.dcdIds} />
         {isAiModalOpen && <AiGeneratorModal isOpen={isAiModalOpen} onClose={() => setIsAiModalOpen(false)} onApply={(rep, act, eng) => { setFormData(p => ({ ...p, duaRepresentation: rep, duaActionExpression: act, duaEngagement: eng })); setIsAiModalOpen(false); }} currentSkills={selectedDcdObjects.map(d => d.description).join('\n')} />}
     </>;
 };
@@ -503,7 +503,7 @@ const CurricularPlanningPage: React.FC<CurricularPlanningPageProps> = ({ microPl
                                         {isReviewer && <p className="text-xs text-gray-500">{userMap.get(plan.teacherId)}</p>}
                                     </td>
                                     <td className="px-4 py-3 text-sm text-gray-600">{classMap.get(plan.classId)}<br/>{subjectMap.get(plan.subjectId)}</td>
-                                    <td className="px-4 py-3"><span className={`inline-flex items-center gap-1.5 px-2 py-1 text-xs font-semibold rounded-full ${statusConfig[plan.status].color}`}>{statusConfig[plan.status].icon}{statusConfig[plan.status].text}</span></td>
+                                    <td className="px-4 py-3"><span className={`inline-flex items-center gap-1.5 px-2 py-1 text-xs font-semibold rounded-full ${(statusConfig[plan.status] || statusConfig[CurricularPlanStatus.Draft]).color}`}>{(statusConfig[plan.status] || statusConfig[CurricularPlanStatus.Draft]).icon}{(statusConfig[plan.status] || statusConfig[CurricularPlanStatus.Draft]).text}</span></td>
                                     <td className="px-4 py-3 text-right space-x-2">
                                         <button onClick={() => handleOpenDetails(plan)} className="px-3 py-1 text-sm font-medium text-primary-700 bg-primary-100 rounded-md hover:bg-primary-200">Ver</button>
                                         {!isReviewer && (plan.status === CurricularPlanStatus.Draft || plan.status === CurricularPlanStatus.RequiresAdjustments) && <button onClick={() => handleOpenForm(plan)} className="px-3 py-1 text-sm font-medium text-blue-700 bg-blue-100 rounded-md hover:bg-blue-200">Editar</button>}

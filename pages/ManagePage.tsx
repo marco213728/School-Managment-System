@@ -20,7 +20,6 @@ import PromotionWizard from '../components/management/PromotionWizard';
 import SchoolStandardsManager from '../components/management/SchoolStandardsManager';
 import PeiBuilder from '../components/management/PeiBuilder';
 // FIX: Added missing SparklesIcon and PlusIcon imports.
-import WorkloadManagement from '../components/management/WorkloadManagement';
 import { WorkloadManagement as WorkloadManagementComponent } from '../components/management/WorkloadManagement';
 import { FingerPrintIcon, UsersIcon, ClipboardListIcon, CalendarIcon, ManageIcon, GraduationCapIcon, ChartBarIcon, ClipboardDocumentCheckIcon, ChatBubbleIcon, ArchiveBoxIcon, ClockIcon, SparklesIcon, PlusIcon } from '../components/icons/Icons';
 

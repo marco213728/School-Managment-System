@@ -5,6 +5,7 @@ import { GRADE_LEVELS, COMPETENCIES, CURRICULAR_INSERTIONS } from '../constants'
 import { UserContext } from '../contexts/UserContext';
 import { PlusIcon, EditIcon, TrashIcon, CloseIcon, UploadIcon, SearchIcon, DownloadIcon } from '../components/icons/Icons';
 import CurriculumImportModal from '../components/repository/CurriculumImportModal';
+import { deleteDocument, saveDocument } from '../lib/firebase';
 
 // #region FORMS (Internos para gestión)
 interface EvaluationCriterionFormProps {
@@ -64,7 +65,10 @@ const DcdForm: React.FC<DcdFormProps> = ({ isOpen, onClose, onSave, itemToEdit, 
                         <select name="subjectId" value={formData.subjectId} onChange={handleChange} required className="w-full p-2 border rounded-md bg-white"><option value="">Asignatura</option>{subjects.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}</select>
                         <select name="gradeLevel" value={formData.gradeLevel} onChange={handleChange} required className="w-full p-2 border rounded-md bg-white"><option value="">Nivel</option>{GRADE_LEVELS.map(l => <option key={l} value={l}>{l}</option>)}</select>
                     </div>
-                    <select name="criterionId" value={formData.criterionId} onChange={handleChange} required className="w-full p-2 border rounded-md bg-white"><option value="">Criterio de Evaluación Asociado</option>{criteria.map(c => <option key={c.id} value={c.id}>{c.code} {c.description.substring(0, 50)}...</option>)}</select>
+                    <select name="criterionId" value={formData.criterionId} onChange={handleChange} required className="w-full p-2 border rounded-md bg-white">
+                        <option value="">Criterio de Evaluación Asociado</option>
+                        {(criteria || []).filter(Boolean).map(c => <option key={c.id} value={c.id}>{c.code || ''} {(c.description || '').substring(0, 50)}...</option>)}
+                    </select>
                     <div className="flex items-center p-2 bg-yellow-50 border border-yellow-200 rounded-md">
                         <input type="checkbox" id="isDisaggregated" name="isDisaggregated" checked={formData.isDisaggregated} onChange={(e) => setFormData(p => ({ ...p, isDisaggregated: e.target.checked }))} className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded" />
                         <label htmlFor="isDisaggregated" className="ml-2 block text-sm text-gray-900">Es una destreza desagregada</label>
@@ -98,7 +102,10 @@ const EvaluationIndicatorForm: React.FC<EvaluationIndicatorFormProps> = ({ isOpe
                 <form onSubmit={handleSubmit} className="space-y-4">
                     <input type="text" name="code" value={formData.code} onChange={handleChange} required className="w-full p-2 border rounded-md" placeholder="Código (Ej: I.M.4.1.1.)"/>
                     <textarea name="description" value={formData.description} onChange={handleChange} required rows={4} className="w-full p-2 border rounded-md" placeholder="Descripción del Indicador"/>
-                    <select name="criterionId" value={formData.criterionId} onChange={handleChange} required className="w-full p-2 border rounded-md bg-white"><option value="">Criterio de Evaluación Asociado</option>{criteria.map(c => <option key={c.id} value={c.id}>{c.code} {c.description.substring(0, 50)}...</option>)}</select>
+                    <select name="criterionId" value={formData.criterionId} onChange={handleChange} required className="w-full p-2 border rounded-md bg-white">
+                        <option value="">Criterio de Evaluación Asociado</option>
+                        {(criteria || []).filter(Boolean).map(c => <option key={c.id} value={c.id}>{c.code || ''} {(c.description || '').substring(0, 50)}...</option>)}
+                    </select>
                     <div className="flex justify-end gap-4 pt-4"><button type="button" onClick={onClose} className="px-4 py-2 bg-gray-200 rounded-md">Cancelar</button><button type="submit" className="px-4 py-2 bg-primary-600 text-white rounded-md">Guardar</button></div>
                 </form>
             </div>
@@ -129,6 +136,9 @@ const CurriculumRepositoryPage: React.FC<CurriculumRepositoryPageProps> = (props
     const [isIeModalOpen, setIsIeModalOpen] = useState(false);
     const [isImportModalOpen, setIsImportModalOpen] = useState(false);
     const [editingItem, setEditingItem] = useState<any>(null);
+    const [itemToDelete, setItemToDelete] = useState<{ type: 'ce' | 'dcd' | 'ie'; id: string; code: string; description: string } | null>(null);
+    const [isDeleting, setIsDeleting] = useState(false);
+    const [feedbackMsg, setFeedbackMsg] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
 
     const subjectMap = useMemo(() => new Map(subjects.map(s => [s.id, s.name])), [subjects]);
     const criterionMap = useMemo(() => new Map(evaluationCriteria.map(c => [c.id, c.code])), [evaluationCriteria]);
@@ -163,19 +173,39 @@ const CurriculumRepositoryPage: React.FC<CurriculumRepositoryPageProps> = (props
         });
     }, [activeTab, evaluationCriteria, dcds, evaluationIndicators, searchTerm, selectedSubjectFilter, selectedGradeFilter]);
 
-    const handleSave = (type: 'ce' | 'dcd' | 'ie', data: any) => {
+    const handleSave = async (type: 'ce' | 'dcd' | 'ie', data: any) => {
         const institutionId = currentUser?.institutionId || 'GLOBAL';
         const newItem = { ...data, id: data.id || `${type}-${Date.now()}`, institutionId };
+        const colName = type === 'ce' ? 'evaluation_criteria' : type === 'dcd' ? 'dcds' : 'evaluation_indicators';
+        await saveDocument(colName, newItem.id, newItem);
         if (type === 'ce') onUpdateEvaluationCriteria(data.id ? evaluationCriteria.map(i => i.id === data.id ? newItem : i) : [...evaluationCriteria, newItem]);
         else if (type === 'dcd') onUpdateDcds(data.id ? dcds.map(i => i.id === data.id ? newItem : i) : [...dcds, newItem]);
         else onUpdateEvaluationIndicators(data.id ? evaluationIndicators.map(i => i.id === data.id ? newItem : i) : [...evaluationIndicators, newItem]);
+        setFeedbackMsg({ text: `Registro guardado exitosamente.`, type: 'success' });
+        setTimeout(() => setFeedbackMsg(null), 3000);
     };
     
-    const handleDelete = (type: 'ce' | 'dcd' | 'ie', id: string) => {
-        if (!window.confirm('¿Seguro que desea eliminar este elemento?')) return;
-        if (type === 'ce') onUpdateEvaluationCriteria(evaluationCriteria.filter(i => i.id !== id));
-        if (type === 'dcd') onUpdateDcds(dcds.filter(i => i.id !== id));
-        if (type === 'ie') onUpdateEvaluationIndicators(evaluationIndicators.filter(i => i.id !== id));
+    const handleConfirmDelete = async () => {
+        if (!itemToDelete) return;
+        setIsDeleting(true);
+        const { type, id, code } = itemToDelete;
+        const colName = type === 'ce' ? 'evaluation_criteria' : type === 'dcd' ? 'dcds' : 'evaluation_indicators';
+        
+        try {
+            const success = await deleteDocument(colName, id);
+            if (type === 'ce') onUpdateEvaluationCriteria(evaluationCriteria.filter(i => i.id !== id));
+            else if (type === 'dcd') onUpdateDcds(dcds.filter(i => i.id !== id));
+            else onUpdateEvaluationIndicators(evaluationIndicators.filter(i => i.id !== id));
+            
+            setFeedbackMsg({ text: `Se eliminó correctamente el registro "${code || id}".`, type: 'success' });
+            setTimeout(() => setFeedbackMsg(null), 3500);
+        } catch (error) {
+            console.error('Error al eliminar elemento curricular:', error);
+            setFeedbackMsg({ text: 'Error al eliminar el elemento en la base de datos.', type: 'error' });
+        } finally {
+            setIsDeleting(false);
+            setItemToDelete(null);
+        }
     };
 
     const handleBulkImportSuccess = (imported: {
@@ -191,6 +221,12 @@ const CurriculumRepositoryPage: React.FC<CurriculumRepositoryPageProps> = (props
     return (
         <div className="space-y-6">
             <div className="bg-white p-6 rounded-xl shadow-md border border-slate-200">
+                {feedbackMsg && (
+                    <div className={`mb-4 p-3 rounded-lg text-sm flex items-center justify-between ${feedbackMsg.type === 'success' ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' : 'bg-red-50 text-red-800 border border-red-200'}`}>
+                        <span>{feedbackMsg.text}</span>
+                        <button onClick={() => setFeedbackMsg(null)} className="text-sm font-bold ml-2">✕</button>
+                    </div>
+                )}
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
                     <div>
                         <h2 className="text-xl font-bold text-gray-800">{readOnly ? 'Consulta de Malla Curricular' : 'Repositorio Curricular Maestro'}</h2>
@@ -269,11 +305,11 @@ const CurriculumRepositoryPage: React.FC<CurriculumRepositoryPageProps> = (props
                         </thead>
                         <tbody className="bg-white divide-y divide-gray-200 text-sm">
                             {filteredData.length > 0 ? (
-                                filteredData.map(item => (
+                                filteredData.filter(Boolean).map(item => (
                                     <tr key={item.id} className="hover:bg-gray-50">
-                                        <td className="px-4 py-3 font-mono font-bold text-primary-700 whitespace-nowrap">{item.code}</td>
+                                        <td className="px-4 py-3 font-mono font-bold text-primary-700 whitespace-nowrap">{item.code || '-'}</td>
                                         <td className="px-4 py-3 text-gray-700 max-w-xl">
-                                            <div className="line-clamp-3 hover:line-clamp-none">{item.description}</div>
+                                            <div className="line-clamp-3 hover:line-clamp-none">{item.description || 'Sin descripción'}</div>
                                             {activeTab === 'dcd' && (item as Dcd).competencies && (item as Dcd).competencies.length > 0 && (
                                                 <div className="flex flex-wrap gap-1 mt-1">
                                                     {(item as Dcd).competencies.map(c => (
@@ -286,13 +322,24 @@ const CurriculumRepositoryPage: React.FC<CurriculumRepositoryPageProps> = (props
                                         </td>
                                         <td className="px-4 py-3 text-gray-500 whitespace-nowrap">
                                             {activeTab === 'ie' 
-                                                ? (criterionMap.get(item.criterionId) || 'Sin asignar') 
-                                                : (subjectMap.get(item.subjectId) || 'General')}
+                                                ? ((item as EvaluationIndicator).criterionId ? (criterionMap.get((item as EvaluationIndicator).criterionId) || 'Sin asignar') : 'Sin asignar') 
+                                                : ((item as Dcd).subjectId ? (subjectMap.get((item as Dcd).subjectId) || 'General') : 'General')}
                                         </td>
                                         {!readOnly && (
                                             <td className="px-4 py-3 text-right space-x-2 whitespace-nowrap">
-                                                <button onClick={() => { setEditingItem(item); if(activeTab==='ce') setIsCeModalOpen(true); else if(activeTab==='dcd') setIsDcdModalOpen(true); else setIsIeModalOpen(true); }} className="text-blue-600 hover:bg-blue-50 p-1 rounded"><EditIcon className="h-4 w-4"/></button>
-                                                <button onClick={() => handleDelete(activeTab, item.id)} className="text-red-600 hover:bg-red-50 p-1 rounded"><TrashIcon className="h-4 w-4"/></button>
+                                                <button onClick={() => { setEditingItem(item); if(activeTab==='ce') setIsCeModalOpen(true); else if(activeTab==='dcd') setIsDcdModalOpen(true); else setIsIeModalOpen(true); }} className="text-blue-600 hover:bg-blue-50 p-1.5 rounded" title="Editar"><EditIcon className="h-4 w-4"/></button>
+                                                <button 
+                                                    onClick={() => setItemToDelete({
+                                                        type: activeTab,
+                                                        id: item.id,
+                                                        code: item.code || '',
+                                                        description: item.description || ''
+                                                    })}
+                                                    className="text-red-600 hover:bg-red-50 p-1.5 rounded transition" 
+                                                    title="Eliminar elemento"
+                                                >
+                                                    <TrashIcon className="h-4 w-4"/>
+                                                </button>
                                             </td>
                                         )}
                                     </tr>
@@ -308,6 +355,48 @@ const CurriculumRepositoryPage: React.FC<CurriculumRepositoryPageProps> = (props
                     </table>
                 </div>
             </div>
+
+            {/* Modal de Confirmación de Eliminación */}
+            {itemToDelete && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-center items-center p-4">
+                    <div className="bg-white rounded-xl shadow-2xl p-6 w-full max-w-md relative animate-fade-in">
+                        <div className="flex items-center gap-3 text-red-600 mb-3">
+                            <div className="p-2 bg-red-100 rounded-full">
+                                <TrashIcon className="h-6 w-6" />
+                            </div>
+                            <h3 className="text-lg font-bold text-gray-900">¿Eliminar registro curricular?</h3>
+                        </div>
+                        <p className="text-sm text-gray-600 mb-3">
+                            Está a punto de eliminar de forma permanente {itemToDelete.type === 'ce' ? 'el Criterio de Evaluación' : itemToDelete.type === 'dcd' ? 'la Destreza (DCD)' : 'el Indicador de Evaluación'}:
+                        </p>
+                        <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg text-xs space-y-1 mb-4 max-h-36 overflow-y-auto">
+                            <p className="font-mono font-bold text-primary-700">{itemToDelete.code}</p>
+                            <p className="text-gray-700">{itemToDelete.description}</p>
+                        </div>
+                        <p className="text-xs text-amber-700 bg-amber-50 p-2.5 rounded border border-amber-200 mb-5">
+                            Esta acción eliminará el registro de la base de datos de manera definitiva.
+                        </p>
+                        <div className="flex justify-end gap-3">
+                            <button
+                                type="button"
+                                onClick={() => setItemToDelete(null)}
+                                disabled={isDeleting}
+                                className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition"
+                            >
+                                Cancelar
+                            </button>
+                            <button
+                                type="button"
+                                onClick={handleConfirmDelete}
+                                disabled={isDeleting}
+                                className="px-4 py-2 text-sm font-semibold text-white bg-red-600 hover:bg-red-700 rounded-lg transition flex items-center gap-1.5 shadow-sm"
+                            >
+                                {isDeleting ? 'Eliminando...' : 'Eliminar definitivamente'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Modales solo se activan si no es readOnly */}
             {!readOnly && (

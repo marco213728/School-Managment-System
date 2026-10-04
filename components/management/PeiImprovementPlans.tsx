@@ -147,8 +147,8 @@ const PeiImprovementPlans: React.FC<PeiImprovementPlansProps> = ({ pei, onUpdate
                                             className="w-full p-2 border rounded-md text-sm mb-2 bg-slate-50"
                                         >
                                             <option value="">-- Vincular con FODA (Opcional) --</option>
-                                            {weaknesses.map(w => (
-                                                <option key={w.id} value={w.id}>[{w.dimension.split(' ')[1] || 'G'}] {w.description.substring(0, 50)}...</option>
+                                            {weaknesses.filter(Boolean).map(w => (
+                                                <option key={w.id} value={w.id}>[{w.dimension ? (w.dimension.split(' ')[1] || 'G') : 'G'}] {(w.description || '').substring(0, 50)}...</option>
                                             ))}
                                         </select>
                                         <textarea 

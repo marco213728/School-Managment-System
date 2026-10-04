@@ -57,8 +57,8 @@ const LessonPlanAssistant: React.FC<LessonPlanAssistantProps> = ({
         if (selectedPudId) {
             const pud = microPlans.find(p => p.id === selectedPudId);
             if (pud) {
-                const relatedDcds = allDcds.filter(d => pud.dcdIds.includes(d.id));
-                dcdContext = relatedDcds.map(d => `- ${d.code}: ${d.description}`).join('\n');
+                const relatedDcds = allDcds.filter(d => d && pud.dcdIds && Array.isArray(pud.dcdIds) && pud.dcdIds.includes(d.id));
+                dcdContext = relatedDcds.map(d => `- ${d.code || ''}: ${d.description || ''}`).join('\n');
             }
         }
 

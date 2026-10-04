@@ -142,7 +142,7 @@ const ActivityForm: React.FC<ActivityFormProps> = ({ isOpen, onClose, onSave, ac
             ...prev,
             title: resource.title,
             description: resource.description,
-            dcdId: resource.dcdIds[0] || '', // Take the first DCD as primary
+            dcdId: resource.dcdIds?.[0] || '', // Take the first DCD as primary
             rubricId: resource.rubricId || '',
             // Map resource type to activity type roughly
             type: resource.type === 'Project' || resource.type === 'ABP' ? ActivityType.Homework : ActivityType.Homework, 
@@ -171,8 +171,8 @@ const ActivityForm: React.FC<ActivityFormProps> = ({ isOpen, onClose, onSave, ac
     const relevantDcds = useMemo(() => {
         if (!formData.microPlanId) return [];
         const plan = microPlans.find(p => p.id === formData.microPlanId);
-        if (!plan) return [];
-        return dcds.filter(d => plan.dcdIds.includes(d.id));
+        if (!plan || !plan.dcdIds || !Array.isArray(plan.dcdIds)) return [];
+        return dcds.filter(d => d && plan.dcdIds.includes(d.id));
     }, [formData.microPlanId, microPlans, dcds]);
     
     const selectedDcd = dcds.find(d => d.id === formData.dcdId);
@@ -218,7 +218,7 @@ const ActivityForm: React.FC<ActivityFormProps> = ({ isOpen, onClose, onSave, ac
                             </select>
                             <select value={formData.dcdId} onChange={e => setFormData(p => ({...p, dcdId: e.target.value}))} className="w-full p-2 border rounded bg-white" disabled={!formData.microPlanId && !formData.dcdId}> {/* Enabled if pre-filled from resource */}
                                 <option value="">Seleccionar Destreza (DCD)</option>
-                                {relevantDcds.length > 0 ? relevantDcds.map(d => <option key={d.id} value={d.id}>{d.code} - {d.description.substring(0, 60)}...</option>) : 
+                                {relevantDcds.length > 0 ? relevantDcds.filter(Boolean).map(d => <option key={d.id} value={d.id}>{d.code || ''} - {(d.description || '').substring(0, 60)}...</option>) : 
                                  formData.dcdId ? <option value={formData.dcdId}>DCD Importada (Verificar PUD)</option> : null}
                             </select>
                             {selectedDcd && (

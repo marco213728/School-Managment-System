@@ -35,7 +35,7 @@ interface InspectorSustitucionesProps {
     staffAttendanceRecords: StaffAttendanceRecord[];
 }
 
-export const InspectorSustituciones: React.FC<InspectorSustitucionesProps> = ({ users, schedule, classes, subjects, staffAttendanceRecords, absenceRequests = [], onUpdateAbsenceRequests = () => {} }) => {
+export const InspectorSustituciones: React.FC<InspectorSustitucionesProps> = ({ users, schedule, classes, subjects, staffAttendanceRecords, absenceRequests = [], onUpdateAbsenceRequests = (_r: AbsenceRequest[]) => {} }) => {
   const { user: currentUser } = useContext(UserContext);
   const { institution } = useContext(InstitutionContext);
   
@@ -44,6 +44,7 @@ export const InspectorSustituciones: React.FC<InspectorSustitucionesProps> = ({ 
   const [formData, setFormData] = useState({
       docenteTitularId: "",
       fecha: new Date().toISOString().split('T')[0],
+      diaSemana: new Date().getDay(),
       periodo: 1,
       classId: "",
       subjectId: "",
@@ -95,12 +96,16 @@ export const InspectorSustituciones: React.FC<InspectorSustitucionesProps> = ({ 
         
         const disponibles: DocenteDisponible[] = [];
         
+        const daysMap: Record<number, 'Lunes' | 'Martes' | 'Miércoles' | 'Jueves' | 'Viernes'> = {
+            1: 'Lunes', 2: 'Martes', 3: 'Miércoles', 4: 'Jueves', 5: 'Viernes'
+        };
+        const diaNombre = daysMap[ausencia.diaSemana] || 'Lunes';
+
         docentesInstitucion.forEach(docente => {
-            // Verificar si tiene clase en este periodo y dia (dia de la semana 1-5, o periodo en el horario)
+            const docenteSubjectIds = new Set(subjects.filter(s => s.teacherId === docente.id).map(s => s.id));
             const scheduleEntry = schedule.find(s => 
-                s.teacherId === docente.id && 
-                s.dayOfWeek === ausencia.diaSemana && 
-                s.period === ausencia.periodo
+                docenteSubjectIds.has(s.subjectId) && 
+                s.day === diaNombre
             );
             
             // Verificar si el docente está ausente hoy
@@ -110,7 +115,7 @@ export const InspectorSustituciones: React.FC<InspectorSustitucionesProps> = ({ 
             if (!scheduleEntry && !isAusenteHoy) {
                 
                 // Calculo de carga
-                const totalHoras = schedule.filter(s => s.teacherId === docente.id).length;
+                const totalHoras = schedule.filter(s => docenteSubjectIds.has(s.subjectId)).length;
                 
                 // Validar especialidad (simulada basada en la asignatura que imparte)
                 const subjectsDocente = subjects.filter(s => s.teacherId === docente.id);
@@ -164,6 +169,7 @@ export const InspectorSustituciones: React.FC<InspectorSustitucionesProps> = ({ 
       if (!currentUser?.institutionId) return;
       const newAbsence: AbsenceRequest = {
           ...formData,
+          diaSemana: formData.diaSemana ?? new Date(formData.fecha).getDay(),
           id: `abs-${Date.now()}`,
           institutionId: currentUser.institutionId,
           estado: 'Pendiente',
@@ -174,6 +180,7 @@ export const InspectorSustituciones: React.FC<InspectorSustitucionesProps> = ({ 
       setFormData({
           docenteTitularId: "",
           fecha: new Date().toISOString().split('T')[0],
+          diaSemana: new Date().getDay(),
           periodo: 1,
           classId: "",
           subjectId: "",

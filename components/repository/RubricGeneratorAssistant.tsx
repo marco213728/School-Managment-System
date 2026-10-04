@@ -35,8 +35,8 @@ const RubricGeneratorAssistant: React.FC<RubricGeneratorAssistantProps> = ({ isO
         if (!description) return;
         setIsLoading(true);
 
-        const criteriaPrompt = customCriteria.filter(c => c.trim() !== '').length > 0 
-            ? `Incluye obligatoriamente estos criterios: ${customCriteria.filter(c => c.trim() !== '').join(', ')}.` 
+        const criteriaPrompt = customCriteria.filter(c => c && String(c).trim() !== '').length > 0 
+            ? `Incluye obligatoriamente estos criterios: ${customCriteria.filter(c => c && String(c).trim() !== '').join(', ')}.` 
             : 'Sugiere los criterios de evaluación más adecuados para esta actividad.';
 
         const prompt = `
@@ -130,7 +130,7 @@ const RubricGeneratorAssistant: React.FC<RubricGeneratorAssistantProps> = ({ isO
             id: rubricId,
             institutionId: currentUser?.institutionId || '',
             title: json.title,
-            description: `Generada por IA para: ${description.substring(0, 50)}...`,
+            description: `Generada por IA para: ${(description || '').substring(0, 50)}...`,
             scaleType: 'Quantitative',
             levels,
             criteria,

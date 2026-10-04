@@ -175,7 +175,7 @@ interface TeacherDashboardProps {
     onUpdateCronogramaEvents: (events: CronogramaEvent[]) => void;
 }
 
-const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ absenceRequests = [], onUpdateAbsenceRequests = () => {}, schedule, subjects, timeSlots, rooms, timetables, users, classes, cronogramaEvents, onUpdateCronogramaEvents }) => {
+const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ absenceRequests = [], onUpdateAbsenceRequests = (_r: any[]) => {}, schedule, subjects, timeSlots, rooms, timetables, users, classes, cronogramaEvents, onUpdateCronogramaEvents }) => {
     const { user: currentUser } = useContext(UserContext);
 
     const teacherData = useMemo(() => {

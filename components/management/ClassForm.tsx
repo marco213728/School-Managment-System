@@ -340,7 +340,7 @@ const ClassForm: React.FC<ClassFormProps> = ({
                                                 <span>{student.name}</span>
                                             </div>
                                             <div className="text-[11px] text-slate-400 font-mono">
-                                                {student.nationalId || `ID: ${student.id.substring(0, 8)}`}
+                                                {student.nationalId || (student.id ? `ID: ${student.id.substring(0, 8)}` : '')}
                                             </div>
                                         </div>
                                     );

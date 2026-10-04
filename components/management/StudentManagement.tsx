@@ -162,8 +162,8 @@ const StudentManagement: React.FC<StudentManagementProps> = ({
         // Update class studentIds
         if (studentWithInst.classId && onUpdateClasses) {
             const cls = classes.find(c => c.id === studentWithInst.classId);
-            if (cls && !cls.studentIds.includes(studentWithInst.id)) {
-                const updatedCls = { ...cls, studentIds: [...cls.studentIds, studentWithInst.id] };
+            if (cls && !(cls.studentIds || []).includes(studentWithInst.id)) {
+                const updatedCls = { ...cls, studentIds: [...(cls.studentIds || []), studentWithInst.id] };
                 await saveDocument('classes', updatedCls.id, updatedCls);
                 onUpdateClasses(classes.map(c => c.id === updatedCls.id ? updatedCls : c));
             }

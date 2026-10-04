@@ -163,15 +163,16 @@ const StudentOvpProfile: React.FC<{
         { axis: OvpAxis.DecisionMaking, title: 'Eje: Toma de Decisiones', icon: <ClipboardListIcon className="h-6 w-6 text-primary-700" /> }
     ];
 
-    const getInitials = (name: string) => {
-        const names = name.split(' ');
-        if (names.length > 1) {
-            return `${names[0][0]}${names[1][0]}`;
+    const getInitials = (name?: string) => {
+        if (!name) return '??';
+        const names = name.trim().split(/\s+/).filter(Boolean);
+        if (names.length > 1 && names[0]?.[0] && names[1]?.[0]) {
+            return `${names[0][0]}${names[1][0]}`.toUpperCase();
         }
-        return name.substring(0, 2);
+        return (name || '').substring(0, 2).toUpperCase();
     }
     
-    const avatarInitials = getInitials(student.name);
+    const avatarInitials = getInitials(student?.name);
 
     return (
         <div className="fixed inset-0 bg-black bg-opacity-50 z-40 flex justify-center items-center p-4" onClick={onClose}>

@@ -37,8 +37,8 @@ const ManualSend: React.FC<CommunicationsPageProps> = ({ users, students, classe
         if (recipientType === 'class') {
             const selectedClass = classes.find(c => c.id === selectedClassId);
             if (selectedClass) {
-                const studentIds = selectedClass.studentIds;
-                const studentsInClass = students.filter(s => studentIds.includes(s.id));
+                const studentIds = selectedClass.studentIds || [];
+                const studentsInClass = students.filter(s => s && studentIds.includes(s.id));
                 studentsInClass.forEach(s => {
                     recipients.push(s.id);
                     if (s.parentId) recipients.push(s.parentId);

@@ -1,7 +1,7 @@
 
 import React, { useState, useMemo, useContext } from 'react';
 import { AttendanceRecord, Student, Class, ExitPass, Notification, User, DisciplinaryAction, InspectionVisit,
-  AbsenceRequest, ConflictMediation, QualityMetric, DisciplinarySeverity, Gradebook, Subject } from '../types';
+  AbsenceRequest, ConflictMediation, QualityMetric, DisciplinarySeverity, Gradebook, Subject, ScheduleEntry, StaffAttendanceRecord } from '../types';
 import { UserContext } from '../contexts/UserContext';
 import { MOCK_DISCIPLINARY_ACTIONS, MOCK_INSPECTION_VISITS, MOCK_QUALITY_METRICS } from '../constants';
 import JustificationManagement from '../components/inspection/JustificationManagement';
@@ -31,7 +31,6 @@ interface InspectionPageProps {
     onUpdateConflictMediations?: (conflicts: ConflictMediation[]) => void;
     // New props for Quality Module
     gradebooks?: Gradebook[];
-    subjects?: Subject[];
 }
 
 type InspectionView = 'dashboard' | 'justifications' | 'exit_passes';
@@ -42,7 +41,7 @@ const InspectionPage: React.FC<InspectionPageProps> = (props) => {
         attendanceRecords, onUpdateAttendance, students, classes, exitPasses, 
         onUpdateExitPasses, notifications, onUpdateNotifications, users, 
         conflictMediations = [], onUpdateConflictMediations,
-        gradebooks = [], subjects = [], schedule = [], staffAttendanceRecords = [], absenceRequests = [], onUpdateAbsenceRequests = () => {} // Defaults
+        gradebooks = [], subjects = [], schedule = [], staffAttendanceRecords = [], absenceRequests = [], onUpdateAbsenceRequests = (_r: AbsenceRequest[]) => {} // Defaults
     } = props;
 
     const { user: currentUser } = useContext(UserContext);
@@ -68,8 +67,7 @@ const InspectionPage: React.FC<InspectionPageProps> = (props) => {
     const studentMap = useMemo(() => new Map(institutionStudents.map(s => [s.id, s.name])), [institutionStudents]);
 
     // Handle saving an inspection visit (Create or Update)
-    const handleSaveVisit = (visitData: Omit<InspectionVisit,
-  AbsenceRequest, 'id' | 'institutionId' | 'inspectorId'> & { id?: string }) => {
+    const handleSaveVisit = (visitData: Omit<InspectionVisit, 'id' | 'institutionId' | 'inspectorId'> & { id?: string }) => {
         if (visitData.id) {
             // Edit existing
             setInspectionVisits(prev => prev.map(v => v.id === visitData.id ? { ...v, ...visitData } : v));
@@ -368,7 +366,7 @@ const InspectionPage: React.FC<InspectionPageProps> = (props) => {
             )}
             
             {activeTab === 'coexistence' && renderCoexistenceTab()}
-            {activeTab === 'substitutions' && <InspectorSustituciones users={institutionUsers} schedule={schedule} classes={institutionClasses} subjects={subjects} staffAttendanceRecords={staffAttendanceRecords} />}
+            {activeTab === 'substitutions' && <InspectorSustituciones users={institutionUsers} schedule={schedule} classes={institutionClasses} subjects={subjects} staffAttendanceRecords={staffAttendanceRecords} absenceRequests={absenceRequests} onUpdateAbsenceRequests={onUpdateAbsenceRequests} />}
 
             {isVisitFormOpen && (
                 <InspectionVisitForm

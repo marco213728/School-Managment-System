@@ -434,7 +434,7 @@ const StudentProfileCard: React.FC<StudentProfileCardProps> = ({
 
     const renderInfoTab = () => {
         const currentClasses = allClasses || MOCK_CLASSES;
-        const currentTimetables = timetables || MOCK_TIMETABLES;
+        const currentTimetables = timetables || [];
         const currentUsers = allUsers || MOCK_USERS;
 
         const studentClass = currentClasses.find(c => c.id === profileData.classId);
@@ -831,7 +831,7 @@ const StudentProfileCard: React.FC<StudentProfileCardProps> = ({
         const currentSubjects = subjects || [];
         const currentTimeSlots = timeSlots || [];
         const currentRooms = rooms || [];
-        const currentTimetables = timetables || MOCK_TIMETABLES;
+        const currentTimetables = timetables || [];
         const currentUsers = allUsers || MOCK_USERS;
 
         const studentClass = currentClasses.find(c => c.id === profileData.classId);

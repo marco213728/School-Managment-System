@@ -60,6 +60,7 @@ const ScheduleForm: React.FC<ScheduleFormProps> = ({
                 
                 const validacion = validarMobiliarioExclusivoAula(paraleloAdapter, {
                     ...room,
+                    nombre: room.name || '',
                     capacidad: room.capacidad || 30,
                     esLaboratorio: room.esLaboratorio || false,
                     piso: room.piso || 1,

@@ -30,7 +30,7 @@ import JuntaManager from '../vicerrectorado/JuntaManager';
 import { UserContext, InstitutionContext } from '../../contexts/UserContext';
 import { MOCK_RUBRICS } from '../../constants'; 
 
-type Page = 'dashboard' | 'attendance' | 'activities' | 'reports' | 'manage' | 'dece' | 'health' | 'students' | 'communications' | 'schedule' | 'inspection' | 'citaciones' | 'leccionario' | 'curricular_planning' | 'curriculum_repository' | 'gradebook' | 'vicerrector_dashboard' | 'reinforcement' | 'teacher_training' | 'resource_bank' | 'juntas'; 
+type Page = 'dashboard' | 'attendance' | 'activities' | 'reports' | 'manage' | 'dece' | 'health' | 'students' | 'communications' | 'schedule' | 'inspection' | 'citaciones' | 'leccionario' | 'curricular_planning' | 'curriculum_repository' | 'gradebook' | 'vicerrector_dashboard' | 'reinforcement' | 'teacher_training' | 'resource_bank' | 'juntas' | 'hris'; 
 
 interface DashboardLayoutProps {
   absenceRequests: any[];
@@ -357,6 +357,8 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = (props) => {
                     classes={classes} 
                     users={users} 
                     students={students} 
+                    schedule={schedule}
+                    staffAttendanceRecords={staffAttendanceRecords || []}
                     conflictMediations={conflictMediations} 
                     onUpdateConflictMediations={onUpdateConflictMediations} 
                     gradebooks={gradebooks} 
@@ -367,7 +369,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = (props) => {
                 'curricular_planning': <CurricularPlanningPage microPlans={microPlans} onUpdateMicroPlans={onUpdateMicroPlans} classes={classes} subjects={subjects} students={students} users={users} dcds={dcds} evaluationCriteria={restProps.evaluationCriteria} evaluationIndicators={restProps.evaluationIndicators} />,
                 'gradebook': <GradebookPage gradebooks={gradebooks} onUpdateGradebooks={restProps.onUpdateGradebooks} classes={classes} subjects={subjects} students={students} users={users} schedule={schedule} activities={restProps.activities} />,
             };
-            return AllOtherPages[currentPage] || <DashboardPage absenceRequests={props.absenceRequests} onUpdateAbsenceRequests={props.onUpdateAbsenceRequests} {...restProps} schedule={schedule} classes={classes} subjects={subjects} timeSlots={institutionTimeSlots} rooms={restProps.rooms} timetables={institutionTimetables} users={users} onNavigate={setCurrentPage} students={students} formalRequests={formalRequests} />;
+            return AllOtherPages[currentPage] || <DashboardPage absenceRequests={props.absenceRequests} onUpdateAbsenceRequests={props.onUpdateAbsenceRequests} {...restProps} schedule={schedule} classes={classes} subjects={subjects} timeSlots={institutionTimeSlots} rooms={restProps.rooms} timetables={institutionTimetables} users={users} onNavigate={setCurrentPage} students={students} formalRequests={formalRequests} cronogramaEvents={cronogramaEvents || []} onUpdateCronogramaEvents={onUpdateCronogramaEvents || (() => {})} />;
     }
   };
 

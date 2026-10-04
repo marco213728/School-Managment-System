@@ -1,10 +1,11 @@
 import express from "express";
 import path from "path";
-import { MotorOptimizadorHorarios } from "./lib/scheduler";
+import fs from "fs";
+import { MotorOptimizadorHorarios } from "./lib/scheduler.ts";
 
 async function startServer() {
   const app = express();
-  const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 8080;
+  const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
 
   app.use(express.json());
 
@@ -69,8 +70,12 @@ async function startServer() {
     });
   });
 
-  // En producción (Cloud Run / App Hosting): Servir estáticos construidos
-  if (process.env.NODE_ENV !== "production" && !process.env.K_SERVICE) {
+  // En producción (Cloud Run / App Hosting): Servir estáticos construidos si existen
+  const distPath = path.join(process.cwd(), 'dist');
+  const indexHtmlPath = path.join(distPath, 'index.html');
+  const hasBuiltDist = fs.existsSync(indexHtmlPath);
+
+  if ((process.env.NODE_ENV !== "production" && !process.env.K_SERVICE) || !hasBuiltDist) {
     const { createServer: createViteServer } = await import("vite");
     const vite = await createViteServer({
       server: { middlewareMode: true },
@@ -78,10 +83,13 @@ async function startServer() {
     });
     app.use(vite.middlewares);
   } else {
-    const distPath = path.join(process.cwd(), 'dist');
     app.use(express.static(distPath));
     app.use((_req, res) => {
-      res.sendFile(path.join(distPath, 'index.html'));
+      if (fs.existsSync(indexHtmlPath)) {
+        res.sendFile(indexHtmlPath);
+      } else {
+        res.status(404).send("Application static files are being prepared.");
+      }
     });
   }
 

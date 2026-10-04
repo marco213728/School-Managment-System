@@ -41,7 +41,7 @@ export const WorkloadManagement: React.FC<WorkloadManagementProps> = ({
     return {
       id: u.id,
       nombre: u.name,
-      cedula: u.id.substring(0, 10),
+      cedula: (u.id || '').substring(0, 10),
       especialidad: teacherSubjects.length > 0 ? teacherSubjects[0].areaOfKnowledge : 'General',
       relacionLaboral: 'definitivo' as const,
       funcion: 'docente' as const,

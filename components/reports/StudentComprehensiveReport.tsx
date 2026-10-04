@@ -135,7 +135,7 @@ const StudentComprehensiveReport: React.FC<ReportProps> = ({
                                                 {item.agreements && (
                                                     <div className="mt-1 p-2 bg-gray-50 rounded text-xs text-gray-600 border border-gray-100">
                                                         <strong className="block mb-1"><ClipboardListIcon className="inline h-3 w-3 mr-1"/>Acuerdos:</strong>
-                                                        {item.agreements.substring(0, 150)}{item.agreements.length > 150 ? '...' : ''}
+                                                        {(item.agreements || '').substring(0, 150)}{(item.agreements || '').length > 150 ? '...' : ''}
                                                     </div>
                                                 )}
                                                 <p className="text-xs text-gray-500 italic mt-1">Registrado por: {staffMap.get(item.deceProfessionalId) || 'Profesional'}</p>

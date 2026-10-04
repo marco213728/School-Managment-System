@@ -102,8 +102,8 @@ const ReportsPage: React.FC<ReportsPageProps> = (props) => {
             const cls = institutionClasses.find(c => c.id === selectedId);
             if (cls) {
                  // Generate chart data for class
-                 const studentIds = cls.studentIds;
-                 const classRecords = institutionAttendance.filter(r => studentIds.includes(r.studentId));
+                 const studentIds = cls.studentIds || [];
+                 const classRecords = institutionAttendance.filter(r => r && studentIds.includes(r.studentId));
                   const counts = classRecords.reduce((acc, curr) => {
                     acc[curr.status] = (acc[curr.status] || 0) + 1;
                     return acc;

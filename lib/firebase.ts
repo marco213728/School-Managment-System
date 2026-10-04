@@ -101,14 +101,19 @@ export async function saveDocument(collectionName: string, id: string, data: any
  * Persist multiple documents in Firestore in a single batch
  */
 export async function saveDocumentsBatch(items: { collectionName: string; id: string; data: any }[]): Promise<boolean> {
+  if (!items || items.length === 0) return true;
   try {
-    const batch = writeBatch(db);
-    for (const item of items) {
-      const docRef = doc(db, item.collectionName, item.id);
-      const sanitized = cleanPayload(item.data);
-      batch.set(docRef, sanitized, { merge: true });
+    const CHUNK_SIZE = 400; // Firestore limit is 500 writes per batch
+    for (let i = 0; i < items.length; i += CHUNK_SIZE) {
+      const chunk = items.slice(i, i + CHUNK_SIZE);
+      const batch = writeBatch(db);
+      for (const item of chunk) {
+        const docRef = doc(db, item.collectionName, item.id);
+        const sanitized = cleanPayload(item.data);
+        batch.set(docRef, sanitized, { merge: true });
+      }
+      await batch.commit();
     }
-    await batch.commit();
     return true;
   } catch (error) {
     console.error(`Error al guardar lote en Firestore:`, error);

@@ -131,7 +131,7 @@ const SubjectReportForm: React.FC<SubjectReportFormProps> = ({
     const handleAddDifficulty = () => {
         setFormData(prev => ({
             ...prev,
-            difficulties: [...(prev.difficulties || []), { studentId: '', difficulty: '', cause: '', measure: '', results: '' }]
+            difficulties: [...(prev.difficulties || []), { studentId: '', difficulty: '', cause: '', measure: '', results: '', minGrade: 0, improvedGrade: 0 }]
         }));
     };
 

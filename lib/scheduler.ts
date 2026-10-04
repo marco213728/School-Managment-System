@@ -1,4 +1,4 @@
-import { Docente, ParaleloInfo, AulaInfo, AsignaturaInfo, SlotHorarioInfo } from '../types';
+import type { Docente, ParaleloInfo, AulaInfo, AsignaturaInfo, SlotHorarioInfo } from '../types.ts';
 
 export class MotorOptimizadorHorarios {
   private docentes: Docente[];

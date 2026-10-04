@@ -213,7 +213,7 @@ const ResourceForm: React.FC<ResourceFormProps> = ({ isOpen, onClose, onSave, re
                                 <ul className="text-xs space-y-1 mb-2">
                                     {filteredDcds.map(d => (
                                         <li key={d.id} className="cursor-pointer hover:bg-gray-100 p-1 rounded" onClick={() => handleCheckboxGroup('dcdIds', d.id)}>
-                                            + <strong>{d.code}</strong> {d.description.substring(0, 30)}...
+                                            + <strong>{d.code}</strong> {(d.description || '').substring(0, 30)}...
                                         </li>
                                     ))}
                                 </ul>

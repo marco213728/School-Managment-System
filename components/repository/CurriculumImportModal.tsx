@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import * as XLSX from 'xlsx';
 import { Dcd, EvaluationCriterion, EvaluationIndicator, Subject, GradeLevel, Competency, CurricularInsertion } from '../../types';
 import { GRADE_LEVELS, COMPETENCIES, CURRICULAR_INSERTIONS } from '../../constants';
@@ -94,52 +94,85 @@ export const CurriculumImportModal: React.FC<CurriculumImportModalProps> = ({
     const [parsedIndicators, setParsedIndicators] = useState<ParsedIndicatorRow[]>([]);
     const [hasParsed, setHasParsed] = useState(false);
 
+    // Track newly detected subjects that need to be created in Firestore
+    const autoSubjectsRef = useRef<Map<string, { id: string; name: string }>>(new Map());
+    const newDetectedSubjectsRef = useRef<Map<string, Subject>>(new Map());
+
     if (!isOpen) return null;
 
     // Helper to match subject from name or text
     const findSubjectId = (subjectText: string): { id: string; name: string } => {
-        if (!subjectText) {
+        if (!subjectText || !subjectText.trim()) {
             return { id: subjects[0]?.id || 'subj-gen', name: subjects[0]?.name || 'General' };
         }
-        const norm = normalize(subjectText);
+        const cleanName = subjectText.trim();
+        const norm = normalize(cleanName);
+        if (!norm) {
+            return { id: subjects[0]?.id || 'subj-gen', name: subjects[0]?.name || 'General' };
+        }
+
         // Direct match
-        const direct = subjects.find(s => normalize(s.name) === norm);
+        const direct = subjects.find(s => s && normalize(s.name) === norm);
         if (direct) return { id: direct.id, name: direct.name };
 
         // Partial match
         const partial = subjects.find(s => {
+            if (!s || !s.name) return false;
             const sNorm = normalize(s.name);
-            return norm.includes(sNorm) || sNorm.includes(norm);
+            return sNorm && (norm === sNorm || norm.includes(sNorm) || sNorm.includes(norm));
         });
         if (partial) return { id: partial.id, name: partial.name };
 
         // Keyword based
+        if (norm.includes('inicial') || norm.includes('preparatoria') || norm.includes('infantil')) {
+            const ini = subjects.find(s => s && s.name && (normalize(s.name).includes('inicial') || normalize(s.name).includes('preparatoria')));
+            if (ini) return { id: ini.id, name: ini.name };
+        }
         if (norm.includes('matemat')) {
-            const m = subjects.find(s => normalize(s.name).includes('matemat'));
+            const m = subjects.find(s => s && s.name && normalize(s.name).includes('matemat'));
             if (m) return { id: m.id, name: m.name };
         }
         if (norm.includes('lengua') || norm.includes('literat')) {
-            const l = subjects.find(s => normalize(s.name).includes('lengua') || normalize(s.name).includes('literat'));
+            const l = subjects.find(s => s && s.name && (normalize(s.name).includes('lengua') || normalize(s.name).includes('literat')));
             if (l) return { id: l.id, name: l.name };
         }
         if (norm.includes('social') || norm.includes('histor')) {
-            const s = subjects.find(s => normalize(s.name).includes('social') || normalize(s.name).includes('histor'));
+            const s = subjects.find(s => s && s.name && (normalize(s.name).includes('social') || normalize(s.name).includes('histor')));
             if (s) return { id: s.id, name: s.name };
         }
         if (norm.includes('natural') || norm.includes('biolog') || norm.includes('quimic') || norm.includes('fisic')) {
-            const n = subjects.find(s => normalize(s.name).includes('natural') || normalize(s.name).includes('biolog'));
+            const n = subjects.find(s => s && s.name && (normalize(s.name).includes('natural') || normalize(s.name).includes('biolog')));
             if (n) return { id: n.id, name: n.name };
         }
         if (norm.includes('ingles') || norm.includes('english')) {
-            const i = subjects.find(s => normalize(s.name).includes('ingles') || normalize(s.name).includes('english'));
+            const i = subjects.find(s => s && s.name && (normalize(s.name).includes('ingles') || normalize(s.name).includes('english')));
             if (i) return { id: i.id, name: i.name };
         }
         if (norm.includes('educacion fisica') || norm.includes('fisica') || norm.includes('ed. fis')) {
-            const ef = subjects.find(s => normalize(s.name).includes('fisica'));
+            const ef = subjects.find(s => s && s.name && (normalize(s.name).includes('educacion fisica') || normalize(s.name).includes('fisica')));
             if (ef) return { id: ef.id, name: ef.name };
         }
 
-        return { id: subjects[0]?.id || 'subj-gen', name: subjectText };
+        // If not in the current catalog, create a dedicated subject entry instead of incorrectly assigning to subjects[0]
+        if (autoSubjectsRef.current.has(norm)) {
+            return autoSubjectsRef.current.get(norm)!;
+        }
+
+        const slugId = `subj-${norm.replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || Date.now()}`;
+        const newSubjInfo = { id: slugId, name: cleanName };
+        autoSubjectsRef.current.set(norm, newSubjInfo);
+
+        newDetectedSubjectsRef.current.set(slugId, {
+            id: slugId,
+            institutionId: institutionId || 'GLOBAL',
+            name: cleanName,
+            teacherId: '',
+            areaOfKnowledge: cleanName,
+            level: 'Todos',
+            isModule: false
+        });
+
+        return newSubjInfo;
     };
 
     // Helper to normalize GradeLevel
@@ -156,13 +189,14 @@ export const CurriculumImportModal: React.FC<CurriculumImportModalProps> = ({
     };
 
     // Extract code and text from mixed string like "CE.M.4.1. Emplea las relaciones de orden..."
-    const splitCodeAndText = (input: string, prefixRegex: RegExp): { code: string; text: string } => {
+    const splitCodeAndText = (input: any, prefixRegex: RegExp): { code: string; text: string } => {
         if (!input) return { code: '', text: '' };
-        const clean = input.trim();
+        const clean = String(input || '').trim();
+        if (!clean) return { code: '', text: '' };
         const match = clean.match(prefixRegex);
-        if (match) {
-            const code = match[0].trim().replace(/[:.-]+$/, '');
-            const text = clean.substring(match[0].length).replace(/^[:.-]+/, '').trim();
+        if (match && match[0]) {
+            const code = String(match[0] || '').trim().replace(/[:.-]+$/, '');
+            const text = (clean || '').substring(match[0].length).replace(/^[:.-]+/, '').trim();
             return { code, text: text || clean };
         }
         return { code: '', text: clean };
@@ -222,30 +256,63 @@ export const CurriculumImportModal: React.FC<CurriculumImportModalProps> = ({
 
         // Cache seen criteria codes in this import
         const criteriaByCode = new Map<string, ParsedCriterionRow>();
+        let lastSeenCeCode = '';
+        let lastSeenSubject = subjects[0] || { id: 'sub-mat', name: 'Matemática' };
+        let lastSeenGradeLevel: GradeLevel = 'EGB Superior';
+
+        const CE_REGEX = /^CE\.[A-Z]+(\.[A-Z]+)?\.[0-9]+(\.[0-9]+)*\.?/i;
+        const DCD_REGEX = /^[A-Z]+(\.[A-Z]+)?\.[0-9]+(\.[0-9]+)+(\.[0-9]+)*\.?/i;
+        const IE_REGEX = /^I\.[A-Z]+(\.[A-Z]+)?\.[0-9]+(\.[0-9]+)*\.?/i;
 
         rows.forEach((row, idx) => {
             // Check for Subject and GradeLevel in this row
             const subjectRaw = getCol(row, ['asignatura', 'materia', 'area', 'área', 'subject']);
             const gradeLevelRaw = getCol(row, ['nivel', 'subnivel', 'grado', 'curso', 'gradelevel']);
-            const matchedSubject = findSubjectId(subjectRaw);
-            const matchedGradeLevel = matchGradeLevel(gradeLevelRaw);
+            
+            if (subjectRaw) {
+                lastSeenSubject = findSubjectId(subjectRaw);
+            }
+            if (gradeLevelRaw) {
+                lastSeenGradeLevel = matchGradeLevel(gradeLevelRaw);
+            }
+
+            const matchedSubject = lastSeenSubject;
+            const matchedGradeLevel = lastSeenGradeLevel;
+
+            // Extract all cell values for fallback cell-sniffing
+            const allCellValues = Object.values(row).map(v => String(v || '').trim()).filter(v => v.length > 0);
 
             if (docStructure === 'integrated') {
                 // MINEDUC UNIFIED MATRIX FORMAT
                 // 1. Criterio de Evaluación
-                const ceCodeRaw = getCol(row, ['codigo_ce', 'codigo criterio', 'cod_ce', 'ce_code', 'ce']);
-                const ceDescRaw = getCol(row, ['criterio de evaluacion', 'criterio evaluacion', 'criterio', 'descripcion_ce', 'ce_desc']);
+                const ceCodeRaw = getCol(row, ['codigo_ce', 'codigo criterio', 'cod_ce', 'ce_code', 'ce', 'codigo']);
+                let ceDescRaw = getCol(row, ['criterio de evaluacion', 'criterios de evaluacion', 'criterio evaluacion', 'criterios evaluacion', 'criterio', 'criterios', 'descripcion_ce', 'ce_desc']);
                 
                 let ceCode = ceCodeRaw;
                 let ceDesc = ceDescRaw;
+
+                // Fallback: sniff cell with CE code
+                if (!ceCode && !ceDesc) {
+                    const foundCeCell = allCellValues.find(v => /^CE\.[A-Z]+/i.test(v));
+                    if (foundCeCell) {
+                        ceDesc = foundCeCell;
+                    }
+                }
+
                 if (!ceCode && ceDesc) {
-                    const split = splitCodeAndText(ceDesc, /^CE\.[A-Z]+\.[0-9]+(\.[0-9]+)?\.?/i);
+                    const split = splitCodeAndText(ceDesc, CE_REGEX);
                     if (split.code) {
                         ceCode = split.code;
                         ceDesc = split.text;
                     }
                 }
                 if (ceCode && !ceCode.endsWith('.')) ceCode += '.';
+
+                if (ceCode) {
+                    lastSeenCeCode = ceCode;
+                } else if (lastSeenCeCode) {
+                    ceCode = lastSeenCeCode;
+                }
 
                 if (ceCode && ceDesc && !criteriaByCode.has(ceCode)) {
                     const critObj: ParsedCriterionRow = {
@@ -263,11 +330,20 @@ export const CurriculumImportModal: React.FC<CurriculumImportModalProps> = ({
 
                 // 2. Destreza DCD
                 const dcdCodeRaw = getCol(row, ['codigo_dcd', 'codigo destreza', 'cod_dcd', 'dcd_code', 'dcd']);
-                const dcdDescRaw = getCol(row, ['destreza con criterio de desempeno', 'destreza', 'dcd', 'descripcion_dcd', 'dcd_desc']);
+                let dcdDescRaw = getCol(row, ['destreza con criterio de desempeno', 'destrezas con criterio de desempeno', 'destrezas con criterios de desempeno', 'destreza con criterios de desempeno', 'destreza', 'destrezas', 'dcd', 'descripcion_dcd', 'dcd_desc', 'contenido']);
                 let dcdCode = dcdCodeRaw;
                 let dcdDesc = dcdDescRaw;
+
+                // Fallback: sniff cell with DCD code
+                if (!dcdCode && !dcdDesc) {
+                    const foundDcdCell = allCellValues.find(v => DCD_REGEX.test(v) && !/^CE\./i.test(v) && !/^I\./i.test(v));
+                    if (foundDcdCell) {
+                        dcdDesc = foundDcdCell;
+                    }
+                }
+
                 if (!dcdCode && dcdDesc) {
-                    const split = splitCodeAndText(dcdDesc, /^[A-Z]+\.[0-9]+\.[0-9]+\.[0-9]+(\.[0-9]+)?\.?/i);
+                    const split = splitCodeAndText(dcdDesc, DCD_REGEX);
                     if (split.code) {
                         dcdCode = split.code;
                         dcdDesc = split.text;
@@ -288,7 +364,7 @@ export const CurriculumImportModal: React.FC<CurriculumImportModalProps> = ({
                         subjectId: matchedSubject.id,
                         subjectName: matchedSubject.name,
                         gradeLevel: matchedGradeLevel,
-                        criterionCode: ceCode || '',
+                        criterionCode: ceCode || lastSeenCeCode || '',
                         isDisaggregated,
                         refCode: refCode || undefined,
                         competencies: parseCompetencies(compRaw),
@@ -302,11 +378,20 @@ export const CurriculumImportModal: React.FC<CurriculumImportModalProps> = ({
 
                 // 3. Indicador de Evaluación IE
                 const ieCodeRaw = getCol(row, ['codigo_ie', 'codigo indicador', 'cod_ie', 'ie_code', 'ie']);
-                const ieDescRaw = getCol(row, ['indicador de evaluacion', 'indicador evaluacion', 'indicador', 'descripcion_ie', 'ie_desc']);
+                let ieDescRaw = getCol(row, ['indicador de evaluacion', 'indicadores de evaluacion', 'indicadores para la evaluacion del criterio', 'indicador evaluacion', 'indicadores evaluacion', 'indicador', 'indicadores', 'descripcion_ie', 'ie_desc']);
                 let ieCode = ieCodeRaw;
                 let ieDesc = ieDescRaw;
+
+                // Fallback: sniff cell with IE code
+                if (!ieCode && !ieDesc) {
+                    const foundIeCell = allCellValues.find(v => IE_REGEX.test(v));
+                    if (foundIeCell) {
+                        ieDesc = foundIeCell;
+                    }
+                }
+
                 if (!ieCode && ieDesc) {
-                    const split = splitCodeAndText(ieDesc, /^I\.[A-Z]+\.[0-9]+\.[0-9]+(\.[0-9]+)?\.?/i);
+                    const split = splitCodeAndText(ieDesc, IE_REGEX);
                     if (split.code) {
                         ieCode = split.code;
                         ieDesc = split.text;
@@ -318,7 +403,7 @@ export const CurriculumImportModal: React.FC<CurriculumImportModalProps> = ({
                     const ieObj: ParsedIndicatorRow = {
                         code: ieCode || `IE-${idx + 1}`,
                         description: ieDesc || 'Sin descripción',
-                        criterionCode: ceCode || '',
+                        criterionCode: ceCode || lastSeenCeCode || '',
                         isValid: Boolean(ieCode && ieDesc),
                         errors: []
                     };
@@ -329,11 +414,15 @@ export const CurriculumImportModal: React.FC<CurriculumImportModalProps> = ({
             } else if (docStructure === 'ce') {
                 // SOLO CRITERIOS
                 const codeRaw = getCol(row, ['codigo', 'code', 'cod', 'código']);
-                const descRaw = getCol(row, ['descripcion', 'criterio', 'description', 'detalle']);
+                let descRaw = getCol(row, ['descripcion', 'criterio', 'description', 'detalle', 'criterios']);
+                if (!descRaw && !codeRaw) {
+                    const cell = allCellValues.find(v => /^CE\./i.test(v)) || allCellValues[0];
+                    if (cell) descRaw = cell;
+                }
                 let code = codeRaw;
                 let desc = descRaw;
                 if (!code && desc) {
-                    const split = splitCodeAndText(desc, /^CE\.[A-Z]+\.[0-9]+(\.[0-9]+)?\.?/i);
+                    const split = splitCodeAndText(desc, CE_REGEX);
                     if (split.code) { code = split.code; desc = split.text; }
                 }
                 if (code && !code.endsWith('.')) code += '.';
@@ -352,12 +441,16 @@ export const CurriculumImportModal: React.FC<CurriculumImportModalProps> = ({
             } else if (docStructure === 'dcd') {
                 // SOLO DESTREZAS
                 const codeRaw = getCol(row, ['codigo', 'code', 'cod', 'código']);
-                const descRaw = getCol(row, ['descripcion', 'destreza', 'description', 'detalle']);
+                let descRaw = getCol(row, ['descripcion', 'destreza', 'description', 'detalle', 'destrezas', 'contenido']);
+                if (!descRaw && !codeRaw) {
+                    const cell = allCellValues.find(v => DCD_REGEX.test(v)) || allCellValues[0];
+                    if (cell) descRaw = cell;
+                }
                 const critCodeRaw = getCol(row, ['criterio', 'criterion', 'criterio_ref', 'ce', 'codigo_ce']);
                 let code = codeRaw;
                 let desc = descRaw;
                 if (!code && desc) {
-                    const split = splitCodeAndText(desc, /^[A-Z]+\.[0-9]+\.[0-9]+\.[0-9]+(\.[0-9]+)?\.?/i);
+                    const split = splitCodeAndText(desc, DCD_REGEX);
                     if (split.code) { code = split.code; desc = split.text; }
                 }
                 if (code && !code.endsWith('.')) code += '.';
@@ -387,12 +480,16 @@ export const CurriculumImportModal: React.FC<CurriculumImportModalProps> = ({
             } else if (docStructure === 'ie') {
                 // SOLO INDICADORES
                 const codeRaw = getCol(row, ['codigo', 'code', 'cod', 'código']);
-                const descRaw = getCol(row, ['descripcion', 'indicador', 'description', 'detalle']);
+                let descRaw = getCol(row, ['descripcion', 'indicador', 'description', 'detalle', 'indicadores']);
+                if (!descRaw && !codeRaw) {
+                    const cell = allCellValues.find(v => IE_REGEX.test(v)) || allCellValues[0];
+                    if (cell) descRaw = cell;
+                }
                 const critCodeRaw = getCol(row, ['criterio', 'criterion', 'criterio_ref', 'ce', 'codigo_ce']);
                 let code = codeRaw;
                 let desc = descRaw;
                 if (!code && desc) {
-                    const split = splitCodeAndText(desc, /^I\.[A-Z]+\.[0-9]+\.[0-9]+(\.[0-9]+)?\.?/i);
+                    const split = splitCodeAndText(desc, IE_REGEX);
                     if (split.code) { code = split.code; desc = split.text; }
                 }
                 if (code && !code.endsWith('.')) code += '.';
@@ -460,27 +557,60 @@ export const CurriculumImportModal: React.FC<CurriculumImportModalProps> = ({
         }
     };
 
+    // Helper to find header row if document has leading title rows
+    const normalizeSheetRows = (sheet: XLSX.WorkSheet): Record<string, any>[] => {
+        let jsonRows = XLSX.utils.sheet_to_json<Record<string, any>>(sheet, { defval: '' });
+        if (jsonRows.length === 0) return [];
+
+        // Check if the header row is buried in the first 5 rows (due to title/metadata rows)
+        let headerRowIdx = -1;
+        for (let r = 0; r < Math.min(jsonRows.length, 6); r++) {
+            const vals = Object.values(jsonRows[r]).map(v => normalize(String(v)));
+            const matchCount = vals.filter(v => 
+                v.includes('criterio') || v.includes('destreza') || v.includes('indicador') || 
+                v.includes('codigo') || v.includes('cod') || v.includes('asignatura') || 
+                v.includes('dcd') || v.includes('descripcion') || v.includes('competencia')
+            ).length;
+            if (matchCount >= 2) {
+                headerRowIdx = r;
+                break;
+            }
+        }
+
+        if (headerRowIdx >= 0) {
+            const oldKeys = Object.keys(jsonRows[0]);
+            const newHeaders = oldKeys.map(k => String(jsonRows[headerRowIdx][k] || k).trim());
+            const remapped: Record<string, any>[] = [];
+            for (let i = headerRowIdx + 1; i < jsonRows.length; i++) {
+                const newRow: Record<string, any> = {};
+                oldKeys.forEach((oldK, kIdx) => {
+                    newRow[newHeaders[kIdx] || oldK] = jsonRows[i][oldK];
+                });
+                remapped.push(newRow);
+            }
+            if (remapped.length > 0) {
+                return remapped;
+            }
+        }
+
+        return jsonRows;
+    };
+
     // Parse CSV Text with delimiter detection and quote support
     const parseCsvText = (csvString: string) => {
         setIsParsing(true);
         try {
-            // Detect delimiter
-            const firstLine = csvString.split(/\r\n|\n|\r/)[0] || '';
-            const semicolonCount = (firstLine.match(/;/g) || []).length;
-            const tabCount = (firstLine.match(/\t/g) || []).length;
-            const commaCount = (firstLine.match(/,/g) || []).length;
-
-            let delimiter = ',';
-            if (semicolonCount > commaCount && semicolonCount > tabCount) delimiter = ';';
-            else if (tabCount > commaCount && tabCount > semicolonCount) delimiter = '\t';
-
+            if (!csvString || !csvString.trim()) {
+                setErrorMsg('El texto proporcionado está vacío.');
+                return;
+            }
             // Use XLSX utility to parse CSV text into json rows cleanly
             const wb = XLSX.read(csvString, { type: 'string', raw: true });
             const sheet = wb.Sheets[wb.SheetNames[0]];
-            const jsonRows = XLSX.utils.sheet_to_json<Record<string, any>>(sheet, { defval: '' });
+            const jsonRows = normalizeSheetRows(sheet);
             processRawData(jsonRows);
         } catch (err: any) {
-            setErrorMsg('Error al procesar el archivo CSV: ' + err.message);
+            setErrorMsg('Error al procesar el texto: ' + err.message);
         } finally {
             setIsParsing(false);
         }
@@ -492,7 +622,7 @@ export const CurriculumImportModal: React.FC<CurriculumImportModalProps> = ({
         setIsParsing(true);
         try {
             const sheet = workbook.Sheets[selectedSheet];
-            const jsonRows = XLSX.utils.sheet_to_json<Record<string, any>>(sheet, { defval: '' });
+            const jsonRows = normalizeSheetRows(sheet);
             processRawData(jsonRows);
         } catch (err: any) {
             setErrorMsg('Error al procesar la hoja de cálculo: ' + err.message);
@@ -520,50 +650,64 @@ export const CurriculumImportModal: React.FC<CurriculumImportModalProps> = ({
             // 1. Process Criteria
             const newCriteriaToSave: EvaluationCriterion[] = [];
             const criteriaCodeToId = new Map<string, string>();
-            existingCriteria.forEach(c => criteriaCodeToId.set(c.code.trim(), c.id));
+            (existingCriteria || []).forEach(c => {
+                if (c && c.code) {
+                    const cleanCode = String(c.code).trim();
+                    if (cleanCode) {
+                        criteriaCodeToId.set(cleanCode, c.id);
+                    }
+                }
+            });
 
             parsedCriteria.forEach(pc => {
-                const existing = existingCriteria.find(c => c.code.trim() === pc.code.trim());
+                if (!pc) return;
+                const pcCode = String(pc.code || '').trim();
+                const existing = (existingCriteria || []).find(c => c && String(c.code || '').trim() === pcCode);
                 const id = existing ? existing.id : `ce-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
                 const item: EvaluationCriterion = {
                     id,
                     institutionId: instId,
-                    code: pc.code,
-                    description: pc.description,
-                    subjectId: pc.subjectId,
+                    code: pcCode || `CE.${Date.now()}`,
+                    description: pc.description || '',
+                    subjectId: pc.subjectId || '',
                     gradeLevel: pc.gradeLevel
                 };
                 newCriteriaToSave.push(item);
-                criteriaCodeToId.set(pc.code.trim(), id);
+                if (pcCode) {
+                    criteriaCodeToId.set(pcCode, id);
+                }
             });
 
             // 2. Process DCDs
             const newDcdsToSave: Dcd[] = [];
             parsedDcds.forEach(pd => {
-                const existing = existingDcds.find(d => d.code.trim() === pd.code.trim());
+                if (!pd) return;
+                const pdCode = String(pd.code || '').trim();
+                const existing = (existingDcds || []).find(d => d && String(d.code || '').trim() === pdCode);
                 const id = existing ? existing.id : `dcd-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
                 
                 // Link criterionId
                 let criterionId = '';
-                if (pd.criterionCode && criteriaCodeToId.has(pd.criterionCode.trim())) {
-                    criterionId = criteriaCodeToId.get(pd.criterionCode.trim())!;
-                } else if (existingCriteria.length > 0) {
+                const critCode = String(pd.criterionCode || '').trim();
+                if (critCode && criteriaCodeToId.has(critCode)) {
+                    criterionId = criteriaCodeToId.get(critCode)!;
+                } else if (existingCriteria && existingCriteria.length > 0 && existingCriteria[0]?.id) {
                     criterionId = existingCriteria[0].id;
-                } else if (newCriteriaToSave.length > 0) {
+                } else if (newCriteriaToSave.length > 0 && newCriteriaToSave[0]?.id) {
                     criterionId = newCriteriaToSave[0].id;
                 }
 
                 const item: Dcd = {
                     id,
-                    code: pd.code,
-                    description: pd.description,
-                    subjectId: pd.subjectId,
+                    code: pdCode || `DCD.${Date.now()}`,
+                    description: pd.description || '',
+                    subjectId: pd.subjectId || '',
                     gradeLevel: pd.gradeLevel,
                     criterionId,
-                    competencies: pd.competencies,
-                    curricularInsertions: pd.curricularInsertions.length > 0 ? pd.curricularInsertions : undefined,
-                    isDisaggregated: pd.isDisaggregated,
-                    refCode: pd.refCode
+                    competencies: pd.competencies || [],
+                    curricularInsertions: pd.curricularInsertions && pd.curricularInsertions.length > 0 ? pd.curricularInsertions : undefined,
+                    isDisaggregated: !!pd.isDisaggregated,
+                    refCode: pd.refCode ? String(pd.refCode).trim() : undefined
                 };
                 newDcdsToSave.push(item);
             });
@@ -571,23 +715,26 @@ export const CurriculumImportModal: React.FC<CurriculumImportModalProps> = ({
             // 3. Process Indicators
             const newIndicatorsToSave: EvaluationIndicator[] = [];
             parsedIndicators.forEach(pi => {
-                const existing = existingIndicators.find(i => i.code.trim() === pi.code.trim());
+                if (!pi) return;
+                const piCode = String(pi.code || '').trim();
+                const existing = (existingIndicators || []).find(i => i && String(i.code || '').trim() === piCode);
                 const id = existing ? existing.id : `ie-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
 
                 let criterionId = '';
-                if (pi.criterionCode && criteriaCodeToId.has(pi.criterionCode.trim())) {
-                    criterionId = criteriaCodeToId.get(pi.criterionCode.trim())!;
-                } else if (existingCriteria.length > 0) {
+                const critCode = String(pi.criterionCode || '').trim();
+                if (critCode && criteriaCodeToId.has(critCode)) {
+                    criterionId = criteriaCodeToId.get(critCode)!;
+                } else if (existingCriteria && existingCriteria.length > 0 && existingCriteria[0]?.id) {
                     criterionId = existingCriteria[0].id;
-                } else if (newCriteriaToSave.length > 0) {
+                } else if (newCriteriaToSave.length > 0 && newCriteriaToSave[0]?.id) {
                     criterionId = newCriteriaToSave[0].id;
                 }
 
                 const item: EvaluationIndicator = {
                     id,
                     institutionId: instId,
-                    code: pi.code,
-                    description: pi.description,
+                    code: piCode || `I.${Date.now()}`,
+                    description: pi.description || '',
                     criterionId
                 };
                 newIndicatorsToSave.push(item);
@@ -595,6 +742,7 @@ export const CurriculumImportModal: React.FC<CurriculumImportModalProps> = ({
 
             // 4. Batch Save to Firestore
             const batchOperations: { collectionName: string; id: string; data: any }[] = [];
+            newDetectedSubjectsRef.current.forEach(s => batchOperations.push({ collectionName: 'subjects', id: s.id, data: s }));
             newCriteriaToSave.forEach(c => batchOperations.push({ collectionName: 'evaluation_criteria', id: c.id, data: c }));
             newDcdsToSave.forEach(d => batchOperations.push({ collectionName: 'dcds', id: d.id, data: d }));
             newIndicatorsToSave.forEach(i => batchOperations.push({ collectionName: 'evaluation_indicators', id: i.id, data: i }));
@@ -604,23 +752,23 @@ export const CurriculumImportModal: React.FC<CurriculumImportModalProps> = ({
             }
 
             // Merge with existing
-            const finalCriteria = [...existingCriteria];
+            const finalCriteria = [...(existingCriteria || [])];
             newCriteriaToSave.forEach(nc => {
-                const idx = finalCriteria.findIndex(c => c.id === nc.id);
+                const idx = finalCriteria.findIndex(c => c && c.id === nc.id);
                 if (idx > -1) finalCriteria[idx] = nc;
                 else finalCriteria.push(nc);
             });
 
-            const finalDcds = [...existingDcds];
+            const finalDcds = [...(existingDcds || [])];
             newDcdsToSave.forEach(nd => {
-                const idx = finalDcds.findIndex(d => d.id === nd.id);
+                const idx = finalDcds.findIndex(d => d && d.id === nd.id);
                 if (idx > -1) finalDcds[idx] = nd;
                 else finalDcds.push(nd);
             });
 
-            const finalIndicators = [...existingIndicators];
+            const finalIndicators = [...(existingIndicators || [])];
             newIndicatorsToSave.forEach(ni => {
-                const idx = finalIndicators.findIndex(i => i.id === ni.id);
+                const idx = finalIndicators.findIndex(i => i && i.id === ni.id);
                 if (idx > -1) finalIndicators[idx] = ni;
                 else finalIndicators.push(ni);
             });
@@ -637,7 +785,8 @@ export const CurriculumImportModal: React.FC<CurriculumImportModalProps> = ({
             }, 1800);
 
         } catch (err: any) {
-            setErrorMsg('Error al guardar datos curriculares: ' + err.message);
+            console.error('Error al guardar datos curriculares:', err);
+            setErrorMsg('Error al guardar datos curriculares: ' + (err?.message || String(err)));
         } finally {
             setIsSaving(false);
         }
