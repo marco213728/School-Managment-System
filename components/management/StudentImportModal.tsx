@@ -1,9 +1,10 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useContext } from 'react';
 import * as XLSX from 'xlsx';
 import { Student, User, Class, Role, RelatedContact } from '../../types';
 import { CloseIcon, PlusIcon, UsersIcon } from '../icons/Icons';
 import { saveDocumentsBatch } from '../../lib/firebase';
 import { parseAnyDateToIso, formatDateForDisplay } from '../../lib/dateUtils';
+import { UserContext, InstitutionContext } from '../../contexts/UserContext';
 
 interface StudentImportModalProps {
     isOpen: boolean;
@@ -214,6 +215,12 @@ const StudentImportModal: React.FC<StudentImportModalProps> = ({
     institutionId,
     onImportSuccess
 }) => {
+    const { user: contextUser } = useContext(UserContext);
+    const { institution: contextInstitution } = useContext(InstitutionContext);
+    const resolvedInstitutionId = institutionId || 
+        (contextUser?.institutionId && contextUser.institutionId !== 'none' ? contextUser.institutionId : contextInstitution?.id) ||
+        'inst-1790363544282-swirjer';
+
     const [activeTab, setActiveTab] = useState<'upload' | 'guide'>('upload');
     const [selectedTargetClassId, setSelectedTargetClassId] = useState<string>('auto');
     const [autoCreateClasses, setAutoCreateClasses] = useState<boolean>(true);
@@ -611,7 +618,7 @@ const StudentImportModal: React.FC<StudentImportModalProps> = ({
                     const newClassId = `class-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`;
                     found = {
                         id: newClassId,
-                        institutionId: institutionId || 'uemol',
+                        institutionId: resolvedInstitutionId,
                         name: trimmed,
                         studentIds: [],
                         timetableId: '',
@@ -625,7 +632,7 @@ const StudentImportModal: React.FC<StudentImportModalProps> = ({
                     // Fallback to first existing class or default
                     found = Array.from(updatedClassesMap.values())[0] || {
                         id: `class-${Date.now()}`,
-                        institutionId: institutionId || 'uemol',
+                        institutionId: resolvedInstitutionId,
                         name: 'Clase General',
                         studentIds: []
                     };
@@ -666,7 +673,7 @@ const StudentImportModal: React.FC<StudentImportModalProps> = ({
                             email: row.parentEmail || `rep_${studentId}@amauta.internal`,
                             password: 'password',
                             role: Role.Parent,
-                            institutionId: institutionId || 'uemol',
+                            institutionId: resolvedInstitutionId,
                             childIds: [studentId],
                             phone: row.parentPhone || ''
                         };
@@ -677,7 +684,7 @@ const StudentImportModal: React.FC<StudentImportModalProps> = ({
 
                 const newStudent: Student = {
                     id: studentId,
-                    institutionId: institutionId || 'uemol',
+                    institutionId: resolvedInstitutionId,
                     name: row.name,
                     classId: targetClass.id,
                     parentId: parentId,

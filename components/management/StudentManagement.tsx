@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useContext } from 'react';
-import { Student, User, Class, Role, ScheduleEntry, Subject, TimeSlot, Room, Timetable, ViccIntervention, HealthRecord, MedicalVisit, Intervention } from '../../types';
+import { Student, User, Class, Role, ScheduleEntry, Subject, TimeSlot, Room, Timetable, ViccIntervention, HealthRecord, MedicalVisit, Intervention, isUserAdmin } from '../../types';
 import { PlusIcon, EditIcon, TrashIcon, SearchIcon, UsersIcon, LocationMarkerIcon, ExternalLinkIcon } from '../icons/Icons';
 import StudentForm from './StudentForm';
 import StudentProfileCard from '../student/StudentProfileCard';
@@ -65,8 +65,13 @@ const StudentManagement: React.FC<StudentManagementProps> = ({
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedClassFilter, setSelectedClassFilter] = useState<string>('all');
 
+    const isAdmin = useMemo(() => isUserAdmin(currentUser), [currentUser]);
+
     const effectiveInstitutionId = useMemo(() => {
-        return currentUser?.institutionId || currentInstitution?.id || students[0]?.institutionId || 'uemol';
+        if (currentUser?.institutionId && currentUser.institutionId !== 'none') {
+            return currentUser.institutionId;
+        }
+        return currentInstitution?.id || students[0]?.institutionId || '';
     }, [currentUser, currentInstitution, students]);
 
     const classMap = useMemo(() => new Map(classes.map(c => [c.id, c.name])), [classes]);
@@ -106,6 +111,10 @@ const StudentManagement: React.FC<StudentManagementProps> = ({
     }, [students]);
 
     const handleRemoveDuplicates = async () => {
+        if (!isAdmin) {
+            alert('Acceso restringido: Solo los administradores del centro educativo pueden depurar registros de alumnos.');
+            return;
+        }
         if (duplicateStudents.length === 0) return;
         if (!window.confirm(`Se detectaron ${duplicateStudents.length} registros repetidos/duplicados. ¿Deseas depurar la lista ahora y conservar solo registros únicos?`)) return;
 
@@ -146,6 +155,10 @@ const StudentManagement: React.FC<StudentManagementProps> = ({
     }, [students]);
 
     const handleBatchFixBirthDates = async () => {
+        if (!isAdmin) {
+            alert('Acceso restringido: Solo los administradores del centro pueden normalizar masivamente fechas de nacimiento.');
+            return;
+        }
         if (studentsWithExcelDates.length === 0) return;
         setIsBatchFixingDates(true);
         try {
@@ -179,11 +192,19 @@ const StudentManagement: React.FC<StudentManagementProps> = ({
     };
 
     const handleAddNew = () => {
+        if (!isAdmin) {
+            alert('Acceso denegado: La matrícula y registro de alumnos está reservado exclusivamente para Administradores de la institución.');
+            return;
+        }
         setSelectedStudent(null);
         setIsFormOpen(true);
     };
 
     const handleEdit = (student: Student) => {
+        if (!isAdmin) {
+            alert('Acceso denegado: La modificación de la información personal de los alumnos (nombres, cédula, fecha de nacimiento, contacto) solo puede ser realizada por Administradores.');
+            return;
+        }
         setSelectedStudent(student);
         setIsFormOpen(true);
     };
@@ -194,6 +215,10 @@ const StudentManagement: React.FC<StudentManagementProps> = ({
     };
 
     const handleDelete = async (studentId: string) => {
+        if (!isAdmin) {
+            alert('Acceso denegado: La eliminación de alumnos está reservada exclusivamente para Administradores de la institución.');
+            return;
+        }
         if (window.confirm('¿Está seguro de que desea eliminar a este alumno? Esta acción también eliminará el registro de Firestore.')) {
             const studentToDelete = students.find(s => s.id === studentId);
             
@@ -229,6 +254,10 @@ const StudentManagement: React.FC<StudentManagementProps> = ({
     };
 
     const handleSave = async (studentData: Student, parentData: User) => {
+        if (!isAdmin) {
+            alert('Acceso denegado: Solo administradores pueden guardar modificaciones a los datos personales de alumnos.');
+            return;
+        }
         const studentWithInst: Student = {
             ...studentData,
             institutionId: effectiveInstitutionId
@@ -312,9 +341,13 @@ const StudentManagement: React.FC<StudentManagementProps> = ({
                     <h3 className="text-xl font-bold text-slate-800 flex items-center gap-2">
                         <span>🎓</span> Nómina de Estudiantes
                     </h3>
-                    <p className="text-xs text-slate-500 mt-0.5">
-                        Total: {students.length} estudiante(s) matriculado(s) en la institución.
-                    </p>
+                    <div className="flex items-center gap-2 mt-1 flex-wrap">
+                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200">
+                            <span>🏛️ Escuela Asignada:</span>
+                            <span className="font-bold">{currentInstitution?.name || 'Institución Activa'}</span>
+                        </span>
+                        <span className="text-xs text-slate-500">({students.length} estudiantes matriculados)</span>
+                    </div>
                 </div>
 
                 <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
@@ -335,7 +368,7 @@ const StudentManagement: React.FC<StudentManagementProps> = ({
                     {/* Search */}
                     <div className="relative flex-1 md:w-60">
                         <input 
-                            type="text"
+                            type="text" 
                             placeholder="Buscar por nombre, cédula..."
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
@@ -346,26 +379,43 @@ const StudentManagement: React.FC<StudentManagementProps> = ({
                         </div>
                     </div>
 
-                    {/* Import Button */}
-                    <button 
-                        onClick={() => setIsImportOpen(true)} 
-                        className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-sm transition flex items-center gap-1.5 whitespace-nowrap"
-                        title="Importar lista de alumnos desde Excel (.xlsx) o archivo de texto (.txt / .csv)"
-                    >
-                        <span>📊</span>
-                        <span>Importar Excel / TXT</span>
-                    </button>
+                    {/* Import Button - Only for Admins */}
+                    {isAdmin && (
+                        <button 
+                            onClick={() => setIsImportOpen(true)} 
+                            className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-sm transition flex items-center gap-1.5 whitespace-nowrap"
+                            title="Importar lista de alumnos desde Excel (.xlsx) o archivo de texto (.txt / .csv)"
+                        >
+                            <span>📊</span>
+                            <span>Importar Excel / TXT</span>
+                        </button>
+                    )}
 
-                    {/* Add Single Student */}
-                    <button 
-                        onClick={handleAddNew} 
-                        className="px-3.5 py-2 bg-primary-600 text-white font-bold text-xs rounded-xl hover:bg-primary-700 transition shadow-sm flex items-center gap-1.5 whitespace-nowrap"
-                    >
-                        <PlusIcon className="h-4 w-4" />
-                        <span>Añadir Alumno</span>
-                    </button>
+                    {/* Add Single Student - Only for Admins */}
+                    {isAdmin && (
+                        <button 
+                            onClick={handleAddNew} 
+                            className="px-3.5 py-2 bg-primary-600 text-white font-bold text-xs rounded-xl hover:bg-primary-700 transition shadow-sm flex items-center gap-1.5 whitespace-nowrap"
+                        >
+                            <PlusIcon className="h-4 w-4" />
+                            <span>Añadir Alumno</span>
+                        </button>
+                    )}
                 </div>
             </div>
+
+            {/* Read-only notice for non-admins */}
+            {!isAdmin && (
+                <div className="mb-6 p-4 bg-sky-50 border border-sky-200 rounded-2xl text-xs text-sky-900 flex items-center gap-3 shadow-xs">
+                    <span className="text-xl flex-shrink-0">🔒</span>
+                    <div>
+                        <p className="font-bold text-sky-950 text-sm">Modo de Consulta Autorizada</p>
+                        <p className="text-sky-800 mt-0.5">
+                            Por políticas de confidencialidad institucional, la información personal de los estudiantes (nombres, cédula, fecha de nacimiento, teléfonos, dirección) únicamente puede ser modificada por administradores del centro. Haz clic en 👁️ para consultar la ficha completa.
+                        </p>
+                    </div>
+                </div>
+            )}
 
             {/* Banner de Detección de Duplicados */}
             {duplicateStudents.length > 0 && (
@@ -529,20 +579,24 @@ const StudentManagement: React.FC<StudentManagementProps> = ({
                                         >
                                             👁️
                                         </button>
-                                        <button 
-                                            onClick={() => handleEdit(student)} 
-                                            className="p-1.5 text-slate-500 hover:text-blue-600 rounded-lg hover:bg-blue-50 transition" 
-                                            title="Editar datos"
-                                        >
-                                            <EditIcon className="h-4 w-4" />
-                                        </button>
-                                        <button 
-                                            onClick={() => handleDelete(student.id)} 
-                                            className="p-1.5 text-slate-500 hover:text-red-600 rounded-lg hover:bg-red-50 transition" 
-                                            title="Eliminar"
-                                        >
-                                            <TrashIcon className="h-4 w-4" />
-                                        </button>
+                                        {isAdmin && (
+                                            <button 
+                                                onClick={() => handleEdit(student)} 
+                                                className="p-1.5 text-slate-500 hover:text-blue-600 rounded-lg hover:bg-blue-50 transition" 
+                                                title="Editar datos personales (Solo Administradores)"
+                                            >
+                                                <EditIcon className="h-4 w-4" />
+                                            </button>
+                                        )}
+                                        {isAdmin && (
+                                            <button 
+                                                onClick={() => handleDelete(student.id)} 
+                                                className="p-1.5 text-slate-500 hover:text-red-600 rounded-lg hover:bg-red-50 transition" 
+                                                title="Eliminar (Solo Administradores)"
+                                            >
+                                                <TrashIcon className="h-4 w-4" />
+                                            </button>
+                                        )}
                                     </td>
                                 </tr>
                             ))

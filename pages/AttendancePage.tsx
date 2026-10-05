@@ -2,7 +2,7 @@
 import React, { useState, useContext, useMemo, useEffect } from 'react';
 import { UserContext } from '../contexts/UserContext';
 import { MOCK_STUDENTS, MOCK_OCR_SUBMISSIONS, ATTENDANCE_OBSERVATIONS } from '../constants';
-import { AttendanceStatus, Role, OcrSubmission, OcrSubmissionStatus, Class, TimeSlot, Timetable, AttendanceRecord } from '../types';
+import { AttendanceStatus, Role, OcrSubmission, OcrSubmissionStatus, Class, TimeSlot, Timetable, AttendanceRecord, Student } from '../types';
 import { UploadIcon, CloseIcon } from '../components/icons/Icons';
 import JustificationForm from '../components/attendance/JustificationForm';
 
@@ -23,6 +23,7 @@ const statusColors: Record<AttendanceStatus, string> = {
 
 interface AttendancePageProps {
     classes: Class[];
+    students?: Student[];
     timeSlots: TimeSlot[];
     timetables: Timetable[];
     attendanceRecords: AttendanceRecord[];
@@ -83,7 +84,7 @@ const ObservationModal: React.FC<ObservationModalProps> = ({ isOpen, onClose, on
 };
 
 // Teacher View - Manual Entry (Existing component)
-const TakeAttendanceManual: React.FC<AttendancePageProps> = ({ classes, timeSlots, timetables, attendanceRecords, onUpdateAttendance }) => {    
+const TakeAttendanceManual: React.FC<AttendancePageProps> = ({ classes, students = [], timeSlots, timetables, attendanceRecords, onUpdateAttendance }) => {    
     const { user } = useContext(UserContext);
     const [selectedClass, setSelectedClass] = useState('');
     const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
@@ -93,8 +94,8 @@ const TakeAttendanceManual: React.FC<AttendancePageProps> = ({ classes, timeSlot
     const [isObservationModalOpen, setObservationModalOpen] = useState(false);
     const [editingStudentId, setEditingStudentId] = useState<string | null>(null);
 
-    const institutionClasses = useMemo(() => classes.filter(c => c.institutionId === user?.institutionId), [classes, user]);
-    const institutionStudents = useMemo(() => MOCK_STUDENTS.filter(s => s.institutionId === user?.institutionId), [user]);
+    const institutionClasses = useMemo(() => classes, [classes]);
+    const institutionStudents = useMemo(() => students.length > 0 ? students : MOCK_STUDENTS.filter(s => s.institutionId === user?.institutionId), [students, user]);
     
     const relevantTimeSlots = useMemo(() => {
         if (!selectedClass) return [];
@@ -102,12 +103,12 @@ const TakeAttendanceManual: React.FC<AttendancePageProps> = ({ classes, timeSlot
         if (!classInfo || !classInfo.timetableId) return [];
 
         return timeSlots
-            .filter(ts => ts.institutionId === user?.institutionId && ts.timetableId === classInfo.timetableId && !ts.isBreak)
+            .filter(ts => ts.timetableId === classInfo.timetableId && !ts.isBreak)
             .sort((a,b) => a.startTime.localeCompare(b.startTime));
-    }, [selectedClass, institutionClasses, timeSlots, user]);
+    }, [selectedClass, institutionClasses, timeSlots]);
 
     const visibleClasses = useMemo(() => {
-        if (user?.role === Role.InstitutionAdmin || user?.role === Role.InspectorGeneral) {
+        if (user?.role === Role.InstitutionAdmin || user?.role === Role.InspectorGeneral || user?.role === Role.SuperAdmin || user?.role === Role.Rector) {
             return institutionClasses;
         }
         return institutionClasses.filter(c => user?.classIds?.includes(c.id));
@@ -274,7 +275,7 @@ const TakeAttendanceManual: React.FC<AttendancePageProps> = ({ classes, timeSlot
 
 
 // Teacher View - Container
-const TeacherAttendance: React.FC<AttendancePageProps> = ({ classes, timeSlots, timetables, attendanceRecords, onUpdateAttendance }) => {
+const TeacherAttendance: React.FC<AttendancePageProps> = ({ classes, students = [], timeSlots, timetables, attendanceRecords, onUpdateAttendance }) => {
     const { user } = useContext(UserContext);
     const [activeTab, setActiveTab] = useState<'manual' | 'ocr'>('manual');
     const [isUploadModalOpen, setUploadModalOpen] = useState(false);
@@ -282,10 +283,10 @@ const TeacherAttendance: React.FC<AttendancePageProps> = ({ classes, timeSlots, 
     const [reviewingSubmission, setReviewingSubmission] = useState<OcrSubmission | null>(null);
     const [selectedOcrClass, setSelectedOcrClass] = useState('');
 
-    const institutionClasses = useMemo(() => classes.filter(c => c.institutionId === user?.institutionId), [classes, user]);
+    const institutionClasses = useMemo(() => classes, [classes]);
 
     const classesForCurrentUser = useMemo(() => {
-        if (user?.role === Role.InstitutionAdmin || user?.role === Role.InspectorGeneral) {
+        if (user?.role === Role.InstitutionAdmin || user?.role === Role.InspectorGeneral || user?.role === Role.SuperAdmin || user?.role === Role.Rector) {
             return institutionClasses;
         }
         return institutionClasses.filter(c => user?.classIds?.includes(c.id));
@@ -339,7 +340,7 @@ const TeacherAttendance: React.FC<AttendancePageProps> = ({ classes, timeSlots, 
                     Registro por OCR
                 </button>
             </div>
-            {activeTab === 'manual' && <TakeAttendanceManual classes={classes} timeSlots={timeSlots} timetables={timetables} attendanceRecords={attendanceRecords} onUpdateAttendance={onUpdateAttendance} />}
+            {activeTab === 'manual' && <TakeAttendanceManual classes={classes} students={students} timeSlots={timeSlots} timetables={timetables} attendanceRecords={attendanceRecords} onUpdateAttendance={onUpdateAttendance} />}
             {activeTab === 'ocr' && (
                 <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
                     <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 gap-4">
@@ -388,36 +389,83 @@ const TeacherAttendance: React.FC<AttendancePageProps> = ({ classes, timeSlots, 
 
 
 // Student/Parent View
-const ViewAttendance: React.FC<Pick<AttendancePageProps, 'attendanceRecords' | 'onUpdateAttendance'>> = ({ attendanceRecords, onUpdateAttendance }) => {
+interface ViewAttendanceProps {
+    students?: Student[];
+    classes?: Class[];
+    attendanceRecords: AttendanceRecord[];
+    onUpdateAttendance: (records: AttendanceRecord[]) => void;
+}
+
+const ViewAttendance: React.FC<ViewAttendanceProps> = ({ students = [], classes = [], attendanceRecords, onUpdateAttendance }) => {
     const { user } = useContext(UserContext);
     const [justifyingRecord, setJustifyingRecord] = useState<AttendanceRecord | null>(null);
     const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
 
     const availableStudents = useMemo(() => {
-        if (user?.role === Role.Student) {
-            return MOCK_STUDENTS.filter(s => s.id === user.id);
-        } else if (user?.role === Role.Parent && user.childIds) {
-            return MOCK_STUDENTS.filter(s => user.childIds?.includes(s.id));
+        const studentPool = students.length > 0 ? students : MOCK_STUDENTS;
+        if (!user) return [];
+
+        if (user.role === Role.Student) {
+            return studentPool.filter(s => s.id === user.id);
         }
+
+        if (user.role === Role.Parent) {
+            // 1. By childIds in parent user
+            const byChildIds = user.childIds && user.childIds.length > 0
+                ? studentPool.filter(s => user.childIds?.includes(s.id))
+                : [];
+            // 2. By parentId in student
+            const byParentId = studentPool.filter(s => s.parentId === user.id);
+            // 3. By matching email, phone or name in relatedContacts
+            const byContact = studentPool.filter(s => 
+                s.relatedContacts?.some(c => 
+                    (user.email && c.email && c.email.toLowerCase() === user.email.toLowerCase()) ||
+                    (user.phone && c.phone && c.phone.replace(/\D/g, '') === user.phone.replace(/\D/g, '')) ||
+                    (user.name && c.name && c.name.toLowerCase().trim() === user.name.toLowerCase().trim())
+                )
+            );
+
+            const map = new Map<string, Student>();
+            [...byChildIds, ...byParentId, ...byContact].forEach(s => map.set(s.id, s));
+            return Array.from(map.values());
+        }
+
         return [];
-    }, [user]);
+    }, [user, students]);
 
     useEffect(() => {
-        if (availableStudents.length > 0 && !selectedStudentId) {
-            setSelectedStudentId(availableStudents[0].id);
+        if (availableStudents.length > 0) {
+            if (!selectedStudentId || !availableStudents.some(s => s.id === selectedStudentId)) {
+                setSelectedStudentId(availableStudents[0].id);
+            }
         }
     }, [availableStudents, selectedStudentId]);
 
     const studentData = useMemo(() => 
-        availableStudents.find(s => s.id === selectedStudentId && s.institutionId === user?.institutionId),
-        [selectedStudentId, user, availableStudents]
+        availableStudents.find(s => s.id === selectedStudentId) || (availableStudents.length > 0 ? availableStudents[0] : null),
+        [selectedStudentId, availableStudents]
     );
 
-    const studentAttendance = useMemo(() => 
-        attendanceRecords.filter(att => att.studentId === selectedStudentId && att.institutionId === user?.institutionId)
-        .sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()),
-        [selectedStudentId, user, attendanceRecords]
-    );
+    const studentClass = useMemo(() => {
+        if (!studentData?.classId) return null;
+        return classes.find(c => c.id === studentData.classId);
+    }, [studentData, classes]);
+
+    const studentAttendance = useMemo(() => {
+        if (!studentData) return [];
+        return attendanceRecords
+            .filter(att => att.studentId === studentData.id)
+            .sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    }, [studentData, attendanceRecords]);
+
+    const stats = useMemo(() => {
+        const total = studentAttendance.length;
+        const present = studentAttendance.filter(r => r.status === AttendanceStatus.Present).length;
+        const tardy = studentAttendance.filter(r => r.status === AttendanceStatus.Tardy).length;
+        const unexcused = studentAttendance.filter(r => r.status === AttendanceStatus.Unexcused).length;
+        const justified = studentAttendance.filter(r => r.status === AttendanceStatus.Excused || r.status === AttendanceStatus.JustificationPending).length;
+        return { total, present, tardy, unexcused, justified };
+    }, [studentAttendance]);
 
     const handleSaveJustification = (notes: string, documentUrl?: string) => {
         if (!justifyingRecord) return;
@@ -437,62 +485,179 @@ const ViewAttendance: React.FC<Pick<AttendancePageProps, 'attendanceRecords' | '
         setJustifyingRecord(null);
     };
 
-    if (!selectedStudentId) return <p>Cargando...</p>;
-
-    return (
-         <>
-            <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-                {availableStudents.length > 1 && (
-                    <div className="mb-4">
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Seleccionar Estudiante:</label>
-                        <select 
-                            value={selectedStudentId || ''} 
-                            onChange={(e) => setSelectedStudentId(e.target.value)}
-                            className="p-2 border rounded-md"
-                        >
-                            {availableStudents.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-                        </select>
-                    </div>
-                )}
-                <h2 className="text-xl font-bold text-gray-800 mb-4">Historial de Asistencia de {studentData?.name}</h2>
-                <div className="overflow-x-auto">
-                    <table className="min-w-full divide-y divide-gray-200">
-                        <thead className="bg-gray-50">
-                            <tr>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Franja Horaria</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
-                            </tr>
-                        </thead>
-                        <tbody className="bg-white divide-y divide-gray-200">
-                            {studentAttendance.map(record => (
-                                <tr key={record.id}>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{record.date}</td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{record.timeSlot}</td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm">
-                                        <span className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${statusColors[record.status]}`}>
-                                            {record.status}
-                                        </span>
-                                    </td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm">
-                                        {record.status === AttendanceStatus.Unexcused && user?.role === Role.Parent && (
-                                            <button onClick={() => setJustifyingRecord(record)} className="text-primary-600 hover:text-primary-900 font-semibold">
-                                                Justificar
-                                            </button>
-                                        )}
-                                        {record.justificationDocumentUrl && (
-                                            <a href={record.justificationDocumentUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline ml-2">
-                                                Ver Doc.
-                                            </a>
-                                        )}
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
+    if (availableStudents.length === 0) {
+        return (
+            <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-200 text-center max-w-xl mx-auto my-8">
+                <div className="w-16 h-16 bg-amber-50 text-amber-600 rounded-full flex items-center justify-center text-3xl mx-auto mb-4 border border-amber-200">
+                    👨‍👩‍👧‍👦
+                </div>
+                <h3 className="text-xl font-bold text-slate-800 mb-2">No se encontraron estudiantes asociados</h3>
+                <p className="text-sm text-slate-600 mb-6 leading-relaxed">
+                    Tu cuenta de familiar (<strong>{user?.name}</strong>) no tiene ningún estudiante vinculado actualmente.
+                </p>
+                <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-600 text-left space-y-2">
+                    <p className="font-semibold text-slate-800">¿Qué debes hacer?</p>
+                    <p>• Comunícate con la administración de la institución para que registren a tu representado.</p>
+                    <p>• Al matricular al alumno, el personal asignará tu correo (<strong>{user?.email}</strong>) como representante legal.</p>
                 </div>
             </div>
+        );
+    }
+
+    return (
+        <div className="space-y-6">
+            {/* Multi-child selector if parent has more than 1 student */}
+            {availableStudents.length > 1 && (
+                <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs flex items-center gap-3 overflow-x-auto">
+                    <span className="text-xs font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">Estudiante:</span>
+                    <div className="flex gap-2">
+                        {availableStudents.map(s => (
+                            <button
+                                key={s.id}
+                                onClick={() => setSelectedStudentId(s.id)}
+                                className={`px-4 py-1.5 rounded-full text-xs font-bold transition flex items-center gap-2 ${
+                                    selectedStudentId === s.id
+                                        ? 'bg-primary-600 text-white shadow-xs'
+                                        : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                                }`}
+                            >
+                                <span>🎓</span>
+                                <span>{s.name}</span>
+                            </button>
+                        ))}
+                    </div>
+                </div>
+            )}
+
+            {/* Student Header Card */}
+            <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <div className="flex items-center gap-4">
+                    <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-primary-500 to-primary-700 text-white flex items-center justify-center text-xl font-bold shadow-md overflow-hidden flex-shrink-0">
+                        {studentData?.photoUrl ? (
+                            <img src={studentData.photoUrl} alt={studentData.name} className="w-full h-full object-cover" />
+                        ) : (
+                            studentData?.name ? studentData.name.charAt(0) : '🎓'
+                        )}
+                    </div>
+                    <div>
+                        <div className="flex items-center gap-2 flex-wrap">
+                            <h2 className="text-xl font-bold text-slate-900">{studentData?.name}</h2>
+                            {studentData?.listNumber && (
+                                <span className="px-2 py-0.5 bg-slate-100 text-slate-700 text-xs font-semibold rounded-full border border-slate-200">
+                                    Nº {studentData.listNumber}
+                                </span>
+                            )}
+                        </div>
+                        <div className="flex items-center gap-3 text-xs text-slate-500 mt-1 flex-wrap">
+                            <span className="font-semibold text-primary-700">
+                                🏫 {studentClass?.name || studentData?.grade || 'Sin curso asignado'}
+                            </span>
+                            {studentData?.nationalId && (
+                                <span>• Cédula: <strong className="font-mono text-slate-700">{studentData.nationalId}</strong></span>
+                            )}
+                            <span>• Representante: <strong className="text-slate-700">{user?.name}</strong></span>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="flex items-center gap-2 self-stretch md:self-auto justify-end">
+                    <span className="px-3 py-1 bg-emerald-50 text-emerald-800 border border-emerald-200 rounded-full text-xs font-bold flex items-center gap-1.5">
+                        <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                        Seguimiento Activo
+                    </span>
+                </div>
+            </div>
+
+            {/* Attendance Metrics Grid */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                <div className="bg-emerald-50 border border-emerald-200 p-4 rounded-xl text-center">
+                    <div className="text-2xl font-black text-emerald-700">{stats.present}</div>
+                    <div className="text-xs font-semibold text-emerald-800 mt-0.5">Asistencias Puntuales</div>
+                </div>
+                <div className="bg-amber-50 border border-amber-200 p-4 rounded-xl text-center">
+                    <div className="text-2xl font-black text-amber-700">{stats.tardy}</div>
+                    <div className="text-xs font-semibold text-amber-800 mt-0.5">Atrasos</div>
+                </div>
+                <div className="bg-blue-50 border border-blue-200 p-4 rounded-xl text-center">
+                    <div className="text-2xl font-black text-blue-700">{stats.justified}</div>
+                    <div className="text-xs font-semibold text-blue-800 mt-0.5">Justificadas</div>
+                </div>
+                <div className="bg-rose-50 border border-rose-200 p-4 rounded-xl text-center">
+                    <div className="text-2xl font-black text-rose-700">{stats.unexcused}</div>
+                    <div className="text-xs font-semibold text-rose-800 mt-0.5">Faltas Injustificadas</div>
+                </div>
+            </div>
+
+            {/* Records Table */}
+            <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                <div className="flex justify-between items-center mb-4">
+                    <h3 className="text-base font-bold text-slate-800 flex items-center gap-2">
+                        <span>📋</span> Registro Detallado de Asistencia
+                    </h3>
+                    <span className="text-xs text-slate-400 font-medium">
+                        {studentAttendance.length} registro(s)
+                    </span>
+                </div>
+
+                {studentAttendance.length === 0 ? (
+                    <div className="py-12 px-4 text-center border-2 border-dashed border-emerald-100 bg-emerald-50/40 rounded-xl">
+                        <div className="w-12 h-12 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center text-2xl mx-auto mb-3">
+                            ✓
+                        </div>
+                        <h4 className="text-base font-bold text-emerald-950 mb-1">¡Excelente Asistencia!</h4>
+                        <p className="text-xs text-emerald-800 max-w-md mx-auto">
+                            No se registran faltas ni atrasos reportados para <strong>{studentData?.name}</strong> en el sistema lectivo.
+                        </p>
+                    </div>
+                ) : (
+                    <div className="overflow-x-auto rounded-xl border border-slate-100">
+                        <table className="min-w-full divide-y divide-slate-200 text-xs">
+                            <thead className="bg-slate-50 font-bold text-slate-700 uppercase tracking-wider">
+                                <tr>
+                                    <th className="px-4 py-3 text-left">Fecha</th>
+                                    <th className="px-4 py-3 text-left">Franja Horaria / Periodo</th>
+                                    <th className="px-4 py-3 text-left">Estado</th>
+                                    <th className="px-4 py-3 text-right">Acciones / Justificación</th>
+                                </tr>
+                            </thead>
+                            <tbody className="bg-white divide-y divide-slate-100">
+                                {studentAttendance.map(record => (
+                                    <tr key={record.id} className="hover:bg-slate-50 transition">
+                                        <td className="px-4 py-3 whitespace-nowrap font-medium text-slate-900">{record.date}</td>
+                                        <td className="px-4 py-3 whitespace-nowrap text-slate-600">{record.timeSlot}</td>
+                                        <td className="px-4 py-3 whitespace-nowrap">
+                                            <span className={`px-2.5 py-1 inline-flex text-xs leading-4 font-bold rounded-full ${statusColors[record.status]}`}>
+                                                {record.status}
+                                            </span>
+                                        </td>
+                                        <td className="px-4 py-3 whitespace-nowrap text-right space-x-2">
+                                            {record.status === AttendanceStatus.Unexcused && user?.role === Role.Parent && (
+                                                <button 
+                                                    onClick={() => setJustifyingRecord(record)} 
+                                                    className="px-3 py-1 bg-primary-50 text-primary-700 hover:bg-primary-100 border border-primary-200 rounded-lg font-bold text-xs transition"
+                                                >
+                                                    Justificar Falta
+                                                </button>
+                                            )}
+                                            {record.justificationDocumentUrl && (
+                                                <a href={record.justificationDocumentUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline inline-flex items-center gap-1 font-medium">
+                                                    <span>📎 Doc. Adjunto</span>
+                                                </a>
+                                            )}
+                                            {record.justificationNotes && (
+                                                <span className="text-slate-500 italic text-[11px]" title={record.justificationNotes}>
+                                                    ({record.justificationNotes.slice(0, 30)}...)
+                                                </span>
+                                            )}
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                )}
+            </div>
+
             {justifyingRecord && (
                 <JustificationForm 
                     isOpen={!!justifyingRecord}
@@ -500,20 +665,20 @@ const ViewAttendance: React.FC<Pick<AttendancePageProps, 'attendanceRecords' | '
                     onSave={handleSaveJustification}
                 />
             )}
-         </>
+        </div>
     );
 };
 
 
-const AttendancePage: React.FC<AttendancePageProps> = ({ classes, timeSlots, timetables, attendanceRecords, onUpdateAttendance }) => {
+const AttendancePage: React.FC<AttendancePageProps> = ({ classes, students = [], timeSlots, timetables, attendanceRecords, onUpdateAttendance }) => {
     const { user } = useContext(UserContext);
     
-    if (user?.role === Role.Teacher || user?.role === Role.InstitutionAdmin || user?.role === Role.InspectorGeneral) {
-        return <TeacherAttendance classes={classes} timeSlots={timeSlots} timetables={timetables} attendanceRecords={attendanceRecords} onUpdateAttendance={onUpdateAttendance} />;
+    if (user?.role === Role.Teacher || user?.role === Role.InstitutionAdmin || user?.role === Role.InspectorGeneral || user?.role === Role.SuperAdmin || user?.role === Role.Rector) {
+        return <TeacherAttendance classes={classes} students={students} timeSlots={timeSlots} timetables={timetables} attendanceRecords={attendanceRecords} onUpdateAttendance={onUpdateAttendance} />;
     }
     
     if (user?.role === Role.Parent || user?.role === Role.Student) {
-        return <ViewAttendance attendanceRecords={attendanceRecords} onUpdateAttendance={onUpdateAttendance} />;
+        return <ViewAttendance students={students} classes={classes} attendanceRecords={attendanceRecords} onUpdateAttendance={onUpdateAttendance} />;
     }
 
     return <p>No tiene acceso a esta sección.</p>;

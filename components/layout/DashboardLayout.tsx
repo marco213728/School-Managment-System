@@ -109,7 +109,15 @@ interface DashboardLayoutProps {
 const DashboardLayout: React.FC<DashboardLayoutProps> = (props) => {
   const { user } = useContext(UserContext);
   const { institution } = useContext(InstitutionContext);
-  const effectiveInstitutionId = user?.institutionId || institution?.id;
+  const effectiveInstitutionId = useMemo(() => {
+    if (user?.institutionId && user.institutionId !== 'none') {
+      return user.institutionId;
+    }
+    if (institution?.id && institution.id !== 'platform') {
+      return institution.id;
+    }
+    return props.classes[0]?.institutionId || 'inst-1790363544282-swirjer';
+  }, [user, institution, props.classes]);
 
   const {
     users,
@@ -145,11 +153,23 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = (props) => {
 
   const institutionTimetables = useMemo(() => {
     const all = props.timetables || [];
-    if (!effectiveInstitutionId) return all;
+    if (!effectiveInstitutionId) return [];
     const direct = all.filter(t => t.institutionId === effectiveInstitutionId);
     if (direct.length > 0) return direct;
     return all.filter(t => !t.institutionId);
   }, [props.timetables, effectiveInstitutionId]);
+
+  const institutionClasses = useMemo(() => {
+    const all = props.classes || [];
+    if (!effectiveInstitutionId) return [];
+    return all.filter(c => c.institutionId === effectiveInstitutionId);
+  }, [props.classes, effectiveInstitutionId]);
+
+  const institutionStudents = useMemo(() => {
+    const all = props.students || [];
+    if (!effectiveInstitutionId) return [];
+    return all.filter(s => s.institutionId === effectiveInstitutionId);
+  }, [props.students, effectiveInstitutionId]);
 
   const institutionTimetableIds = useMemo(() => {
     return new Set(institutionTimetables.map(t => t.id));
@@ -188,14 +208,14 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = (props) => {
           return <DashboardPage absenceRequests={props.absenceRequests} onUpdateAbsenceRequests={props.onUpdateAbsenceRequests} 
               {...restProps} 
               schedule={schedule} 
-              classes={classes} 
+              classes={institutionClasses} 
               subjects={subjects} 
               timeSlots={institutionTimeSlots} 
               rooms={restProps.rooms} 
               timetables={institutionTimetables} 
               users={users} 
               onNavigate={setCurrentPage}
-              students={students}
+              students={institutionStudents}
               formalRequests={formalRequests}
               cronogramaEvents={cronogramaEvents || []}
               onUpdateCronogramaEvents={onUpdateCronogramaEvents || (() => {})}
@@ -206,8 +226,8 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = (props) => {
           return <ManagePage 
             {...restProps}
             allUsers={users}
-            allClasses={classes}
-            allStudents={students}
+            allClasses={props.classes}
+            allStudents={props.students}
             schedule={schedule}
             supportContacts={restProps.supportContacts}
             subjects={subjects}
@@ -230,8 +250,8 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = (props) => {
           />;
         case 'reinforcement':
             return <TeacherReinforcementPage
-                students={students}
-                classes={classes}
+                students={institutionStudents}
+                classes={institutionClasses}
                 subjects={subjects}
                 users={users}
                 reinforcementPlans={reinforcementPlans}
@@ -249,8 +269,8 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = (props) => {
                 gradebooks={gradebooks}
                 users={users}
                 subjects={subjects}
-                classes={classes}
-                students={students}
+                classes={institutionClasses}
+                students={institutionStudents}
                 onNavigate={setCurrentPage}
                 notifications={restProps.notifications}
                 onUpdateNotifications={restProps.onUpdateNotifications}
@@ -267,8 +287,8 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = (props) => {
             return <CommunicationsPage
                 {...restProps}
                 users={users}
-                students={students}
-                classes={classes}
+                students={institutionStudents}
+                classes={institutionClasses}
                 allNotifications={restProps.notifications}
                 onUpdateNotifications={restProps.onUpdateNotifications}
                 formalRequests={formalRequests}
@@ -281,7 +301,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = (props) => {
                 onUpdateRubrics={handleUpdateRubrics}
                 subjects={subjects}
                 microPlans={microPlans} 
-                classes={classes} 
+                classes={institutionClasses} 
             />;
         case 'curriculum_repository':
             return <CurriculumRepositoryPage 
@@ -299,10 +319,10 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = (props) => {
                 <div className="bg-white p-6 rounded-xl shadow-md">
                     <h2 className="text-2xl font-bold text-gray-800 mb-6">Juntas de Curso y Entrega de Informes</h2>
                     <JuntaManager 
-                        classes={classes}
+                        classes={institutionClasses}
                         subjects={subjects}
                         users={users}
-                        students={students}
+                        students={institutionStudents}
                         gradebooks={gradebooks}
                         microPlans={microPlans}
                         reinforcementPlans={reinforcementPlans}
@@ -311,13 +331,13 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = (props) => {
             );
         default:
              const AllOtherPages = {
-                'attendance': <AttendancePage classes={classes} timeSlots={institutionTimeSlots} timetables={institutionTimetables} attendanceRecords={restProps.attendanceRecords} onUpdateAttendance={restProps.onUpdateAttendance} />,
+                'attendance': <AttendancePage classes={institutionClasses} students={institutionStudents} timeSlots={institutionTimeSlots} timetables={institutionTimetables} attendanceRecords={restProps.attendanceRecords} onUpdateAttendance={restProps.onUpdateAttendance} />,
                 'activities': <ActivitiesPage 
                     activities={restProps.activities} 
                     onUpdateActivities={restProps.onUpdateActivities} 
-                    classes={classes} 
+                    classes={institutionClasses} 
                     subjects={subjects} 
-                    students={students} 
+                    students={institutionStudents} 
                     gradebooks={gradebooks} 
                     onUpdateGradebooks={restProps.onUpdateGradebooks} 
                     users={users} 
@@ -326,19 +346,19 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = (props) => {
                     rubrics={rubrics} 
                     onUpdateRubrics={handleUpdateRubrics} 
                 />,
-                'reports': <ReportsPage attendanceRecords={restProps.attendanceRecords} academicCalendarEvents={restProps.academicCalendarEvents} students={students} classes={classes} schedule={schedule} timeSlots={institutionTimeSlots} timetables={institutionTimetables} users={users} subjects={subjects} gradebooks={gradebooks} interventions={props.interventions || []} healthRecords={props.healthRecords || []} viccInterventions={restProps.viccInterventions || []} />,
-                'dece': <DecePage {...restProps} users={users} classes={classes} schedule={schedule} subjects={subjects} timeSlots={institutionTimeSlots} students={students} onUpdateStudents={restProps.onUpdateStudents} viccInterventions={restProps.viccInterventions} onUpdateViccInterventions={restProps.onUpdateViccInterventions} conflictMediations={conflictMediations} onUpdateConflictMediations={onUpdateConflictMediations} interventions={props.interventions || []} onUpdateInterventions={props.onUpdateInterventions} healthRecords={props.healthRecords || []} onUpdateHealthRecords={props.onUpdateHealthRecords} medicalVisits={props.medicalVisits || []} onUpdateMedicalVisits={props.onUpdateMedicalVisits} />,
-                'health': <HealthPage {...restProps} users={users} classes={classes} schedule={schedule} subjects={subjects} timeSlots={institutionTimeSlots} students={students} onUpdateStudents={restProps.onUpdateStudents} viccInterventions={restProps.viccInterventions} onUpdateViccInterventions={restProps.onUpdateViccInterventions} healthRecords={props.healthRecords || []} onUpdateHealthRecords={props.onUpdateHealthRecords} medicalVisits={props.medicalVisits || []} onUpdateMedicalVisits={props.onUpdateMedicalVisits} interventions={props.interventions || []} onUpdateInterventions={props.onUpdateInterventions} />,
+                'reports': <ReportsPage attendanceRecords={restProps.attendanceRecords} academicCalendarEvents={restProps.academicCalendarEvents} students={institutionStudents} classes={institutionClasses} schedule={schedule} timeSlots={institutionTimeSlots} timetables={institutionTimetables} users={users} subjects={subjects} gradebooks={gradebooks} interventions={props.interventions || []} healthRecords={props.healthRecords || []} viccInterventions={restProps.viccInterventions || []} />,
+                'dece': <DecePage {...restProps} users={users} classes={institutionClasses} schedule={schedule} subjects={subjects} timeSlots={institutionTimeSlots} students={institutionStudents} onUpdateStudents={restProps.onUpdateStudents} viccInterventions={restProps.viccInterventions} onUpdateViccInterventions={restProps.onUpdateViccInterventions} conflictMediations={conflictMediations} onUpdateConflictMediations={onUpdateConflictMediations} interventions={props.interventions || []} onUpdateInterventions={props.onUpdateInterventions} healthRecords={props.healthRecords || []} onUpdateHealthRecords={props.onUpdateHealthRecords} medicalVisits={props.medicalVisits || []} onUpdateMedicalVisits={props.onUpdateMedicalVisits} />,
+                'health': <HealthPage {...restProps} users={users} classes={institutionClasses} schedule={schedule} subjects={subjects} timeSlots={institutionTimeSlots} students={institutionStudents} onUpdateStudents={restProps.onUpdateStudents} viccInterventions={restProps.viccInterventions} onUpdateViccInterventions={restProps.onUpdateViccInterventions} healthRecords={props.healthRecords || []} onUpdateHealthRecords={props.onUpdateHealthRecords} medicalVisits={props.medicalVisits || []} onUpdateMedicalVisits={props.onUpdateMedicalVisits} interventions={props.interventions || []} onUpdateInterventions={props.onUpdateInterventions} />,
                 'students': <StudentManagementPage 
                     {...restProps} 
                     users={users} 
-                    classes={classes} 
+                    classes={institutionClasses} 
                     schedule={schedule} 
                     subjects={subjects} 
                     timeSlots={institutionTimeSlots} 
                     rooms={restProps.rooms} 
                     timetables={institutionTimetables} 
-                    students={students} 
+                    students={institutionStudents} 
                     onUpdateStudents={restProps.onUpdateStudents} 
                     onUpdateUsers={restProps.onUpdateUsers} 
                     onUpdateClasses={restProps.onUpdateClasses} 
@@ -351,12 +371,12 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = (props) => {
                     viccInterventions={restProps.viccInterventions || []}
                     onUpdateViccInterventions={restProps.onUpdateViccInterventions}
                 />,
-                'schedule': <SchedulePage {...restProps} schedule={schedule} subjects={subjects} timeSlots={institutionTimeSlots} rooms={restProps.rooms} timetables={institutionTimetables} users={users} classes={classes} students={students} />,
+                'schedule': <SchedulePage {...restProps} schedule={schedule} subjects={subjects} timeSlots={institutionTimeSlots} rooms={restProps.rooms} timetables={institutionTimetables} users={users} classes={institutionClasses} students={institutionStudents} />,
                 'inspection': <InspectionPage absenceRequests={props.absenceRequests} onUpdateAbsenceRequests={props.onUpdateAbsenceRequests} 
                     {...restProps} 
-                    classes={classes} 
+                    classes={institutionClasses} 
                     users={users} 
-                    students={students} 
+                    students={institutionStudents} 
                     schedule={schedule}
                     staffAttendanceRecords={staffAttendanceRecords || []}
                     conflictMediations={conflictMediations} 
@@ -364,12 +384,12 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = (props) => {
                     gradebooks={gradebooks} 
                     subjects={subjects} 
                 />,
-                'citaciones': <CitacionesPage {...restProps} users={users} students={students} />,
-                'leccionario': <LeccionarioPage leccionarioEntries={leccionarioEntries} onUpdateLeccionarioEntries={onUpdateLeccionarioEntries} schedule={schedule} classes={classes} subjects={subjects} users={users} timeSlots={institutionTimeSlots} microPlans={microPlans} />,
-                'curricular_planning': <CurricularPlanningPage microPlans={microPlans} onUpdateMicroPlans={onUpdateMicroPlans} classes={classes} subjects={subjects} students={students} users={users} dcds={dcds} evaluationCriteria={restProps.evaluationCriteria} evaluationIndicators={restProps.evaluationIndicators} />,
-                'gradebook': <GradebookPage gradebooks={gradebooks} onUpdateGradebooks={restProps.onUpdateGradebooks} classes={classes} subjects={subjects} students={students} users={users} schedule={schedule} activities={restProps.activities} />,
+                'citaciones': <CitacionesPage {...restProps} users={users} students={institutionStudents} />,
+                'leccionario': <LeccionarioPage leccionarioEntries={leccionarioEntries} onUpdateLeccionarioEntries={onUpdateLeccionarioEntries} schedule={schedule} classes={institutionClasses} subjects={subjects} users={users} timeSlots={institutionTimeSlots} microPlans={microPlans} />,
+                'curricular_planning': <CurricularPlanningPage microPlans={microPlans} onUpdateMicroPlans={onUpdateMicroPlans} classes={institutionClasses} subjects={subjects} students={institutionStudents} users={users} dcds={dcds} evaluationCriteria={restProps.evaluationCriteria} evaluationIndicators={restProps.evaluationIndicators} />,
+                'gradebook': <GradebookPage gradebooks={gradebooks} onUpdateGradebooks={restProps.onUpdateGradebooks} classes={institutionClasses} subjects={subjects} students={institutionStudents} users={users} schedule={schedule} activities={restProps.activities} />,
             };
-            return AllOtherPages[currentPage] || <DashboardPage absenceRequests={props.absenceRequests} onUpdateAbsenceRequests={props.onUpdateAbsenceRequests} {...restProps} schedule={schedule} classes={classes} subjects={subjects} timeSlots={institutionTimeSlots} rooms={restProps.rooms} timetables={institutionTimetables} users={users} onNavigate={setCurrentPage} students={students} formalRequests={formalRequests} cronogramaEvents={cronogramaEvents || []} onUpdateCronogramaEvents={onUpdateCronogramaEvents || (() => {})} />;
+            return AllOtherPages[currentPage] || <DashboardPage absenceRequests={props.absenceRequests} onUpdateAbsenceRequests={props.onUpdateAbsenceRequests} {...restProps} schedule={schedule} classes={institutionClasses} subjects={subjects} timeSlots={institutionTimeSlots} rooms={restProps.rooms} timetables={institutionTimetables} users={users} onNavigate={setCurrentPage} students={institutionStudents} formalRequests={formalRequests} cronogramaEvents={cronogramaEvents || []} onUpdateCronogramaEvents={onUpdateCronogramaEvents || (() => {})} />;
     }
   };
 

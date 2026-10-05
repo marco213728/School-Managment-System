@@ -15,6 +15,19 @@ export enum Role {
   Rector = 'Rector',
 }
 
+/**
+ * Checks if a user has administrative privileges to modify master entities
+ * such as student personal information, classes, or institutional configuration.
+ */
+export const isUserAdmin = (user?: { role?: Role } | null): boolean => {
+  if (!user || !user.role) return false;
+  return (
+    user.role === Role.SuperAdmin ||
+    user.role === Role.InstitutionAdmin ||
+    user.role === Role.Rector
+  );
+};
+
 export enum PeiStatus {
     Draft = 'Borrador',
     PendingReview = 'En Revisión',

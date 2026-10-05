@@ -292,13 +292,20 @@ export default function App() {
   };
 
   const handleUpdateClasses = (updatedClasses: Class[]) => {
+    const activeInstId = (currentUser?.institutionId && currentUser.institutionId !== 'none') 
+      ? currentUser.institutionId 
+      : currentInstitution?.id;
     const currentClassIds = new Set(updatedClasses.map(c => c.id));
     classes.forEach(c => {
-      if (!currentClassIds.has(c.id)) {
+      // Only delete if it belongs to this active institution and is absent from updatedClasses
+      if (activeInstId && c.institutionId === activeInstId && !currentClassIds.has(c.id)) {
         deleteDocument('classes', c.id);
       }
     });
-    setClasses(updatedClasses);
+    setClasses(prev => {
+      const otherClasses = prev.filter(c => activeInstId ? c.institutionId !== activeInstId : false);
+      return [...otherClasses, ...updatedClasses];
+    });
     updatedClasses.forEach(c => saveDocument('classes', c.id, c));
   };
 
@@ -321,13 +328,20 @@ export default function App() {
   };
   
   const handleUpdateStudents = (updatedStudents: Student[]) => {
+    const activeInstId = (currentUser?.institutionId && currentUser.institutionId !== 'none') 
+      ? currentUser.institutionId 
+      : currentInstitution?.id;
     const currentStudentIds = new Set(updatedStudents.map(s => s.id));
     students.forEach(s => {
-      if (!currentStudentIds.has(s.id)) {
+      // Only delete if it belongs to this active institution and is absent from updatedStudents
+      if (activeInstId && s.institutionId === activeInstId && !currentStudentIds.has(s.id)) {
         deleteDocument('students', s.id);
       }
     });
-    setStudents(updatedStudents);
+    setStudents(prev => {
+      const otherStudents = prev.filter(s => activeInstId ? s.institutionId !== activeInstId : false);
+      return [...otherStudents, ...updatedStudents];
+    });
     updatedStudents.forEach(s => saveDocument('students', s.id, s));
   };
 

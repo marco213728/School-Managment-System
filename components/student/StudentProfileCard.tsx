@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect, useContext } from 'react';
 import { UserContext, InstitutionContext } from '../../contexts/UserContext';
 // FIX: Add User, Class, and RelatedContact to imports to support new props and features.
-import { Student, RelatedContact, OvpAxis, HealthRecord, Intervention, InterventionType, User, Class, Role, MedicalVisit, ScheduleEntry, Subject, TimeSlot, Room, Timetable, ViccIntervention, ViccInterventionType } from '../../types';
+import { Student, RelatedContact, OvpAxis, HealthRecord, Intervention, InterventionType, User, Class, Role, MedicalVisit, ScheduleEntry, Subject, TimeSlot, Room, Timetable, ViccIntervention, ViccInterventionType, isUserAdmin } from '../../types';
 import { MOCK_STUDENTS, MOCK_CLASSES, MOCK_USERS, MOCK_INTERVENTIONS, MOCK_OVP_ACTIVITIES, MOCK_HEALTH_RECORDS, MOCK_MEDICAL_VISITS, MOCK_VICC_INTERVENTIONS } from '../../constants';
 import { CloseIcon, ClipboardListIcon, GraduationCapIcon, PlusIcon, DeceIcon, StethoscopeIcon, EditIcon, UsersIcon, PrinterIcon, PhoneIcon, EmailIcon, LocationMarkerIcon, ExternalLinkIcon, ChatBubbleIcon, CalendarIcon, VicerrectoradoIcon, TrashIcon } from '../icons/Icons';
 import InterventionForm from '../dece/InterventionForm';
@@ -418,13 +418,21 @@ const StudentProfileCard: React.FC<StudentProfileCardProps> = ({
 
     const [studentData, setStudentData] = useState<Student | null>(null);
     
-    const effectiveInstitutionId = user?.institutionId || studentData?.institutionId || institution?.id || 'uemol';
+    const isAdmin = useMemo(() => isUserAdmin(user), [user]);
+    const canEditPersonalInfo = isEditable && isAdmin;
+
+    const effectiveInstitutionId = useMemo(() => {
+        if (user?.institutionId && user.institutionId !== 'none') {
+            return user.institutionId;
+        }
+        return studentData?.institutionId || (institution?.id !== 'platform' ? institution?.id : null) || '';
+    }, [user, studentData, institution]);
 
     // Derived memoized data
     const profileData = useMemo(() => {
       if (!studentData) return null;
-      const classInfo = (allClasses || MOCK_CLASSES).find(c => c.id === studentData.classId && (!c.institutionId || c.institutionId === effectiveInstitutionId));
-      const parentInfo = (allUsers || MOCK_USERS).find(u => u.id === studentData.parentId && (!u.institutionId || u.institutionId === effectiveInstitutionId));
+      const classInfo = (allClasses || MOCK_CLASSES).find(c => c.id === studentData.classId && (!effectiveInstitutionId || c.institutionId === effectiveInstitutionId));
+      const parentInfo = (allUsers || MOCK_USERS).find(u => u.id === studentData.parentId && (!effectiveInstitutionId || u.institutionId === effectiveInstitutionId));
       
       const interventionsList = (allInterventions && allInterventions.length > 0) ? allInterventions : MOCK_INTERVENTIONS;
       const interventions = interventionsList.filter(i => i.studentId === studentId && (!i.institutionId || i.institutionId === effectiveInstitutionId || !effectiveInstitutionId))
@@ -463,6 +471,10 @@ const StudentProfileCard: React.FC<StudentProfileCardProps> = ({
     }, [profileData?.birthDate]);
 
     const handleFixStudentBirthDate = async () => {
+        if (!isAdmin) {
+            alert('Acceso restringido: Solo los administradores pueden modificar la fecha de nacimiento de los estudiantes.');
+            return;
+        }
         if (!studentData) return;
         const normalizedIso = parseAnyDateToIso(studentData.birthDate);
         if (!normalizedIso) return;
@@ -484,6 +496,10 @@ const StudentProfileCard: React.FC<StudentProfileCardProps> = ({
     };
 
     const handleAutoGenerateMapsFromAddress = async () => {
+        if (!isAdmin) {
+            alert('Acceso restringido: Solo los administradores pueden actualizar la ubicación domiciliaria.');
+            return;
+        }
         if (!studentData || !studentData.address) return;
         const generatedUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(studentData.address)}`;
         const updatedStudent: Student = {
@@ -498,6 +514,10 @@ const StudentProfileCard: React.FC<StudentProfileCardProps> = ({
     };
 
     const handleSaveGeneralStudent = async (updatedFields: Partial<Student>) => {
+        if (!isAdmin) {
+            alert('Acceso restringido: La información personal del estudiante solo puede ser actualizada por administradores.');
+            return;
+        }
         if (!studentData) return;
         const updatedStudent: Student = {
             ...studentData,
@@ -649,11 +669,19 @@ const StudentProfileCard: React.FC<StudentProfileCardProps> = ({
     };
 
     const handleOpenContactForm = (contact: RelatedContact | null) => {
+        if (!isAdmin) {
+            alert('Acceso restringido: Solo los administradores del centro pueden gestionar los contactos del estudiante.');
+            return;
+        }
         setEditingContact(contact);
         setIsContactFormOpen(true);
     };
 
     const handleSaveContact = (contactData: Omit<RelatedContact, 'id'> & { id?: string }) => {
+        if (!isAdmin) {
+            alert('Acceso restringido: Solo los administradores del centro pueden gestionar los contactos del estudiante.');
+            return;
+        }
         if (!studentData || !allStudents || !onUpdateStudents) return;
 
         let updatedContacts: RelatedContact[];
@@ -683,6 +711,10 @@ const StudentProfileCard: React.FC<StudentProfileCardProps> = ({
     };
     
     const handleDeleteContact = (contactId: string) => {
+        if (!isAdmin) {
+            alert('Acceso restringido: Solo los administradores del centro pueden eliminar contactos del estudiante.');
+            return;
+        }
         if (!studentData || !allStudents || !onUpdateStudents) return;
         if (window.confirm('¿Está seguro de que desea eliminar este contacto?')) {
             const updatedContacts = (studentData.relatedContacts || []).filter(c => c.id !== contactId);
@@ -729,9 +761,16 @@ const StudentProfileCard: React.FC<StudentProfileCardProps> = ({
                     <div className="bg-white p-4 rounded-lg border flex justify-between items-center">
                         <div>
                             <h3 className="text-xl font-bold text-gray-900">{profileData.name}</h3>
-                            <p className="text-xs text-gray-500 font-mono mt-0.5">ID: {profileData.id}</p>
+                            <div className="flex items-center gap-2 mt-0.5">
+                                <span className="text-xs text-gray-500 font-mono">ID: {profileData.id}</span>
+                                {!canEditPersonalInfo && (
+                                    <span className="px-2 py-0.5 bg-slate-100 text-slate-600 rounded text-[10px] font-semibold border border-slate-200">
+                                        Solo Lectura
+                                    </span>
+                                )}
+                            </div>
                         </div>
-                        {isEditable && (
+                        {canEditPersonalInfo && (
                             <button
                                 onClick={() => setIsEditGeneralOpen(true)}
                                 className="px-2.5 py-1 text-xs font-semibold text-primary-700 bg-primary-50 hover:bg-primary-100 border border-primary-200 rounded-lg flex items-center gap-1.5 transition shadow-xs"
@@ -754,7 +793,7 @@ const StudentProfileCard: React.FC<StudentProfileCardProps> = ({
                                     <CalendarIcon className="h-4 w-4 text-gray-400 flex-shrink-0" />
                                     <span className="text-gray-800 font-medium">{formattedBirthDate}</span>
                                 </div>
-                                {isEditable && (
+                                {canEditPersonalInfo && (
                                     <button 
                                         onClick={() => setIsEditGeneralOpen(true)} 
                                         className="text-xs text-primary-600 hover:text-primary-800 p-1 rounded hover:bg-slate-100"
@@ -773,7 +812,7 @@ const StudentProfileCard: React.FC<StudentProfileCardProps> = ({
                                     <p className="text-[11px] text-amber-800">
                                         Fecha real calculada: <strong>{formattedBirthDate}</strong>
                                     </p>
-                                    {isEditable && (
+                                    {canEditPersonalInfo && (
                                         <button
                                             type="button"
                                             onClick={handleFixStudentBirthDate}
@@ -794,9 +833,9 @@ const StudentProfileCard: React.FC<StudentProfileCardProps> = ({
                                     <LocationMarkerIcon className="h-4 w-4 text-gray-400 flex-shrink-0" />
                                     <span className="text-gray-800 break-words">{profileData.address || 'No registrada'}</span>
                                 </div>
-                                {isEditable && (
+                                {canEditPersonalInfo && (
                                     <button 
-                                        onClick={() => setIsEditGeneralOpen(true)}
+                                        onClick={() => setIsEditGeneralOpen(true)} 
                                         className="text-xs text-primary-600 hover:text-primary-800 p-1 rounded hover:bg-slate-100"
                                         title="Editar dirección"
                                     >
@@ -829,7 +868,7 @@ const StudentProfileCard: React.FC<StudentProfileCardProps> = ({
                                                 <ExternalLinkIcon className="h-4 w-4 text-emerald-600" />
                                                 <span>Ver en Google Maps</span>
                                             </a>
-                                            {isEditable && (
+                                            {canEditPersonalInfo && (
                                                 <button
                                                     onClick={() => setIsEditGeneralOpen(true)}
                                                     className="text-xs text-blue-600 hover:underline flex items-center gap-1 py-1"
@@ -848,7 +887,7 @@ const StudentProfileCard: React.FC<StudentProfileCardProps> = ({
                                             <LocationMarkerIcon className="h-4 w-4 text-gray-300" />
                                             <span>Sin enlace registrado</span>
                                         </div>
-                                        {isEditable && (
+                                        {canEditPersonalInfo && (
                                             <div className="flex items-center gap-2 flex-wrap">
                                                 <button
                                                     onClick={() => setIsEditGeneralOpen(true)}
@@ -920,7 +959,7 @@ const StudentProfileCard: React.FC<StudentProfileCardProps> = ({
                                 </span>
                             )}
                         </h3>
-                        {isEditable && (
+                        {canEditPersonalInfo && (
                             <button onClick={() => handleOpenContactForm(null)} className="flex items-center gap-2 px-3 py-1.5 bg-primary-600 text-white font-semibold rounded-md hover:bg-primary-700 text-sm">
                                 <PlusIcon className="h-4 w-4" />
                                 Añadir Contacto
@@ -936,7 +975,7 @@ const StudentProfileCard: React.FC<StudentProfileCardProps> = ({
                                         <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nombre</th>
                                         <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ocupación</th>
                                         <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contacto</th>
-                                        {isEditable && <th className="px-2 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>}
+                                        {canEditPersonalInfo && <th className="px-2 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>}
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-gray-200">
@@ -951,7 +990,7 @@ const StudentProfileCard: React.FC<StudentProfileCardProps> = ({
                                                     {contact.email && <a href={`mailto:${contact.email}`} title={contact.email} className="flex items-center gap-1 text-gray-500 hover:text-primary-600"><EmailIcon className="h-4 w-4" /> <span className="sr-only">Email</span></a>}
                                                 </div>
                                             </td>
-                                            {isEditable && (
+                                            {canEditPersonalInfo && (
                                                 <td className="px-2 py-3 text-right">
                                                     <button onClick={() => handleOpenContactForm(contact)} className="p-1 text-gray-500 hover:text-blue-600" title="Editar"><EditIcon className="h-5 w-5" /></button>
                                                     <button onClick={() => handleDeleteContact(contact.id)} className="p-1 text-gray-500 hover:text-red-600" title="Eliminar"><TrashIcon className="h-5 w-5" /></button>

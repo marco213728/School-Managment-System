@@ -90,24 +90,27 @@ const ManagePage: React.FC<ManagePageProps> = ({
     const [userToEnroll, setUserToEnroll] = useState<User | null>(null);
     const [isPromotionOpen, setIsPromotionOpen] = useState(false);
 
-    const effectiveInstitutionId = currentUser?.institutionId || currentInstitution?.id || 'uemol';
+    const effectiveInstitutionId = (currentUser?.institutionId && currentUser.institutionId !== 'none')
+        ? currentUser.institutionId
+        : (currentInstitution?.id || 'inst-1790363544282-swirjer');
 
     const institutionData = useMemo(() => {
         const institutionId = effectiveInstitutionId;
-        const instTimetables = timetables.filter(t => !t.institutionId || t.institutionId === institutionId);
+        const instTimetables = timetables.filter(t => t.institutionId === institutionId);
         const instTimetableIds = new Set(instTimetables.map(t => t.id));
-        const instClasses = allClasses.filter(c => !c.institutionId || c.institutionId === institutionId);
+        // Strict filtering: visible ONLY to the assigned school
+        const instClasses = allClasses.filter(c => c.institutionId === institutionId);
         const instClassIds = new Set(instClasses.map(c => c.id));
         const instSchedule = schedule.filter(s => instClassIds.has(s.classId));
         const instScheduleSlotIds = new Set(instSchedule.map(s => s.timeSlotId));
         
         return {
-            users: allUsers.filter(u => !u.institutionId || u.institutionId === institutionId),
+            users: allUsers.filter(u => u.institutionId === institutionId || (!u.institutionId && currentUser?.role === Role.SuperAdmin)),
             classes: instClasses,
-            students: allStudents.filter(s => !s.institutionId || s.institutionId === institutionId),
+            students: allStudents.filter(s => s.institutionId === institutionId),
             schedule: instSchedule,
-            supportContacts: supportContacts.filter(sc => !sc.institutionId || sc.institutionId === institutionId),
-            subjects: subjects.filter(s => !s.institutionId || s.institutionId === institutionId),
+            supportContacts: supportContacts.filter(sc => sc.institutionId === institutionId),
+            subjects: subjects.filter(s => s.institutionId === institutionId),
             timeSlots: timeSlots.filter(ts => {
                 // If it explicitly belongs to another institution, reject
                 if (ts.institutionId && ts.institutionId !== institutionId) {
@@ -125,14 +128,13 @@ const ManagePage: React.FC<ManagePageProps> = ({
                 if (instScheduleSlotIds.has(ts.id)) {
                     return true;
                 }
-                // Legacy fallback only if institution has no timetables defined
-                return !ts.institutionId && instTimetableIds.size === 0;
+                return false;
             }),
-            rooms: rooms.filter(r => !r.institutionId || r.institutionId === institutionId),
+            rooms: rooms.filter(r => r.institutionId === institutionId),
             timetables: instTimetables,
-            academicCalendarEvents: academicCalendarEvents.filter(e => !e.institutionId || e.institutionId === institutionId),
+            academicCalendarEvents: academicCalendarEvents.filter(e => e.institutionId === institutionId),
         };
-    }, [effectiveInstitutionId, allUsers, allClasses, allStudents, schedule, supportContacts, subjects, timeSlots, rooms, timetables, academicCalendarEvents]);
+    }, [effectiveInstitutionId, allUsers, allClasses, allStudents, schedule, supportContacts, subjects, timeSlots, rooms, timetables, academicCalendarEvents, currentUser]);
 
     if (!currentUser || ![Role.InstitutionAdmin, Role.InspectorGeneral, Role.Rector, Role.SuperAdmin].includes(currentUser.role)) {
         return <div className="bg-white p-6 rounded-xl shadow-md"><h2 className="text-xl font-bold text-slate-800 mb-4">Gestión del Centro</h2><p>No tiene los permisos necesarios para acceder a esta sección.</p></div>
@@ -156,8 +158,12 @@ const ManagePage: React.FC<ManagePageProps> = ({
         onUpdateUsers([...otherUsers, ...updatedInstUsers]); 
     };
     const handleUpdateInstitutionClasses = (updatedInstClasses: Class[]) => { 
+        const verifiedClasses = updatedInstClasses.map(c => ({
+            ...c,
+            institutionId: c.institutionId || effectiveInstitutionId
+        }));
         const otherClasses = allClasses.filter(c => c.institutionId && c.institutionId !== effectiveInstitutionId); 
-        onUpdateClasses([...otherClasses, ...updatedInstClasses]); 
+        onUpdateClasses([...otherClasses, ...verifiedClasses]); 
     };
     const handleUpdateInstitutionSchedule = (updatedInstSchedule: ScheduleEntry[]) => { 
         const instClassIds = new Set(institutionData.classes.map(c => c.id));
@@ -165,8 +171,12 @@ const ManagePage: React.FC<ManagePageProps> = ({
         onUpdateSchedule([...otherSchedule, ...updatedInstSchedule]); 
     };
     const handleUpdateInstitutionStudents = (updatedInstStudents: Student[]) => { 
+        const verifiedStudents = updatedInstStudents.map(s => ({
+            ...s,
+            institutionId: s.institutionId || effectiveInstitutionId
+        }));
         const otherStudents = allStudents.filter(s => s.institutionId && s.institutionId !== effectiveInstitutionId); 
-        onUpdateStudents([...otherStudents, ...updatedInstStudents]); 
+        onUpdateStudents([...otherStudents, ...verifiedStudents]); 
     };
     const handleUpdateInstitutionSupportContacts = (updatedInstContacts: SupportContact[]) => { 
         const otherContacts = supportContacts.filter(sc => sc.institutionId && sc.institutionId !== effectiveInstitutionId); 

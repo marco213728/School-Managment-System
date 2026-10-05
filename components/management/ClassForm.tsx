@@ -1,6 +1,7 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useContext } from 'react';
 import { Class, User, Student, Role, Timetable } from '../../types';
 import { CloseIcon, SearchIcon } from '../icons/Icons';
+import { InstitutionContext } from '../../contexts/UserContext';
 
 interface ClassFormProps {
     isOpen: boolean;
@@ -43,6 +44,7 @@ const ClassForm: React.FC<ClassFormProps> = ({
     allStudents, 
     timetables 
 }) => {
+    const { institution } = useContext(InstitutionContext);
     const [formData, setFormData] = useState({
         id: undefined as string | undefined,
         name: '',
@@ -179,11 +181,17 @@ const ClassForm: React.FC<ClassFormProps> = ({
                 </button>
 
                 <div className="mb-5 pb-3 border-b border-slate-100">
-                    <h2 className="text-xl font-bold text-slate-800">
-                        {classToEdit ? 'Editar Clase / Paralelo' : 'Crear Nueva Clase / Paralelo'}
-                    </h2>
-                    <p className="text-xs text-slate-500">
-                        Configura el grupo de estudiantes, su grado, tutor y plantilla horaria.
+                    <div className="flex items-center justify-between gap-2 flex-wrap">
+                        <h2 className="text-xl font-bold text-slate-800">
+                            {classToEdit ? 'Editar Clase / Paralelo' : 'Crear Nueva Clase / Paralelo'}
+                        </h2>
+                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200">
+                            <span>🏛️ Escuela Asignada:</span>
+                            <span className="font-bold">{institution?.name || 'Institución Activa'}</span>
+                        </span>
+                    </div>
+                    <p className="text-xs text-slate-500 mt-1">
+                        Esta clase solo será visible y operable para los estudiantes y docentes de esta institución educativa.
                     </p>
                 </div>
 

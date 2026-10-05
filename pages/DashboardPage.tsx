@@ -353,14 +353,14 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ absenceRequests = [
                                     <label className="block text-xs font-medium text-gray-700 mb-1">Clase/Paralelo</label>
                                     <select name="classId" required className="w-full p-2 text-sm border border-gray-300 rounded-md">
                                         <option value="">Seleccione...</option>
-                                        {classes.filter(c => c.institutionId === currentUser?.institutionId).map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                                        {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                                     </select>
                                 </div>
                                 <div>
                                     <label className="block text-xs font-medium text-gray-700 mb-1">Asignatura</label>
                                     <select name="subjectId" required className="w-full p-2 text-sm border border-gray-300 rounded-md">
                                         <option value="">Seleccione...</option>
-                                        {subjects.filter(s => s.institutionId === currentUser?.institutionId).map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                                        {subjects.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                                     </select>
                                 </div>
                             </div>
@@ -421,8 +421,21 @@ const ParentDashboard: React.FC<DashboardPageProps> = ({ students, onUpdateStude
     const [selectedChildId, setSelectedChildId] = useState<string | null>(null);
 
     const myChildren = useMemo(() => {
-        if (!user || !user.childIds || user.childIds.length === 0) return [];
-        return students.filter(s => user.childIds?.includes(s.id));
+        if (!user) return [];
+        const byChildIds = user.childIds && user.childIds.length > 0 
+            ? students.filter(s => user.childIds?.includes(s.id)) 
+            : [];
+        const byParentId = students.filter(s => s.parentId === user.id);
+        const byContact = students.filter(s => 
+            s.relatedContacts?.some(c => 
+                (user.email && c.email && c.email.toLowerCase() === user.email.toLowerCase()) ||
+                (user.phone && c.phone && c.phone.replace(/\D/g, '') === user.phone.replace(/\D/g, '')) ||
+                (user.name && c.name && c.name.toLowerCase().trim() === user.name.toLowerCase().trim())
+            )
+        );
+        const map = new Map<string, Student>();
+        [...byChildIds, ...byParentId, ...byContact].forEach(s => map.set(s.id, s));
+        return Array.from(map.values());
     }, [user, students]);
 
     const child = useMemo(() => {

@@ -684,10 +684,24 @@ const StudentParentActivities: React.FC<ActivitiesPageProps> = (props) => {
 
     // Handle Multiple Children
     const availableStudents = useMemo(() => {
-        if (user?.role === Role.Student) {
+        if (!user) return [];
+        if (user.role === Role.Student) {
             return props.students.filter(s => s.id === user.id);
-        } else if (user?.role === Role.Parent && user.childIds) {
-            return props.students.filter(s => user.childIds?.includes(s.id));
+        } else if (user.role === Role.Parent) {
+            const byChildIds = user.childIds && user.childIds.length > 0 
+                ? props.students.filter(s => user.childIds?.includes(s.id)) 
+                : [];
+            const byParentId = props.students.filter(s => s.parentId === user.id);
+            const byContact = props.students.filter(s => 
+                s.relatedContacts?.some(c => 
+                    (user.email && c.email && c.email.toLowerCase() === user.email.toLowerCase()) ||
+                    (user.phone && c.phone && c.phone.replace(/\D/g, '') === user.phone.replace(/\D/g, '')) ||
+                    (user.name && c.name && c.name.toLowerCase().trim() === user.name.toLowerCase().trim())
+                )
+            );
+            const map = new Map<string, Student>();
+            [...byChildIds, ...byParentId, ...byContact].forEach(s => map.set(s.id, s));
+            return Array.from(map.values());
         }
         return [];
     }, [user, props.students]);

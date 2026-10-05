@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useContext } from 'react';
-import { Student, User, Class, Role } from '../../types';
-import { UserContext } from '../../contexts/UserContext';
+import { Student, User, Class, Role, isUserAdmin } from '../../types';
+import { UserContext, InstitutionContext } from '../../contexts/UserContext';
 import { CloseIcon, LocationMarkerIcon, ExternalLinkIcon } from '../icons/Icons';
 import { parseAnyDateToIso } from '../../lib/dateUtils';
 
@@ -16,6 +16,8 @@ interface StudentFormProps {
 
 const StudentForm: React.FC<StudentFormProps> = ({ isOpen, onClose, onSave, studentToEdit, allUsers, allClasses }) => {
     const { user: currentUser } = useContext(UserContext);
+    const { institution: currentInstitution } = useContext(InstitutionContext);
+    const isAdmin = isUserAdmin(currentUser);
     const [studentData, setStudentData] = useState({
         name: '',
         classId: '',
@@ -106,7 +108,14 @@ const StudentForm: React.FC<StudentFormProps> = ({ isOpen, onClose, onSave, stud
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        const institutionId = currentUser!.institutionId!;
+        if (!isAdmin) {
+            alert('Acceso restringido: La información personal del estudiante solo puede ser actualizada por administradores.');
+            return;
+        }
+
+        const effectiveInstitutionId = (currentUser?.institutionId && currentUser.institutionId !== 'none')
+            ? currentUser.institutionId
+            : (studentToEdit?.institutionId || currentInstitution?.id || 'inst-1790363544282-swirjer');
 
         const parsedStudentFields = {
             name: studentData.name.trim(),
@@ -123,7 +132,11 @@ const StudentForm: React.FC<StudentFormProps> = ({ isOpen, onClose, onSave, stud
 
         if (studentToEdit) {
             // Editing existing student and parent
-            const updatedStudent: Student = { ...studentToEdit, ...parsedStudentFields };
+            const updatedStudent: Student = { 
+                ...studentToEdit, 
+                ...parsedStudentFields,
+                institutionId: studentToEdit.institutionId || effectiveInstitutionId 
+            };
             const parentUser = allUsers.find(u => u.id === studentToEdit.parentId)!;
             const updatedParent: User = { ...parentUser, ...parentData };
             onSave(updatedStudent, updatedParent);
@@ -137,14 +150,14 @@ const StudentForm: React.FC<StudentFormProps> = ({ isOpen, onClose, onSave, stud
                 ...parentData,
                 role: Role.Parent,
                 childIds: [newStudentId],
-                institutionId,
+                institutionId: effectiveInstitutionId,
                 password: 'password',
             };
             const newStudent: Student = {
                 id: newStudentId,
                 ...parsedStudentFields,
                 parentId: newParentId,
-                institutionId,
+                institutionId: effectiveInstitutionId,
             };
             onSave(newStudent, newParent);
         }

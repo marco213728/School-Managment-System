@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useContext } from 'react';
-import { Class, User, Student, Role, Timetable } from '../../types';
+import { Class, User, Student, Role, Timetable, isUserAdmin } from '../../types';
 import { PlusIcon, EditIcon, TrashIcon, ArrowLeftIcon, UsersIcon } from '../icons/Icons';
 import ClassForm from './ClassForm';
 import { UserContext, InstitutionContext } from '../../contexts/UserContext';
@@ -32,36 +32,59 @@ const ClassManagement: React.FC<ClassManagementProps> = ({
     const [viewingClassStudents, setViewingClassStudents] = useState<Class | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
 
+    const isAdmin = useMemo(() => isUserAdmin(currentUser), [currentUser]);
+
     const timetableMap = useMemo(() => new Map(timetables.map(t => [t.id, t.name])), [timetables]);
     const teacherMap = useMemo(() => new Map(users.map(u => [u.id, u.name])), [users]);
 
     // Reliable institution ID resolution
     const effectiveInstitutionId = useMemo(() => {
-        return currentUser?.institutionId || currentInstitution?.id || classes[0]?.institutionId || 'uemol';
+        if (currentUser?.institutionId && currentUser.institutionId !== 'none') {
+            return currentUser.institutionId;
+        }
+        return currentInstitution?.id || (classes.length > 0 ? classes[0].institutionId : '') || 'inst-1790363544282-swirjer';
     }, [currentUser, currentInstitution, classes]);
 
+    // Strictly classes belonging to this school
+    const schoolClasses = useMemo(() => {
+        if (!effectiveInstitutionId) return classes;
+        return classes.filter(c => c.institutionId === effectiveInstitutionId);
+    }, [classes, effectiveInstitutionId]);
+
     const filteredClasses = useMemo(() => {
-        if (!searchTerm.trim()) return classes;
+        if (!searchTerm.trim()) return schoolClasses;
         const q = searchTerm.toLowerCase();
-        return classes.filter(c => 
+        return schoolClasses.filter(c => 
             (c.name || '').toLowerCase().includes(q) ||
             (c.gradoCurso && c.gradoCurso.toLowerCase().includes(q)) ||
             (c.letra && c.letra.toLowerCase().includes(q)) ||
             (c.tutorId && (teacherMap.get(c.tutorId) || '').toLowerCase().includes(q))
         );
-    }, [classes, searchTerm, teacherMap]);
+    }, [schoolClasses, searchTerm, teacherMap]);
 
     const handleAddNew = () => {
+        if (!isAdmin) {
+            alert('Acceso restringido: Solo los administradores pueden crear clases.');
+            return;
+        }
         setEditingClass(null);
         setIsModalOpen(true);
     };
 
     const handleEdit = (cls: Class) => {
+        if (!isAdmin) {
+            alert('Acceso restringido: Solo los administradores pueden editar clases.');
+            return;
+        }
         setEditingClass(cls);
         setIsModalOpen(true);
     };
 
     const handleDelete = async (classId: string) => {
+        if (!isAdmin) {
+            alert('Acceso restringido: Solo los administradores pueden eliminar clases.');
+            return;
+        }
         const cls = classes.find(c => c.id === classId);
         const name = cls?.name || 'esta clase';
         if (window.confirm(`¿Está seguro de que desea eliminar la clase "${name}"? Esta acción borrará la clase y liberará a sus alumnos asignados.`)) {
@@ -85,15 +108,20 @@ const ClassManagement: React.FC<ClassManagementProps> = ({
     };
 
     const handleSave = async (classToSave: Omit<Class, 'id' | 'institutionId'> & { id?: string }) => {
+        if (!isAdmin) {
+            alert('Acceso restringido: Solo los administradores pueden guardar o modificar clases.');
+            return;
+        }
         let savedClass: Class;
         let updatedClasses: Class[];
 
         if (classToSave.id) {
             // Updating existing class
+            const existing = classes.find(c => c.id === classToSave.id);
             savedClass = {
                 ...classToSave,
                 id: classToSave.id,
-                institutionId: effectiveInstitutionId,
+                institutionId: existing?.institutionId || effectiveInstitutionId,
                 name: classToSave.name.trim(),
                 studentIds: classToSave.studentIds || [],
                 timetableId: classToSave.timetableId || '',
@@ -157,8 +185,15 @@ const ClassManagement: React.FC<ClassManagementProps> = ({
                     <h3 className="text-xl font-bold text-slate-800 flex items-center gap-2">
                         <span>🏫</span> Gestión de Clases y Paralelos
                     </h3>
-                    <p className="text-xs text-slate-500 mt-0.5">
-                        Organiza los cursos de la institución, tutores asignados y nóminas de alumnos.
+                    <div className="flex items-center gap-2 mt-1 flex-wrap">
+                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200">
+                            <span>🏛️ Escuela Asignada:</span>
+                            <span className="font-bold">{currentInstitution?.name || 'Institución Activa'}</span>
+                        </span>
+                        <span className="text-xs text-slate-500">({filteredClasses.length} clases visibles en este centro)</span>
+                    </div>
+                    <p className="text-xs text-slate-500 mt-1">
+                        Las clases creadas solo son visibles y operables dentro de esta institución asignada.
                     </p>
                 </div>
 
