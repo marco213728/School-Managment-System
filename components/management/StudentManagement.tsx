@@ -1,11 +1,12 @@
 import React, { useState, useMemo, useContext } from 'react';
 import { Student, User, Class, Role, ScheduleEntry, Subject, TimeSlot, Room, Timetable, ViccIntervention, HealthRecord, MedicalVisit, Intervention } from '../../types';
-import { PlusIcon, EditIcon, TrashIcon, SearchIcon, UsersIcon } from '../icons/Icons';
+import { PlusIcon, EditIcon, TrashIcon, SearchIcon, UsersIcon, LocationMarkerIcon, ExternalLinkIcon } from '../icons/Icons';
 import StudentForm from './StudentForm';
 import StudentProfileCard from '../student/StudentProfileCard';
 import StudentImportModal from './StudentImportModal';
 import { UserContext, InstitutionContext } from '../../contexts/UserContext';
-import { deleteDocument, saveDocument } from '../../lib/firebase';
+import { deleteDocument, saveDocument, saveDocumentsBatch } from '../../lib/firebase';
+import { isExcelSerialDate, parseAnyDateToIso, formatDateForDisplay } from '../../lib/dateUtils';
 
 interface StudentManagementProps {
     students: Student[];
@@ -84,6 +85,98 @@ const StudentManagement: React.FC<StudentManagementProps> = ({
             return matchesClass && matchesSearch;
         });
     }, [searchTerm, selectedClassFilter, students, classMap, parentMap]);
+
+    const [isBatchFixingDates, setIsBatchFixingDates] = useState(false);
+    const [isRemovingDuplicates, setIsRemovingDuplicates] = useState(false);
+
+    const duplicateStudents = useMemo(() => {
+        const seenIds = new Set<string>();
+        const seenNats = new Set<string>();
+        const dups: Student[] = [];
+        students.forEach(s => {
+            const isDup = seenIds.has(s.id) || (s.nationalId && seenNats.has(s.nationalId));
+            if (isDup) {
+                dups.push(s);
+            } else {
+                seenIds.add(s.id);
+                if (s.nationalId) seenNats.add(s.nationalId);
+            }
+        });
+        return dups;
+    }, [students]);
+
+    const handleRemoveDuplicates = async () => {
+        if (duplicateStudents.length === 0) return;
+        if (!window.confirm(`Se detectaron ${duplicateStudents.length} registros repetidos/duplicados. ¿Deseas depurar la lista ahora y conservar solo registros únicos?`)) return;
+
+        setIsRemovingDuplicates(true);
+        try {
+            const seenIds = new Set<string>();
+            const seenNats = new Set<string>();
+            const uniqueStudents: Student[] = [];
+            const toDeleteIds: string[] = [];
+
+            students.forEach(s => {
+                const isDup = seenIds.has(s.id) || (s.nationalId && seenNats.has(s.nationalId));
+                if (isDup) {
+                    toDeleteIds.push(s.id);
+                } else {
+                    seenIds.add(s.id);
+                    if (s.nationalId) seenNats.add(s.nationalId);
+                    uniqueStudents.push(s);
+                }
+            });
+
+            for (const id of toDeleteIds) {
+                await deleteDocument('students', id);
+            }
+
+            onUpdateStudents(uniqueStudents);
+            alert(`¡Listo! Se eliminaron ${toDeleteIds.length} registros duplicados y se conservó una sola lista limpia.`);
+        } catch (err: any) {
+            console.error('Error al depurar duplicados:', err);
+            alert(`Error al depurar duplicados: ${err?.message || 'Error desconocido'}`);
+        } finally {
+            setIsRemovingDuplicates(false);
+        }
+    };
+
+    const studentsWithExcelDates = useMemo(() => {
+        return students.filter(s => s.birthDate && isExcelSerialDate(s.birthDate));
+    }, [students]);
+
+    const handleBatchFixBirthDates = async () => {
+        if (studentsWithExcelDates.length === 0) return;
+        setIsBatchFixingDates(true);
+        try {
+            const batchOps = studentsWithExcelDates.map(s => {
+                const normalized = {
+                    ...s,
+                    birthDate: parseAnyDateToIso(s.birthDate)
+                };
+                return {
+                    collectionName: 'students',
+                    id: s.id,
+                    data: normalized
+                };
+            });
+            await saveDocumentsBatch(batchOps);
+            
+            const updatedStudents = students.map(s => {
+                if (s.birthDate && isExcelSerialDate(s.birthDate)) {
+                    return { ...s, birthDate: parseAnyDateToIso(s.birthDate) };
+                }
+                return s;
+            });
+            onUpdateStudents(updatedStudents);
+            alert(`¡Listo! Se corrigieron y guardaron ${studentsWithExcelDates.length} fechas de nacimiento en la base de datos.`);
+        } catch (err: any) {
+            console.error('Error al normalizar fechas:', err);
+            alert(`Error al normalizar fechas: ${err?.message || 'Error desconocido'}`);
+        } finally {
+            setIsBatchFixingDates(false);
+        }
+    };
 
     const handleAddNew = () => {
         setSelectedStudent(null);
@@ -183,9 +276,22 @@ const StudentManagement: React.FC<StudentManagementProps> = ({
     };
 
     const handleImportSuccess = (newStudents: Student[], newParents: User[], updatedClasses: Class[]) => {
-        onUpdateStudents([...students, ...newStudents]);
+        // Prevent duplicate students: merge by ID or nationalId
+        const newStudentIdSet = new Set(newStudents.map(s => s.id));
+        const newStudentNatIdSet = new Set(newStudents.filter(s => s.nationalId).map(s => s.nationalId));
+
+        const existingFiltered = students.filter(s => {
+            if (newStudentIdSet.has(s.id)) return false;
+            if (s.nationalId && newStudentNatIdSet.has(s.nationalId)) return false;
+            return true;
+        });
+
+        onUpdateStudents([...existingFiltered, ...newStudents]);
+
         if (newParents.length > 0) {
-            onUpdateUsers([...users, ...newParents]);
+            const newParentIdSet = new Set(newParents.map(p => p.id));
+            const existingParentsFiltered = users.filter(u => !newParentIdSet.has(u.id));
+            onUpdateUsers([...existingParentsFiltered, ...newParents]);
         }
         if (onUpdateClasses && updatedClasses.length > 0) {
             onUpdateClasses(updatedClasses);
@@ -261,6 +367,74 @@ const StudentManagement: React.FC<StudentManagementProps> = ({
                 </div>
             </div>
 
+            {/* Banner de Detección de Duplicados */}
+            {duplicateStudents.length > 0 && (
+                <div className="mb-6 p-4 bg-rose-50 border border-rose-300 rounded-2xl text-xs text-rose-900 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 shadow-xs">
+                    <div className="flex items-center gap-3">
+                        <span className="text-2xl flex-shrink-0">⚠️</span>
+                        <div>
+                            <p className="font-bold text-rose-950 text-sm">
+                                Registros Duplicados Detectados ({duplicateStudents.length} alumno(s) repetido(s))
+                            </p>
+                            <p className="text-rose-800 mt-0.5">
+                                Se detectaron alumnos con la misma cédula o identificador en la nómina. Puedes depurarla en un clic para conservar únicamente un registro único por estudiante.
+                            </p>
+                        </div>
+                    </div>
+                    <button
+                        onClick={handleRemoveDuplicates}
+                        disabled={isRemovingDuplicates}
+                        className="px-4 py-2.5 bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs rounded-xl shadow-sm transition flex items-center gap-2 whitespace-nowrap self-end sm:self-auto"
+                    >
+                        {isRemovingDuplicates ? (
+                            <>
+                                <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                                <span>Depurando en Firestore...</span>
+                            </>
+                        ) : (
+                            <>
+                                <span>🧹</span>
+                                <span>Depurar y Conservar Lista Única ({duplicateStudents.length})</span>
+                            </>
+                        )}
+                    </button>
+                </div>
+            )}
+
+            {/* Banner de Diagnóstico y Corrección de Fechas */}
+            {studentsWithExcelDates.length > 0 && (
+                <div className="mb-6 p-4 bg-amber-50 border border-amber-300 rounded-2xl text-xs text-amber-900 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 shadow-xs">
+                    <div className="flex items-center gap-3">
+                        <span className="text-2xl flex-shrink-0">⚠️</span>
+                        <div>
+                            <p className="font-bold text-amber-950 text-sm">
+                                Diagnóstico de Fechas de Nacimiento ({studentsWithExcelDates.length} registros afectados)
+                            </p>
+                            <p className="text-amber-800 mt-0.5">
+                                Se detectaron alumnos cuya fecha fue importada con números de serie de Excel (ej: <code>41518.99</code>). Amauta puede normalizarlas todas automáticamente a formato estándar <code>AAAA-MM-DD</code>.
+                            </p>
+                        </div>
+                    </div>
+                    <button
+                        onClick={handleBatchFixBirthDates}
+                        disabled={isBatchFixingDates}
+                        className="px-4 py-2.5 bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs rounded-xl shadow-sm transition flex items-center gap-2 whitespace-nowrap self-end sm:self-auto"
+                    >
+                        {isBatchFixingDates ? (
+                            <>
+                                <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                                <span>Normalizando en Firestore...</span>
+                            </>
+                        ) : (
+                            <>
+                                <span>⚡</span>
+                                <span>Corregir y Guardar Todas ({studentsWithExcelDates.length})</span>
+                            </>
+                        )}
+                    </button>
+                </div>
+            )}
+
             {/* Students Table */}
             <div className="overflow-x-auto rounded-xl border border-slate-200">
                 <table className="min-w-full divide-y divide-slate-200 text-xs">
@@ -269,7 +443,9 @@ const StudentManagement: React.FC<StudentManagementProps> = ({
                             <th className="px-4 py-3 text-left">Nº</th>
                             <th className="px-4 py-3 text-left">Nombre del Alumno</th>
                             <th className="px-4 py-3 text-left">Cédula / ID</th>
+                            <th className="px-4 py-3 text-left">F. Nacimiento</th>
                             <th className="px-4 py-3 text-left">Clase / Paralelo</th>
+                            <th className="px-4 py-3 text-left">Ubicación Maps</th>
                             <th className="px-4 py-3 text-left">Representante Principal</th>
                             <th className="px-4 py-3 text-right">Acciones</th>
                         </tr>
@@ -277,7 +453,7 @@ const StudentManagement: React.FC<StudentManagementProps> = ({
                     <tbody className="bg-white divide-y divide-slate-100">
                         {filteredStudents.length === 0 ? (
                             <tr>
-                                <td colSpan={6} className="px-4 py-8 text-center text-slate-400">
+                                <td colSpan={8} className="px-4 py-8 text-center text-slate-400">
                                     No se encontraron estudiantes. Puedes añadir alumnos uno a uno o usar el botón <strong>"Importar Excel / TXT"</strong> para cargar listas completas.
                                 </td>
                             </tr>
@@ -307,10 +483,40 @@ const StudentManagement: React.FC<StudentManagementProps> = ({
                                     <td className="px-4 py-3 whitespace-nowrap font-mono text-slate-600">
                                         {student.nationalId || <span className="text-slate-400 italic">No registrada</span>}
                                     </td>
+                                    <td className="px-4 py-3 whitespace-nowrap font-mono text-slate-700">
+                                        {student.birthDate ? (
+                                            <div className="flex items-center gap-1">
+                                                <span>{formatDateForDisplay(student.birthDate)}</span>
+                                                {isExcelSerialDate(student.birthDate) && (
+                                                    <span className="text-[9px] px-1 py-0.2 bg-amber-100 text-amber-800 rounded font-sans font-bold" title="Serial Excel">
+                                                        Excel
+                                                    </span>
+                                                )}
+                                            </div>
+                                        ) : (
+                                            <span className="text-slate-400 italic">-</span>
+                                        )}
+                                    </td>
                                     <td className="px-4 py-3 whitespace-nowrap">
                                         <span className="px-2 py-0.5 bg-blue-50 text-blue-800 rounded font-semibold text-[11px]">
                                             {classMap.get(student.classId) || 'Sin clase asignada'}
                                         </span>
+                                    </td>
+                                    <td className="px-4 py-3 whitespace-nowrap">
+                                        {student.homeLocationLink ? (
+                                            <a 
+                                                href={student.homeLocationLink} 
+                                                target="_blank" 
+                                                rel="noopener noreferrer" 
+                                                className="inline-flex items-center gap-1 px-2 py-0.5 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 rounded font-bold text-[11px] transition"
+                                                title={student.homeLocationLink}
+                                            >
+                                                <LocationMarkerIcon className="h-3.5 w-3.5 text-emerald-600" />
+                                                <span>Maps ↗</span>
+                                            </a>
+                                        ) : (
+                                            <span className="text-slate-400 italic">-</span>
+                                        )}
                                     </td>
                                     <td className="px-4 py-3 whitespace-nowrap text-slate-600">
                                         {parentMap.get(student.parentId) || <span className="text-slate-400 italic">No asignado</span>}

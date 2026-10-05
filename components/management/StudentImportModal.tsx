@@ -1,8 +1,9 @@
 import React, { useState, useMemo } from 'react';
 import * as XLSX from 'xlsx';
-import { Student, User, Class, Role } from '../../types';
+import { Student, User, Class, Role, RelatedContact } from '../../types';
 import { CloseIcon, PlusIcon, UsersIcon } from '../icons/Icons';
 import { saveDocumentsBatch } from '../../lib/firebase';
+import { parseAnyDateToIso, formatDateForDisplay } from '../../lib/dateUtils';
 
 interface StudentImportModalProps {
     isOpen: boolean;
@@ -24,9 +25,11 @@ interface ParsedStudentRow {
     birthDate?: string;
     phone?: string;
     address?: string;
+    homeLocationLink?: string;
     parentName?: string;
     parentEmail?: string;
     parentPhone?: string;
+    relatedContacts: RelatedContact[];
     isValid: boolean;
     errors: string[];
 }
@@ -53,7 +56,7 @@ export const DATA_STRUCTURE_GUIDE = [
         label: "Curso / Grado / Paralelo",
         required: false,
         type: "Texto",
-        example: "10mo EGB A",
+        example: "8vo EGB A",
         description: "Grupo al que pertenece el estudiante. Si no se especifica, se usará el curso destino seleccionado."
     },
     {
@@ -76,9 +79,9 @@ export const DATA_STRUCTURE_GUIDE = [
         field: "fecha_nacimiento",
         label: "Fecha de Nacimiento",
         required: false,
-        type: "Fecha (AAAA-MM-DD o DD/MM/AAAA)",
-        example: "2010-05-14",
-        description: "Fecha de nacimiento del alumno."
+        type: "Fecha (AAAA-MM-DD o DD/MM/AAAA o formato Excel)",
+        example: "2013-09-01",
+        description: "Fecha de nacimiento del alumno. Admite fechas normales y números de serie de fechas de Excel automáticamente."
     },
     {
         field: "telefono",
@@ -93,23 +96,87 @@ export const DATA_STRUCTURE_GUIDE = [
         label: "Dirección Domiciliaria",
         required: false,
         type: "Texto",
-        example: "Av. Amazonas y Colón, Quito",
-        description: "Dirección de residencia del alumno."
+        example: "Agua Clara Y Las Lagunas",
+        description: "Dirección o barrio de residencia del alumno."
+    },
+    {
+        field: "enlace_google_maps",
+        label: "Enlace Google Maps (Ubicación)",
+        required: false,
+        type: "URL / Enlace web",
+        example: "https://maps.app.goo.gl/xyz123",
+        description: "Link o coordenadas de Google Maps para geolocalizar la vivienda del estudiante."
+    },
+    {
+        field: "madre_nombre",
+        label: "Nombre de la Madre",
+        required: false,
+        type: "Texto",
+        example: "Luz Mariana Barrio Zambrano",
+        description: "Nombre completo de la madre para la sección de Familiares y Contactos."
+    },
+    {
+        field: "madre_telefono",
+        label: "Teléfono de la Madre",
+        required: false,
+        type: "Texto / Número",
+        example: "0987112233",
+        description: "Número de celular o WhatsApp de la madre."
+    },
+    {
+        field: "madre_email",
+        label: "Correo de la Madre",
+        required: false,
+        type: "Correo Electrónico",
+        example: "luz.barrio@email.com",
+        description: "Correo electrónico de contacto de la madre."
+    },
+    {
+        field: "padre_nombre",
+        label: "Nombre del Padre",
+        required: false,
+        type: "Texto",
+        example: "Marilyn Fernández Suárez",
+        description: "Nombre completo del padre para la sección de Familiares y Contactos."
+    },
+    {
+        field: "padre_telefono",
+        label: "Teléfono del Padre",
+        required: false,
+        type: "Texto / Número",
+        example: "0998334455",
+        description: "Número de contacto del padre."
+    },
+    {
+        field: "padre_email",
+        label: "Correo del Padre",
+        required: false,
+        type: "Correo Electrónico",
+        example: "marilyn.fernandez@email.com",
+        description: "Correo electrónico del padre."
     },
     {
         field: "representante",
-        label: "Representante Legal / Padre",
+        label: "Representante Legal / Tutor",
         required: false,
         type: "Texto",
-        example: "Carlos Mendoza",
-        description: "Nombre completo de la madre, padre o representante legal."
+        example: "Luz Mariana Barrio Zambrano",
+        description: "Nombre del representante legal formal ante la institución."
+    },
+    {
+        field: "relacion_representante",
+        label: "Parentesco del Representante",
+        required: false,
+        type: "Texto",
+        example: "Madre",
+        description: "Parentesco del representante legal (Madre, Padre, Abuelo/a, Tío/a, etc.)."
     },
     {
         field: "email_representante",
         label: "Email del Representante",
         required: false,
         type: "Correo Electrónico",
-        example: "carlos.mendoza@email.com",
+        example: "luz.barrio@email.com",
         description: "Se creará un usuario familiar con este correo para que pueda consultar notas y citaciones."
     },
     {
@@ -117,8 +184,24 @@ export const DATA_STRUCTURE_GUIDE = [
         label: "Teléfono Representante",
         required: false,
         type: "Texto / Número",
-        example: "0987654321",
+        example: "0987112233",
         description: "Número de contacto directo con el representante legal."
+    },
+    {
+        field: "contacto_nombre",
+        label: "Contacto Adicional / Emergencia",
+        required: false,
+        type: "Texto",
+        example: "Rosa Zambrano",
+        description: "Nombre de familiar de contacto adicional o emergencia."
+    },
+    {
+        field: "contacto_telefono",
+        label: "Teléfono Contacto Adicional",
+        required: false,
+        type: "Texto / Número",
+        example: "0992345678",
+        description: "Teléfono del familiar de contacto adicional."
     }
 ];
 
@@ -156,14 +239,14 @@ const StudentImportModal: React.FC<StudentImportModalProps> = ({
         try {
             let workbook: XLSX.WorkBook;
             if (typeof data === 'string') {
-                workbook = XLSX.read(data, { type: 'string' });
+                workbook = XLSX.read(data, { type: 'string', cellDates: false });
             } else {
-                workbook = XLSX.read(new Uint8Array(data), { type: 'array' });
+                workbook = XLSX.read(new Uint8Array(data), { type: 'array', cellDates: false });
             }
 
             const firstSheetName = workbook.SheetNames[0];
             const worksheet = workbook.Sheets[firstSheetName];
-            const rawRows: Record<string, any>[] = XLSX.utils.sheet_to_json(worksheet, { defval: '' });
+            const rawRows: Record<string, any>[] = XLSX.utils.sheet_to_json(worksheet, { defval: '', raw: true });
 
             if (rawRows.length === 0) {
                 alert('El archivo no contiene filas de datos. Verifica que tenga una fila de encabezados y registros.');
@@ -174,25 +257,38 @@ const StudentImportModal: React.FC<StudentImportModalProps> = ({
             const results: ParsedStudentRow[] = rawRows.map((row, idx) => {
                 const normalizedRow: Record<string, string> = {};
                 for (const [k, v] of Object.entries(row)) {
-                    normalizedRow[normalizeHeader(k)] = String(v).trim();
+                    normalizedRow[normalizeHeader(k)] = String(v ?? '').trim();
                 }
 
-                // Field Detection
-                let nationalId = normalizedRow['cedula'] || normalizedRow['identificacion'] || normalizedRow['dni'] || normalizedRow['ci'] || normalizedRow['id'] || '';
+                const cleanName = (val: string) => String(val || '').replace(/\s+/g, ' ').trim();
+                const cleanPhone = (val: string) => {
+                    let p = String(val || '').replace(/[^\d+]/g, '').trim();
+                    if (p.length === 9 && p.startsWith('9')) p = '0' + p;
+                    return p;
+                };
+
+                // 1. Cédula / Identificación
+                let nationalId = cleanName(normalizedRow['cedula'] || normalizedRow['identificacion'] || normalizedRow['dni'] || normalizedRow['ci'] || normalizedRow['id'] || '');
+                if (/^\d{9}$/.test(nationalId)) {
+                    nationalId = nationalId.padStart(10, '0');
+                }
                 
+                // 2. Nombres y Apellidos
                 let name = normalizedRow['apellidos_y_nombres'] || normalizedRow['apellidos_nombres'] || normalizedRow['nombres_y_apellidos'] || normalizedRow['nombre_completo'] || normalizedRow['estudiante'] || normalizedRow['alumno'] || normalizedRow['nombre'] || '';
-                
-                // If separate apellidos and nombres columns exist
                 if (!name && (normalizedRow['apellidos'] || normalizedRow['nombres'])) {
-                    name = `${normalizedRow['apellidos'] || ''} ${normalizedRow['nombres'] || ''}`.trim();
+                    name = `${normalizedRow['apellidos'] || ''} ${normalizedRow['nombres'] || ''}`;
                 }
+                name = cleanName(name);
 
-                let className = normalizedRow['curso'] || normalizedRow['clase'] || normalizedRow['grado'] || normalizedRow['paralelo'] || normalizedRow['curso_paralelo'] || '';
+                // 3. Curso / Aula
+                let className = cleanName(normalizedRow['curso'] || normalizedRow['clase'] || normalizedRow['grado'] || normalizedRow['paralelo'] || normalizedRow['curso_paralelo'] || '');
 
+                // 4. Número de Lista
                 let rawListNum = normalizedRow['numero_lista'] || normalizedRow['no_lista'] || normalizedRow['lista'] || normalizedRow['orden'] || normalizedRow['num'];
                 let listNumber = rawListNum ? parseInt(rawListNum, 10) : (idx + 1);
                 if (isNaN(listNumber)) listNumber = idx + 1;
 
+                // 5. Género
                 let rawGender = (normalizedRow['genero'] || normalizedRow['sexo'] || '').toUpperCase();
                 let gender: 'FEMENINO' | 'MASCULINO' | 'OTRO' | undefined = undefined;
                 if (rawGender.startsWith('M') || rawGender === 'V' || rawGender.includes('MASC')) {
@@ -201,23 +297,139 @@ const StudentImportModal: React.FC<StudentImportModalProps> = ({
                     gender = 'FEMENINO';
                 }
 
-                let birthDate = normalizedRow['fecha_nacimiento'] || normalizedRow['nacimiento'] || normalizedRow['fnac'] || '';
-                // Standardize date if formatted as DD/MM/YYYY
-                if (birthDate.includes('/')) {
-                    const parts = birthDate.split('/');
-                    if (parts.length === 3) {
-                        if (parts[2].length === 4) {
-                            birthDate = `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
-                        }
+                // 6. Fecha de Nacimiento (con soporte para números de serie de Excel ej: 41518 y formatos DD/MM/AAAA)
+                let rawBirthDate = normalizedRow['fecha_nacimiento'] || normalizedRow['nacimiento'] || normalizedRow['fnac'] || normalizedRow['dob'] || normalizedRow['fecha_de_nacimiento'] || '';
+                let birthDate = parseAnyDateToIso(rawBirthDate);
+
+                // 7. Teléfono del alumno
+                let phone = cleanPhone(normalizedRow['telefono'] || normalizedRow['celular'] || normalizedRow['movil'] || '');
+                
+                // 8. Dirección domiciliaria
+                let address = cleanName(normalizedRow['direccion'] || normalizedRow['domicilio'] || '');
+
+                // 9. Enlace Google Maps / Ubicación GPS
+                let rawLocation = cleanName(normalizedRow['enlace_google_maps'] || 
+                                       normalizedRow['google_maps'] || 
+                                       normalizedRow['maps'] || 
+                                       normalizedRow['ubicacion_google_maps'] || 
+                                       normalizedRow['link_google_maps'] || 
+                                       normalizedRow['enlace_ubicacion'] || 
+                                       normalizedRow['link_ubicacion'] || 
+                                       normalizedRow['enlace_mapa'] || 
+                                       normalizedRow['mapa'] || 
+                                       normalizedRow['ubicacion'] || 
+                                       normalizedRow['croquis'] || 
+                                       normalizedRow['coordenadas'] || 
+                                       normalizedRow['gps'] || '');
+                let homeLocationLink = '';
+                if (rawLocation && !['no', 'sin enlace', '-', 'ninguno'].includes(rawLocation.toLowerCase())) {
+                    if (rawLocation.startsWith('http://') || rawLocation.startsWith('https://')) {
+                        homeLocationLink = rawLocation;
+                    } else {
+                        const cleanQuery = rawLocation.replace(/,/g, (match, offset, str) => {
+                            const prev = str[offset - 1];
+                            const next = str[offset + 1];
+                            if (/\d/.test(prev) && /\d/.test(next)) return '.';
+                            return ',';
+                        });
+                        homeLocationLink = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(cleanQuery)}`;
                     }
                 }
 
-                let phone = normalizedRow['telefono'] || normalizedRow['celular'] || normalizedRow['movil'] || '';
-                let address = normalizedRow['direccion'] || normalizedRow['domicilio'] || '';
+                // 10. Contactos y Familiares (Madre, Padre, Representante, Contacto de Emergencia)
+                const relatedContacts: RelatedContact[] = [];
 
-                let parentName = normalizedRow['representante'] || normalizedRow['tutor_legal'] || normalizedRow['padre'] || normalizedRow['madre'] || normalizedRow['nombre_representante'] || '';
-                let parentEmail = normalizedRow['email_representante'] || normalizedRow['correo_representante'] || normalizedRow['email'] || normalizedRow['correo'] || '';
-                let parentPhone = normalizedRow['telefono_representante'] || normalizedRow['celular_representante'] || normalizedRow['telefono_tutor'] || '';
+                // Madre
+                const madreNombre = cleanName(normalizedRow['madre_nombre'] || normalizedRow['nombre_madre'] || normalizedRow['madre'] || normalizedRow['mama'] || '');
+                const madreTel = cleanPhone(normalizedRow['madre_telefono'] || normalizedRow['telefono_madre'] || normalizedRow['celular_madre'] || normalizedRow['madre_celular'] || '');
+                const madreMail = cleanName(normalizedRow['madre_email'] || normalizedRow['correo_madre'] || normalizedRow['madre_correo'] || '');
+                const madreOcup = cleanName(normalizedRow['madre_ocupacion'] || normalizedRow['ocupacion_madre'] || normalizedRow['profesion_madre'] || '');
+
+                if (madreNombre) {
+                    relatedContacts.push({
+                        id: `rc-${idx + 1}-madre`,
+                        relation: 'Madre',
+                        name: madreNombre,
+                        phone: madreTel || undefined,
+                        email: madreMail || undefined,
+                        occupation: madreOcup || undefined
+                    });
+                }
+
+                // Padre
+                const padreNombre = cleanName(normalizedRow['padre_nombre'] || normalizedRow['nombre_padre'] || normalizedRow['padre'] || normalizedRow['papa'] || '');
+                const padreTel = cleanPhone(normalizedRow['padre_telefono'] || normalizedRow['telefono_padre'] || normalizedRow['celular_padre'] || normalizedRow['padre_celular'] || '');
+                const padreMail = cleanName(normalizedRow['padre_email'] || normalizedRow['correo_padre'] || normalizedRow['padre_correo'] || '');
+                const padreOcup = cleanName(normalizedRow['padre_ocupacion'] || normalizedRow['ocupacion_padre'] || normalizedRow['profesion_padre'] || '');
+
+                if (padreNombre) {
+                    relatedContacts.push({
+                        id: `rc-${idx + 1}-padre`,
+                        relation: 'Padre',
+                        name: padreNombre,
+                        phone: padreTel || undefined,
+                        email: padreMail || undefined,
+                        occupation: padreOcup || undefined
+                    });
+                }
+
+                // Representante Legal
+                const repNombre = cleanName(normalizedRow['representante'] || normalizedRow['tutor_legal'] || normalizedRow['nombre_representante'] || normalizedRow['representante_legal'] || normalizedRow['tutor'] || '');
+                const repEmail = cleanName(normalizedRow['email_representante'] || normalizedRow['correo_representante'] || normalizedRow['email_tutor'] || normalizedRow['representante_email'] || '');
+                const repPhone = cleanPhone(normalizedRow['telefono_representante'] || normalizedRow['celular_representante'] || normalizedRow['telefono_tutor'] || normalizedRow['representante_telefono'] || '');
+                const repRelacion = cleanName(normalizedRow['relacion_representante'] || normalizedRow['parentesco_representante'] || normalizedRow['parentesco'] || 'Representante Legal');
+                const repOcupacion = cleanName(normalizedRow['ocupacion_representante'] || normalizedRow['profesion_representante'] || '');
+
+                if (repNombre) {
+                    const match = relatedContacts.find(c => c.name.toLowerCase().trim() === repNombre.toLowerCase().trim());
+                    if (match) {
+                        if (!match.phone && repPhone) match.phone = repPhone;
+                        if (!match.email && repEmail) match.email = repEmail;
+                        if (!match.occupation && repOcupacion) match.occupation = repOcupacion;
+                    } else {
+                        relatedContacts.push({
+                            id: `rc-${idx + 1}-rep`,
+                            relation: repRelacion,
+                            name: repNombre,
+                            phone: repPhone || undefined,
+                            email: repEmail || undefined,
+                            occupation: repOcupacion || undefined
+                        });
+                    }
+                }
+
+                // Contacto Adicional / Emergencia
+                const c1Nombre = normalizedRow['contacto_nombre'] || normalizedRow['contacto_1_nombre'] || normalizedRow['contacto1_nombre'] || normalizedRow['nombre_contacto'] || normalizedRow['contacto_emergencia'] || normalizedRow['emergencia_nombre'] || '';
+                const c1Tel = normalizedRow['contacto_telefono'] || normalizedRow['contacto_1_telefono'] || normalizedRow['contacto1_telefono'] || normalizedRow['telefono_contacto'] || normalizedRow['telefono_emergencia'] || '';
+                const c1Mail = normalizedRow['contacto_email'] || normalizedRow['contacto_1_email'] || normalizedRow['contacto1_email'] || normalizedRow['email_contacto'] || '';
+                const c1Rel = normalizedRow['contacto_relacion'] || normalizedRow['contacto_1_relacion'] || normalizedRow['contacto1_relacion'] || normalizedRow['relacion_contacto'] || normalizedRow['parentesco_emergencia'] || 'Contacto Adicional';
+                const c1Ocup = normalizedRow['contacto_ocupacion'] || normalizedRow['contacto_1_ocupacion'] || '';
+
+                if (c1Nombre && !relatedContacts.some(c => c.name.toLowerCase().trim() === c1Nombre.toLowerCase().trim())) {
+                    relatedContacts.push({
+                        id: `rc-${idx + 1}-c1`,
+                        relation: c1Rel,
+                        name: c1Nombre,
+                        phone: c1Tel || undefined,
+                        email: c1Mail || undefined,
+                        occupation: c1Ocup || undefined
+                    });
+                }
+
+                // If only basic parent info provided without specific contact headers, ensure at least one contact is in relatedContacts
+                const parentName = repNombre || madreNombre || padreNombre || '';
+                const parentEmail = repEmail || madreMail || padreMail || '';
+                const parentPhone = repPhone || madreTel || padreTel || '';
+
+                if (parentName && relatedContacts.length === 0) {
+                    relatedContacts.push({
+                        id: `rc-${idx + 1}-parent`,
+                        relation: 'Representante Legal',
+                        name: parentName,
+                        phone: parentPhone || undefined,
+                        email: parentEmail || undefined
+                    });
+                }
 
                 const errors: string[] = [];
                 if (!name) errors.push('Falta el nombre del estudiante');
@@ -233,9 +445,11 @@ const StudentImportModal: React.FC<StudentImportModalProps> = ({
                     birthDate,
                     phone,
                     address,
+                    homeLocationLink,
                     parentName,
                     parentEmail,
                     parentPhone,
+                    relatedContacts,
                     isValid: Boolean(name),
                     errors
                 };
@@ -278,59 +492,75 @@ const StudentImportModal: React.FC<StudentImportModalProps> = ({
     const downloadExcelTemplate = () => {
         const sampleData = [
             {
-                "cedula": "1720349812",
-                "apellidos_y_nombres": "Mendoza Salazar Juan Carlos",
-                "curso": "10mo EGB A",
-                "numero_lista": 1,
-                "genero": "MASCULINO",
-                "fecha_nacimiento": "2010-05-14",
+                "cedula": "1250773676",
+                "apellidos_y_nombres": "Fernández Barrio Marilyn Alejandra",
+                "curso": "8vo EGB A",
+                "numero_lista": 15,
+                "genero": "FEMENINO",
+                "fecha_nacimiento": "2013-09-01",
                 "telefono": "0991234567",
-                "direccion": "Av. Amazonas y Colón, Quito",
-                "representante": "Carlos Mendoza",
-                "email_representante": "carlos.mendoza@email.com",
-                "telefono_representante": "0987654321"
+                "direccion": "Agua Clara Y Las Lagunas",
+                "enlace_google_maps": "https://maps.app.goo.gl/example1",
+                "madre_nombre": "Luz Mariana Barrio Zambrano",
+                "madre_telefono": "0987112233",
+                "madre_email": "luz.barrio@email.com",
+                "madre_ocupacion": "Comerciante",
+                "padre_nombre": "Marilyn Fernández Suárez",
+                "padre_telefono": "0998334455",
+                "padre_email": "",
+                "padre_ocupacion": "Empleado privado",
+                "representante": "Luz Mariana Barrio Zambrano",
+                "relacion_representante": "Madre",
+                "email_representante": "luz.barrio@email.com",
+                "telefono_representante": "0987112233"
             },
             {
                 "cedula": "1751928374",
                 "apellidos_y_nombres": "Paredes Gómez Valentina Sofía",
-                "curso": "10mo EGB A",
-                "numero_lista": 2,
+                "curso": "8vo EGB A",
+                "numero_lista": 16,
                 "genero": "FEMENINO",
-                "fecha_nacimiento": "2010-09-22",
+                "fecha_nacimiento": "2013-05-22",
                 "telefono": "0997654321",
                 "direccion": "Sector La Pradera, Pasaje B",
+                "enlace_google_maps": "https://maps.app.goo.gl/example2",
+                "madre_nombre": "Lucía Gómez",
+                "madre_telefono": "0998877665",
+                "madre_email": "lucia.gomez@email.com",
+                "madre_ocupacion": "Docente",
+                "padre_nombre": "Carlos Paredes",
+                "padre_telefono": "0981234567",
+                "padre_email": "carlos.paredes@email.com",
+                "padre_ocupacion": "Ingeniero",
                 "representante": "Lucía Gómez",
+                "relacion_representante": "Madre",
                 "email_representante": "lucia.gomez@email.com",
                 "telefono_representante": "0998877665"
-            },
-            {
-                "cedula": "1782341908",
-                "apellidos_y_nombres": "Tapia Caiza Mateo David",
-                "curso": "10mo EGB A",
-                "numero_lista": 3,
-                "genero": "MASCULINO",
-                "fecha_nacimiento": "2010-11-03",
-                "telefono": "0984561230",
-                "direccion": "Calle Guayaquil y Chile",
-                "representante": "David Tapia",
-                "email_representante": "david.tapia@email.com",
-                "telefono_representante": "0981122334"
             }
         ];
 
         const worksheet = XLSX.utils.json_to_sheet(sampleData);
-        // Column widths
         worksheet['!cols'] = [
             { wch: 15 }, // cedula
-            { wch: 32 }, // apellidos_y_nombres
+            { wch: 34 }, // apellidos_y_nombres
             { wch: 14 }, // curso
             { wch: 14 }, // numero_lista
             { wch: 14 }, // genero
             { wch: 18 }, // fecha_nacimiento
             { wch: 14 }, // telefono
-            { wch: 28 }, // direccion
-            { wch: 24 }, // representante
-            { wch: 28 }, // email_representante
+            { wch: 30 }, // direccion
+            { wch: 32 }, // enlace_google_maps
+            { wch: 28 }, // madre_nombre
+            { wch: 18 }, // madre_telefono
+            { wch: 24 }, // madre_email
+            { wch: 20 }, // madre_ocupacion
+            { wch: 28 }, // padre_nombre
+            { wch: 18 }, // padre_telefono
+            { wch: 24 }, // padre_email
+            { wch: 20 }, // padre_ocupacion
+            { wch: 28 }, // representante
+            { wch: 20 }, // relacion_representante
+            { wch: 26 }, // email_representante
             { wch: 22 }  // telefono_representante
         ];
 
@@ -341,10 +571,9 @@ const StudentImportModal: React.FC<StudentImportModalProps> = ({
 
     const downloadCsvTemplate = () => {
         const csvContent = 
-            "\uFEFFcedula,apellidos_y_nombres,curso,numero_lista,genero,fecha_nacimiento,telefono,direccion,representante,email_representante,telefono_representante\n" +
-            "1720349812,Mendoza Salazar Juan Carlos,10mo EGB A,1,MASCULINO,2010-05-14,0991234567,Av. Amazonas y Colón,Carlos Mendoza,carlos.mendoza@email.com,0987654321\n" +
-            "1751928374,Paredes Gómez Valentina Sofía,10mo EGB A,2,FEMENINO,2010-09-22,0997654321,Sector La Pradera,Lucía Gómez,lucia.gomez@email.com,0998877665\n" +
-            "1782341908,Tapia Caiza Mateo David,10mo EGB A,3,MASCULINO,2010-11-03,0984561230,Calle Guayaquil y Chile,David Tapia,david.tapia@email.com,0981122334\n";
+            "\uFEFFcedula,apellidos_y_nombres,curso,numero_lista,genero,fecha_nacimiento,telefono,direccion,enlace_google_maps,madre_nombre,madre_telefono,madre_email,padre_nombre,padre_telefono,padre_email,representante,relacion_representante,email_representante,telefono_representante\n" +
+            "1250773676,Fernández Barrio Marilyn Alejandra,8vo EGB A,15,FEMENINO,2013-09-01,0991234567,Agua Clara Y Las Lagunas,https://maps.app.goo.gl/example1,Luz Mariana Barrio Zambrano,0987112233,luz.barrio@email.com,Marilyn Fernández Suárez,0998334455,,Luz Mariana Barrio Zambrano,Madre,luz.barrio@email.com,0987112233\n" +
+            "1751928374,Paredes Gómez Valentina Sofía,8vo EGB A,16,FEMENINO,2013-05-22,0997654321,Sector La Pradera,https://maps.app.goo.gl/example2,Lucía Gómez,0998877665,lucia.gomez@email.com,Carlos Paredes,0981234567,carlos.paredes@email.com,Lucía Gómez,Madre,lucia.gomez@email.com,0998877665\n";
         
         const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
         const link = document.createElement("a");
@@ -458,6 +687,8 @@ const StudentImportModal: React.FC<StudentImportModalProps> = ({
                     birthDate: row.birthDate || undefined,
                     phone: row.phone || undefined,
                     address: row.address || undefined,
+                    homeLocationLink: row.homeLocationLink || undefined,
+                    relatedContacts: row.relatedContacts && row.relatedContacts.length > 0 ? row.relatedContacts : undefined,
                     photoUrl: `https://placehold.co/200x200/2563eb/white?text=${encodeURIComponent(row.name.charAt(0))}`
                 };
 
@@ -658,8 +889,9 @@ const StudentImportModal: React.FC<StudentImportModalProps> = ({
                                                     <th className="px-3 py-2 text-left">Cédula</th>
                                                     <th className="px-3 py-2 text-left">Nombres y Apellidos</th>
                                                     <th className="px-3 py-2 text-left">Curso</th>
-                                                    <th className="px-3 py-2 text-left">Género</th>
-                                                    <th className="px-3 py-2 text-left">Representante</th>
+                                                    <th className="px-3 py-2 text-left">F. Nacimiento</th>
+                                                    <th className="px-3 py-2 text-left">Contactos</th>
+                                                    <th className="px-3 py-2 text-left">Ubicación Maps</th>
                                                     <th className="px-3 py-2 text-left">Estado</th>
                                                 </tr>
                                             </thead>
@@ -670,9 +902,32 @@ const StudentImportModal: React.FC<StudentImportModalProps> = ({
                                                         <td className="px-3 py-2 font-mono text-slate-700">{row.nationalId || <span className="text-amber-500 italic">Temporal</span>}</td>
                                                         <td className="px-3 py-2 font-semibold text-slate-900">{row.name}</td>
                                                         <td className="px-3 py-2 text-slate-600">{row.className || 'Sin curso'}</td>
-                                                        <td className="px-3 py-2 text-slate-600">{row.gender || '-'}</td>
+                                                        <td className="px-3 py-2 text-slate-700 font-mono text-[11px]">
+                                                            {row.birthDate ? (
+                                                                <span className="inline-flex items-center gap-1">
+                                                                    📅 {formatDateForDisplay(row.birthDate)}
+                                                                </span>
+                                                            ) : (
+                                                                <span className="text-slate-400 italic">No indicada</span>
+                                                            )}
+                                                        </td>
                                                         <td className="px-3 py-2 text-slate-600">
-                                                            {row.parentName || row.parentEmail || '-'}
+                                                            {row.relatedContacts && row.relatedContacts.length > 0 ? (
+                                                                <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-50 text-blue-700 rounded-full font-semibold text-[10px]">
+                                                                    👥 {row.relatedContacts.length} ({row.relatedContacts.map(c => c.relation).join(', ')})
+                                                                </span>
+                                                            ) : (
+                                                                <span className="text-slate-400 italic">Sin contactos</span>
+                                                            )}
+                                                        </td>
+                                                        <td className="px-3 py-2 text-slate-600">
+                                                            {row.homeLocationLink ? (
+                                                                <span className="inline-flex items-center gap-1 text-emerald-600 font-semibold" title={row.homeLocationLink}>
+                                                                    📍 Vinculado
+                                                                </span>
+                                                            ) : (
+                                                                <span className="text-slate-400 italic">-</span>
+                                                            )}
                                                         </td>
                                                         <td className="px-3 py-2">
                                                             {row.isValid ? (

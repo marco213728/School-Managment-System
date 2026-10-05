@@ -13,6 +13,7 @@ import ScheduleView from '../schedule/ScheduleView';
 import ViccInterventionForm from '../vicerrectorado/ViccInterventionForm';
 import ViccAgreementPrint from '../vicerrectorado/ViccAgreementPrint';
 import { saveDocument, deleteDocument } from '../../lib/firebase';
+import { parseAnyDateToIso, formatDateForDisplay, isExcelSerialDate } from '../../lib/dateUtils';
 
 
 // FIX: Changed 'vicerrectorate' to support the Vice-Rectorate module.
@@ -145,8 +146,234 @@ const ContactForm: React.FC<ContactFormProps> = ({ isOpen, onClose, onSave, cont
     );
 };
 
+interface EditStudentGeneralModalProps {
+    isOpen: boolean;
+    onClose: () => void;
+    student: Student | null;
+    onSave: (updated: Partial<Student>) => void;
+}
 
-// FIX: Update component signature to accept new props.
+const EditStudentGeneralModal: React.FC<EditStudentGeneralModalProps> = ({ isOpen, onClose, student, onSave }) => {
+    const [formData, setFormData] = useState({
+        name: '',
+        nationalId: '',
+        birthDate: '',
+        gender: '' as 'FEMENINO' | 'MASCULINO' | 'OTRO' | '',
+        listNumber: '',
+        phone: '',
+        address: '',
+        homeLocationLink: ''
+    });
+
+    useEffect(() => {
+        if (student) {
+            setFormData({
+                name: student.name || '',
+                nationalId: student.nationalId || '',
+                birthDate: parseAnyDateToIso(student.birthDate) || '',
+                gender: student.gender || '',
+                listNumber: student.listNumber !== undefined ? String(student.listNumber) : '',
+                phone: student.phone || '',
+                address: student.address || '',
+                homeLocationLink: student.homeLocationLink || ''
+            });
+        }
+    }, [student, isOpen]);
+
+    if (!isOpen || !student) return null;
+
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+        const { name, value } = e.target;
+        setFormData(prev => ({ ...prev, [name]: value }));
+    };
+
+    const handleGenerateMapsUrl = () => {
+        if (!formData.address.trim()) {
+            alert('Por favor, ingresa primero una dirección.');
+            return;
+        }
+        const generated = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(formData.address.trim())}`;
+        setFormData(prev => ({ ...prev, homeLocationLink: generated }));
+    };
+
+    const handleSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        onSave({
+            name: formData.name.trim(),
+            nationalId: formData.nationalId.trim() || undefined,
+            birthDate: formData.birthDate.trim() || undefined,
+            gender: (formData.gender as any) || undefined,
+            listNumber: formData.listNumber ? parseInt(formData.listNumber, 10) : undefined,
+            phone: formData.phone.trim() || undefined,
+            address: formData.address.trim() || undefined,
+            homeLocationLink: formData.homeLocationLink.trim() || undefined
+        });
+    };
+
+    return (
+        <div className="fixed inset-0 bg-black/60 z-50 flex justify-center items-center p-4 overflow-y-auto" onClick={onClose}>
+            <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-xl relative border border-slate-200" onClick={e => e.stopPropagation()}>
+                <button onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-gray-700">
+                    <CloseIcon className="h-5 w-5" />
+                </button>
+                <div className="flex items-center gap-2 mb-4 border-b pb-3">
+                    <LocationMarkerIcon className="h-6 w-6 text-primary-600" />
+                    <div>
+                        <h2 className="text-lg font-bold text-gray-900">Editar Datos y Ubicación del Estudiante</h2>
+                        <p className="text-xs text-gray-500">Actualiza fecha de nacimiento, cédula, dirección y enlace de Google Maps</p>
+                    </div>
+                </div>
+
+                <form onSubmit={handleSubmit} className="space-y-4">
+                    <div>
+                        <label className="block text-xs font-semibold text-gray-700 uppercase">Nombre Completo</label>
+                        <input
+                            type="text"
+                            name="name"
+                            value={formData.name}
+                            onChange={handleChange}
+                            required
+                            className="mt-1 w-full p-2 border rounded-lg text-sm bg-white"
+                        />
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div>
+                            <label className="block text-xs font-semibold text-gray-700 uppercase">Cédula / Identificación</label>
+                            <input
+                                type="text"
+                                name="nationalId"
+                                value={formData.nationalId}
+                                onChange={handleChange}
+                                placeholder="10 dígitos"
+                                className="mt-1 w-full p-2 border rounded-lg text-sm font-mono"
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-xs font-semibold text-gray-700 uppercase">Fecha de Nacimiento</label>
+                            <input
+                                type="date"
+                                name="birthDate"
+                                value={formData.birthDate}
+                                onChange={handleChange}
+                                className="mt-1 w-full p-2 border rounded-lg text-sm"
+                            />
+                            {student.birthDate && isExcelSerialDate(student.birthDate) && (
+                                <p className="text-[11px] text-amber-600 mt-0.5">
+                                    💡 Se convirtió automáticamente el valor previo de Excel ({student.birthDate})
+                                </p>
+                            )}
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                        <div>
+                            <label className="block text-xs font-semibold text-gray-700 uppercase">Género</label>
+                            <select
+                                name="gender"
+                                value={formData.gender}
+                                onChange={handleChange}
+                                className="mt-1 w-full p-2 border rounded-lg text-sm bg-white"
+                            >
+                                <option value="">No especificado</option>
+                                <option value="FEMENINO">FEMENINO</option>
+                                <option value="MASCULINO">MASCULINO</option>
+                                <option value="OTRO">OTRO</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label className="block text-xs font-semibold text-gray-700 uppercase">Nº de Lista</label>
+                            <input
+                                type="number"
+                                name="listNumber"
+                                value={formData.listNumber}
+                                onChange={handleChange}
+                                min="1"
+                                className="mt-1 w-full p-2 border rounded-lg text-sm"
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-xs font-semibold text-gray-700 uppercase">Teléfono Alumno</label>
+                            <input
+                                type="tel"
+                                name="phone"
+                                value={formData.phone}
+                                onChange={handleChange}
+                                className="mt-1 w-full p-2 border rounded-lg text-sm"
+                            />
+                        </div>
+                    </div>
+
+                    <div>
+                        <label className="block text-xs font-semibold text-gray-700 uppercase">Dirección Domiciliaria</label>
+                        <input
+                            type="text"
+                            name="address"
+                            value={formData.address}
+                            onChange={handleChange}
+                            placeholder="Ej. Agua Clara Y Las Lagunas"
+                            className="mt-1 w-full p-2 border rounded-lg text-sm"
+                        />
+                    </div>
+
+                    <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
+                        <div className="flex justify-between items-center">
+                            <label className="block text-xs font-bold text-slate-800 uppercase flex items-center gap-1.5">
+                                <span>📍</span> Enlace de Ubicación para Google Maps
+                            </label>
+                            {formData.address && (
+                                <button
+                                    type="button"
+                                    onClick={handleGenerateMapsUrl}
+                                    className="text-[11px] text-primary-700 hover:text-primary-900 font-semibold underline flex items-center gap-1"
+                                >
+                                    🔍 Generar desde Dirección
+                                </button>
+                            )}
+                        </div>
+                        <input
+                            type="url"
+                            name="homeLocationLink"
+                            value={formData.homeLocationLink}
+                            onChange={handleChange}
+                            placeholder="https://maps.app.goo.gl/... o https://www.google.com/maps/search/?api=1&query=..."
+                            className="w-full p-2 border rounded-lg text-xs font-mono bg-white"
+                        />
+                        <div className="flex justify-between items-center text-[11px] text-slate-500">
+                            <span>Pega el enlace compartido desde la app o web de Google Maps.</span>
+                            {formData.homeLocationLink && (
+                                <a
+                                    href={formData.homeLocationLink}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-blue-600 font-semibold hover:underline inline-flex items-center gap-1"
+                                >
+                                    <span>↗ Probar enlace</span>
+                                </a>
+                            )}
+                        </div>
+                    </div>
+
+                    <div className="flex justify-end gap-3 pt-3 border-t">
+                        <button
+                            type="button"
+                            onClick={onClose}
+                            className="px-4 py-2 bg-slate-100 text-slate-700 font-semibold text-xs rounded-lg hover:bg-slate-200 transition"
+                        >
+                            Cancelar
+                        </button>
+                        <button
+                            type="submit"
+                            className="px-5 py-2 bg-primary-600 text-white font-bold text-xs rounded-lg hover:bg-primary-700 shadow-sm transition"
+                        >
+                            Guardar Cambios
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    );
+};
 const StudentProfileCard: React.FC<StudentProfileCardProps> = ({ 
     studentId, 
     onClose, 
@@ -186,6 +413,8 @@ const StudentProfileCard: React.FC<StudentProfileCardProps> = ({
     const [printingViccIntervention, setPrintingViccIntervention] = useState<ViccIntervention | null>(null);
     const [isContactFormOpen, setIsContactFormOpen] = useState(false);
     const [editingContact, setEditingContact] = useState<RelatedContact | null>(null);
+    const [isEditGeneralOpen, setIsEditGeneralOpen] = useState(false);
+    const [isFixingDate, setIsFixingDate] = useState(false);
 
     const [studentData, setStudentData] = useState<Student | null>(null);
     
@@ -225,15 +454,63 @@ const StudentProfileCard: React.FC<StudentProfileCardProps> = ({
       }
     }, [studentData, studentId, effectiveInstitutionId, allUsers, allClasses, allHealthRecords, allMedicalVisits, allInterventions, viccInterventions]);
 
-    const formattedBirthDate = useMemo(() => {
-        if (!profileData?.birthDate) return 'No registrada';
-        // Handles YYYY-MM-DD format without timezone issues.
-        const parts = profileData.birthDate.split('-');
-        if (parts.length === 3) {
-            return `${parts[2]}/${parts[1]}/${parts[0]}`;
-        }
-        return profileData.birthDate; // fallback for other formats
+    const isBirthDateExcelSerial = useMemo(() => {
+        return isExcelSerialDate(profileData?.birthDate);
     }, [profileData?.birthDate]);
+
+    const formattedBirthDate = useMemo(() => {
+        return formatDateForDisplay(profileData?.birthDate);
+    }, [profileData?.birthDate]);
+
+    const handleFixStudentBirthDate = async () => {
+        if (!studentData) return;
+        const normalizedIso = parseAnyDateToIso(studentData.birthDate);
+        if (!normalizedIso) return;
+        
+        setIsFixingDate(true);
+        try {
+            const updatedStudent: Student = {
+                ...studentData,
+                birthDate: normalizedIso
+            };
+            setStudentData(updatedStudent);
+            await saveDocument('students', updatedStudent.id, updatedStudent);
+            if (onUpdateStudents && allStudents) {
+                onUpdateStudents(allStudents.map(s => s.id === updatedStudent.id ? updatedStudent : s));
+            }
+        } finally {
+            setIsFixingDate(false);
+        }
+    };
+
+    const handleAutoGenerateMapsFromAddress = async () => {
+        if (!studentData || !studentData.address) return;
+        const generatedUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(studentData.address)}`;
+        const updatedStudent: Student = {
+            ...studentData,
+            homeLocationLink: generatedUrl
+        };
+        setStudentData(updatedStudent);
+        await saveDocument('students', updatedStudent.id, updatedStudent);
+        if (onUpdateStudents && allStudents) {
+            onUpdateStudents(allStudents.map(s => s.id === updatedStudent.id ? updatedStudent : s));
+        }
+    };
+
+    const handleSaveGeneralStudent = async (updatedFields: Partial<Student>) => {
+        if (!studentData) return;
+        const updatedStudent: Student = {
+            ...studentData,
+            ...updatedFields,
+            birthDate: updatedFields.birthDate ? parseAnyDateToIso(updatedFields.birthDate) : studentData.birthDate
+        };
+        setStudentData(updatedStudent);
+        await saveDocument('students', updatedStudent.id, updatedStudent);
+        if (onUpdateStudents && allStudents) {
+            onUpdateStudents(allStudents.map(s => s.id === updatedStudent.id ? updatedStudent : s));
+        }
+        setIsEditGeneralOpen(false);
+    };
 
     useEffect(() => {
         const student = (allStudents || MOCK_STUDENTS).find(s => s.id === studentId);
@@ -449,24 +726,152 @@ const StudentProfileCard: React.FC<StudentProfileCardProps> = ({
             <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
                 {/* Left Column: Student Details */}
                 <div className="lg:col-span-2 space-y-4">
-                    <div className="bg-white p-4 rounded-lg border">
-                        <h3 className="text-xl font-bold text-gray-900">{profileData.name}</h3>
+                    <div className="bg-white p-4 rounded-lg border flex justify-between items-center">
+                        <div>
+                            <h3 className="text-xl font-bold text-gray-900">{profileData.name}</h3>
+                            <p className="text-xs text-gray-500 font-mono mt-0.5">ID: {profileData.id}</p>
+                        </div>
+                        {isEditable && (
+                            <button
+                                onClick={() => setIsEditGeneralOpen(true)}
+                                className="px-2.5 py-1 text-xs font-semibold text-primary-700 bg-primary-50 hover:bg-primary-100 border border-primary-200 rounded-lg flex items-center gap-1.5 transition shadow-xs"
+                                title="Editar datos personales, fecha de nacimiento o enlace Google Maps"
+                            >
+                                <EditIcon className="h-3.5 w-3.5" />
+                                <span>Editar Ficha</span>
+                            </button>
+                        )}
                     </div>
     
                     <div className="bg-white p-4 rounded-lg border space-y-4">
                         <InfoItem label="Grado">{profileData.grade || studentClass?.name || 'No asignado'}</InfoItem>
                         <InfoItem label="No de Lista">{profileData.listNumber || 'N/A'}</InfoItem>
                         <InfoItem label="Cédula">{profileData.nationalId || 'No registrada'}</InfoItem>
-                        <InfoItem label="Fecha de Nacimiento">{formattedBirthDate}</InfoItem>
+                        <div>
+                            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Fecha de Nacimiento</p>
+                            <div className="flex items-center justify-between gap-2 mt-1">
+                                <div className="flex items-center gap-2">
+                                    <CalendarIcon className="h-4 w-4 text-gray-400 flex-shrink-0" />
+                                    <span className="text-gray-800 font-medium">{formattedBirthDate}</span>
+                                </div>
+                                {isEditable && (
+                                    <button 
+                                        onClick={() => setIsEditGeneralOpen(true)} 
+                                        className="text-xs text-primary-600 hover:text-primary-800 p-1 rounded hover:bg-slate-100"
+                                        title="Editar fecha de nacimiento"
+                                    >
+                                        <EditIcon className="h-3.5 w-3.5" />
+                                    </button>
+                                )}
+                            </div>
+                            {isBirthDateExcelSerial && (
+                                <div className="mt-2 p-2.5 bg-amber-50 border border-amber-300 rounded-lg text-xs text-amber-900 space-y-1.5">
+                                    <div className="flex items-center gap-1 font-semibold text-[11px]">
+                                        <span>⚠️</span>
+                                        <span>Detectado formato numérico de Excel ({profileData.birthDate})</span>
+                                    </div>
+                                    <p className="text-[11px] text-amber-800">
+                                        Fecha real calculada: <strong>{formattedBirthDate}</strong>
+                                    </p>
+                                    {isEditable && (
+                                        <button
+                                            type="button"
+                                            onClick={handleFixStudentBirthDate}
+                                            disabled={isFixingDate}
+                                            className="w-full mt-1 px-2.5 py-1 bg-amber-600 hover:bg-amber-700 text-white rounded text-[11px] font-bold shadow-xs transition flex justify-center items-center gap-1"
+                                        >
+                                            {isFixingDate ? 'Guardando...' : '⚡ Guardar fecha estándar (YYYY-MM-DD)'}
+                                        </button>
+                                    )}
+                                </div>
+                            )}
+                        </div>
                         <InfoItem label="Género">{profileData.gender || 'No registrado'}</InfoItem>
-                        <InfoItem label="Dirección" icon={LocationMarkerIcon}>{profileData.address || 'No registrada'}</InfoItem>
-                        {profileData.homeLocationLink && (
-                             <InfoItem label="Enlace de Ubicación" icon={ExternalLinkIcon}>
-                                <a href={profileData.homeLocationLink} target="_blank" rel="noopener noreferrer" className="text-primary-600 hover:underline break-all">
-                                    Ver en mapa
-                                </a>
-                            </InfoItem>
-                        )}
+                        <div>
+                            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Dirección Domiciliaria</p>
+                            <div className="flex items-center justify-between gap-2 mt-1">
+                                <div className="flex items-center gap-2">
+                                    <LocationMarkerIcon className="h-4 w-4 text-gray-400 flex-shrink-0" />
+                                    <span className="text-gray-800 break-words">{profileData.address || 'No registrada'}</span>
+                                </div>
+                                {isEditable && (
+                                    <button 
+                                        onClick={() => setIsEditGeneralOpen(true)}
+                                        className="text-xs text-primary-600 hover:text-primary-800 p-1 rounded hover:bg-slate-100"
+                                        title="Editar dirección"
+                                    >
+                                        <EditIcon className="h-3.5 w-3.5" />
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Campo de Enlace de Ubicación para Google Maps */}
+                        <div className="pt-2 border-t border-slate-100">
+                            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider flex items-center justify-between">
+                                <span>Ubicación en Google Maps</span>
+                                {profileData.homeLocationLink && (
+                                    <span className="text-[10px] text-emerald-600 font-bold bg-emerald-50 px-1.5 py-0.5 rounded">
+                                        Geolocalizado
+                                    </span>
+                                )}
+                            </p>
+                            <div className="mt-1.5">
+                                {profileData.homeLocationLink ? (
+                                    <div className="space-y-2">
+                                        <div className="flex items-center gap-2 flex-wrap">
+                                            <a
+                                                href={profileData.homeLocationLink}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 rounded-lg text-xs font-bold transition shadow-xs"
+                                            >
+                                                <ExternalLinkIcon className="h-4 w-4 text-emerald-600" />
+                                                <span>Ver en Google Maps</span>
+                                            </a>
+                                            {isEditable && (
+                                                <button
+                                                    onClick={() => setIsEditGeneralOpen(true)}
+                                                    className="text-xs text-blue-600 hover:underline flex items-center gap-1 py-1"
+                                                >
+                                                    <EditIcon className="h-3 w-3" /> Cambiar link
+                                                </button>
+                                            )}
+                                        </div>
+                                        <p className="text-[11px] text-slate-500 font-mono break-all truncate max-w-full bg-slate-50 p-1.5 rounded border border-slate-100" title={profileData.homeLocationLink}>
+                                            {profileData.homeLocationLink}
+                                        </p>
+                                    </div>
+                                ) : (
+                                    <div className="space-y-2">
+                                        <div className="flex items-center gap-1.5 text-xs text-gray-400 italic">
+                                            <LocationMarkerIcon className="h-4 w-4 text-gray-300" />
+                                            <span>Sin enlace registrado</span>
+                                        </div>
+                                        {isEditable && (
+                                            <div className="flex items-center gap-2 flex-wrap">
+                                                <button
+                                                    onClick={() => setIsEditGeneralOpen(true)}
+                                                    className="inline-flex items-center gap-1 px-2.5 py-1 bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200 rounded-lg text-xs font-semibold transition"
+                                                >
+                                                    <PlusIcon className="h-3.5 w-3.5" />
+                                                    <span>Añadir enlace Google Maps</span>
+                                                </button>
+                                                {profileData.address && (
+                                                    <button
+                                                        onClick={handleAutoGenerateMapsFromAddress}
+                                                        className="inline-flex items-center gap-1 px-2 py-1 bg-slate-50 text-slate-700 hover:bg-slate-100 border border-slate-200 rounded-lg text-xs transition"
+                                                        title="Generar automáticamente enlace de búsqueda en Google Maps a partir de la dirección"
+                                                    >
+                                                        <span>🗺️ Buscar por dirección</span>
+                                                    </button>
+                                                )}
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+                        </div>
                     </div>
 
                     {/* Asignación Académica y Horario Oficial */}
@@ -1094,6 +1499,14 @@ const StudentProfileCard: React.FC<StudentProfileCardProps> = ({
                     onClose={() => setIsContactFormOpen(false)}
                     onSave={handleSaveContact}
                     contactToEdit={editingContact}
+                />
+            )}
+            {isEditGeneralOpen && (
+                <EditStudentGeneralModal
+                    isOpen={isEditGeneralOpen}
+                    onClose={() => setIsEditGeneralOpen(false)}
+                    student={studentData}
+                    onSave={handleSaveGeneralStudent}
                 />
             )}
         </>

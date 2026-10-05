@@ -2,7 +2,8 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { Student, User, Class, Role } from '../../types';
 import { UserContext } from '../../contexts/UserContext';
-import { CloseIcon } from '../icons/Icons';
+import { CloseIcon, LocationMarkerIcon, ExternalLinkIcon } from '../icons/Icons';
+import { parseAnyDateToIso } from '../../lib/dateUtils';
 
 interface StudentFormProps {
     isOpen: boolean;
@@ -15,7 +16,18 @@ interface StudentFormProps {
 
 const StudentForm: React.FC<StudentFormProps> = ({ isOpen, onClose, onSave, studentToEdit, allUsers, allClasses }) => {
     const { user: currentUser } = useContext(UserContext);
-    const [studentData, setStudentData] = useState({ name: '', classId: '', phone: '', address: '', photoUrl: '' });
+    const [studentData, setStudentData] = useState({
+        name: '',
+        classId: '',
+        nationalId: '',
+        birthDate: '',
+        gender: '' as 'FEMENINO' | 'MASCULINO' | 'OTRO' | '',
+        listNumber: '',
+        phone: '',
+        address: '',
+        homeLocationLink: '',
+        photoUrl: ''
+    });
     const [parentData, setParentData] = useState({ name: '', email: '', phone: '', address: '' });
     const [photoPreview, setPhotoPreview] = useState<string | null>(null);
 
@@ -25,8 +37,13 @@ const StudentForm: React.FC<StudentFormProps> = ({ isOpen, onClose, onSave, stud
             setStudentData({
                 name: studentToEdit.name,
                 classId: studentToEdit.classId,
+                nationalId: studentToEdit.nationalId || '',
+                birthDate: studentToEdit.birthDate ? parseAnyDateToIso(studentToEdit.birthDate) : '',
+                gender: studentToEdit.gender || '',
+                listNumber: studentToEdit.listNumber !== undefined ? String(studentToEdit.listNumber) : '',
                 phone: studentToEdit.phone || '',
                 address: studentToEdit.address || '',
+                homeLocationLink: studentToEdit.homeLocationLink || '',
                 photoUrl: studentToEdit.photoUrl || '',
             });
             if (parent) {
@@ -40,7 +57,18 @@ const StudentForm: React.FC<StudentFormProps> = ({ isOpen, onClose, onSave, stud
             setPhotoPreview(studentToEdit.photoUrl || null);
         } else {
             // Reset form
-            setStudentData({ name: '', classId: '', phone: '', address: '', photoUrl: '' });
+            setStudentData({
+                name: '',
+                classId: '',
+                nationalId: '',
+                birthDate: '',
+                gender: '',
+                listNumber: '',
+                phone: '',
+                address: '',
+                homeLocationLink: '',
+                photoUrl: ''
+            });
             setParentData({ name: '', email: '', phone: '', address: '' });
             setPhotoPreview(null);
         }
@@ -52,6 +80,15 @@ const StudentForm: React.FC<StudentFormProps> = ({ isOpen, onClose, onSave, stud
 
     const handleParentChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setParentData(prev => ({ ...prev, [e.target.name]: e.target.value }));
+    };
+
+    const handleAutoGenerateMaps = () => {
+        if (!studentData.address.trim()) {
+            alert('Por favor ingresa primero la dirección domiciliaria.');
+            return;
+        }
+        const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(studentData.address.trim())}`;
+        setStudentData(prev => ({ ...prev, homeLocationLink: mapsUrl }));
     };
 
     const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -71,9 +108,22 @@ const StudentForm: React.FC<StudentFormProps> = ({ isOpen, onClose, onSave, stud
         e.preventDefault();
         const institutionId = currentUser!.institutionId!;
 
+        const parsedStudentFields = {
+            name: studentData.name.trim(),
+            classId: studentData.classId,
+            nationalId: studentData.nationalId.trim() || undefined,
+            birthDate: studentData.birthDate.trim() ? parseAnyDateToIso(studentData.birthDate) : undefined,
+            gender: (studentData.gender as any) || undefined,
+            listNumber: studentData.listNumber ? parseInt(studentData.listNumber, 10) : undefined,
+            phone: studentData.phone.trim() || undefined,
+            address: studentData.address.trim() || undefined,
+            homeLocationLink: studentData.homeLocationLink.trim() || undefined,
+            photoUrl: studentData.photoUrl || undefined
+        };
+
         if (studentToEdit) {
             // Editing existing student and parent
-            const updatedStudent: Student = { ...studentToEdit, ...studentData };
+            const updatedStudent: Student = { ...studentToEdit, ...parsedStudentFields };
             const parentUser = allUsers.find(u => u.id === studentToEdit.parentId)!;
             const updatedParent: User = { ...parentUser, ...parentData };
             onSave(updatedStudent, updatedParent);
@@ -86,13 +136,13 @@ const StudentForm: React.FC<StudentFormProps> = ({ isOpen, onClose, onSave, stud
                 id: newParentId,
                 ...parentData,
                 role: Role.Parent,
-                childIds: [newStudentId], // Initialize as array
+                childIds: [newStudentId],
                 institutionId,
-                password: 'password', // Default password for prototype
+                password: 'password',
             };
             const newStudent: Student = {
                 id: newStudentId,
-                ...studentData,
+                ...parsedStudentFields,
                 parentId: newParentId,
                 institutionId,
             };
@@ -124,26 +174,94 @@ const StudentForm: React.FC<StudentFormProps> = ({ isOpen, onClose, onSave, stud
                                     <p className="text-xs text-gray-500 mt-1">JPG, PNG. Max 2MB.</p>
                                 </div>
                             </div>
-                            <div>
-                                <label className="block text-sm font-medium">Nombre Completo</label>
-                                <input type="text" name="name" value={studentData.name} onChange={handleStudentChange} required className="mt-1 w-full p-2 border rounded-md" />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium">Clase</label>
-                                <select name="classId" value={studentData.classId} onChange={handleStudentChange} required className="mt-1 w-full p-2 border rounded-md bg-white">
-                                    <option value="">-- Seleccionar Clase --</option>
-                                    {allClasses.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                                </select>
-                            </div>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div className="md:col-span-2">
+                                    <label className="block text-sm font-medium">Nombre Completo</label>
+                                    <input type="text" name="name" value={studentData.name} onChange={handleStudentChange} required className="mt-1 w-full p-2 border rounded-md" />
+                                </div>
                                 <div>
-                                    <label className="block text-sm font-medium">Teléfono</label>
+                                    <label className="block text-sm font-medium">Cédula / ID</label>
+                                    <input type="text" name="nationalId" value={studentData.nationalId} onChange={handleStudentChange} placeholder="10 dígitos" className="mt-1 w-full p-2 border rounded-md font-mono" />
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div>
+                                    <label className="block text-sm font-medium">Clase / Paralelo</label>
+                                    <select name="classId" value={studentData.classId} onChange={handleStudentChange} required className="mt-1 w-full p-2 border rounded-md bg-white">
+                                        <option value="">-- Seleccionar Clase --</option>
+                                        {allClasses.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium">Fecha de Nacimiento</label>
+                                    <input type="date" name="birthDate" value={studentData.birthDate} onChange={handleStudentChange} className="mt-1 w-full p-2 border rounded-md" />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium">Género</label>
+                                    <select name="gender" value={studentData.gender} onChange={handleStudentChange} className="mt-1 w-full p-2 border rounded-md bg-white">
+                                        <option value="">-- No especificado --</option>
+                                        <option value="FEMENINO">FEMENINO</option>
+                                        <option value="MASCULINO">MASCULINO</option>
+                                        <option value="OTRO">OTRO</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div>
+                                    <label className="block text-sm font-medium">Nº de Lista</label>
+                                    <input type="number" name="listNumber" value={studentData.listNumber} onChange={handleStudentChange} min="1" className="mt-1 w-full p-2 border rounded-md" />
+                                </div>
+                                <div className="md:col-span-2">
+                                    <label className="block text-sm font-medium">Teléfono / Celular Alumno</label>
                                     <input type="tel" name="phone" value={studentData.phone} onChange={handleStudentChange} className="mt-1 w-full p-2 border rounded-md" />
                                 </div>
-                                <div>
-                                    <label className="block text-sm font-medium">Dirección</label>
-                                    <input type="text" name="address" value={studentData.address} onChange={handleStudentChange} className="mt-1 w-full p-2 border rounded-md" />
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium">Dirección Domiciliaria</label>
+                                <input type="text" name="address" value={studentData.address} onChange={handleStudentChange} placeholder="Ej. Agua Clara Y Las Lagunas" className="mt-1 w-full p-2 border rounded-md" />
+                            </div>
+
+                            <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg space-y-1.5">
+                                <div className="flex justify-between items-center">
+                                    <label className="block text-xs font-bold text-slate-700 uppercase flex items-center gap-1">
+                                        <LocationMarkerIcon className="h-4 w-4 text-emerald-600" />
+                                        <span>Enlace Google Maps (Ubicación Georreferenciada)</span>
+                                    </label>
+                                    {studentData.address && (
+                                        <button
+                                            type="button"
+                                            onClick={handleAutoGenerateMaps}
+                                            className="text-xs text-primary-600 hover:text-primary-800 font-semibold underline"
+                                        >
+                                            🔍 Generar desde Dirección
+                                        </button>
+                                    )}
                                 </div>
+                                <input
+                                    type="url"
+                                    name="homeLocationLink"
+                                    value={studentData.homeLocationLink}
+                                    onChange={handleStudentChange}
+                                    placeholder="https://maps.app.goo.gl/... o https://www.google.com/maps/search/?api=1&query=..."
+                                    className="w-full p-2 border rounded-md text-xs font-mono bg-white"
+                                />
+                                {studentData.homeLocationLink && (
+                                    <div className="text-right">
+                                        <a
+                                            href={studentData.homeLocationLink}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="text-xs text-blue-600 hover:underline inline-flex items-center gap-1 font-semibold"
+                                        >
+                                            <ExternalLinkIcon className="h-3.5 w-3.5" />
+                                            <span>Probar link en Google Maps</span>
+                                        </a>
+                                    </div>
+                                )}
                             </div>
                         </div>
                     </fieldset>
