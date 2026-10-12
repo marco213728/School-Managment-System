@@ -378,6 +378,10 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = (props) => {
                     users={users} 
                     students={institutionStudents} 
                     schedule={schedule}
+                    timeSlots={institutionTimeSlots}
+                    leccionarioEntries={leccionarioEntries}
+                    onUpdateLeccionarioEntries={onUpdateLeccionarioEntries}
+                    microPlans={microPlans}
                     staffAttendanceRecords={staffAttendanceRecords || []}
                     conflictMediations={conflictMediations} 
                     onUpdateConflictMediations={onUpdateConflictMediations} 
@@ -385,7 +389,18 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = (props) => {
                     subjects={subjects} 
                 />,
                 'citaciones': <CitacionesPage {...restProps} users={users} students={institutionStudents} />,
-                'leccionario': <LeccionarioPage leccionarioEntries={leccionarioEntries} onUpdateLeccionarioEntries={onUpdateLeccionarioEntries} schedule={schedule} classes={institutionClasses} subjects={subjects} users={users} timeSlots={institutionTimeSlots} microPlans={microPlans} />,
+                'leccionario': <LeccionarioPage 
+                    leccionarioEntries={leccionarioEntries} 
+                    onUpdateLeccionarioEntries={onUpdateLeccionarioEntries} 
+                    schedule={schedule} 
+                    classes={institutionClasses} 
+                    subjects={subjects} 
+                    users={users} 
+                    timeSlots={institutionTimeSlots} 
+                    microPlans={microPlans} 
+                    absenceRequests={props.absenceRequests}
+                    onUpdateAbsenceRequests={props.onUpdateAbsenceRequests}
+                />,
                 'curricular_planning': <CurricularPlanningPage microPlans={microPlans} onUpdateMicroPlans={onUpdateMicroPlans} classes={institutionClasses} subjects={subjects} students={institutionStudents} users={users} dcds={dcds} evaluationCriteria={restProps.evaluationCriteria} evaluationIndicators={restProps.evaluationIndicators} />,
                 'gradebook': <GradebookPage gradebooks={gradebooks} onUpdateGradebooks={restProps.onUpdateGradebooks} classes={institutionClasses} subjects={subjects} students={institutionStudents} users={users} schedule={schedule} activities={restProps.activities} />,
             };

@@ -9,12 +9,8 @@ interface PlatformAdminLayoutProps {
 }
 
 const PlatformAdminLayout: React.FC<PlatformAdminLayoutProps> = ({ children }) => {
-    const { user, logout } = useContext(UserContext);
+    const { user, logout, openProfileModal } = useContext(UserContext);
     const [isSidebarOpen, setSidebarOpen] = useState(false);
-
-    // This layout is unique for SuperAdmin. 
-    // However, to satisfy the user request of making the bank accessible at this level,
-    // we ensure the SuperAdmin's standard navigation can lead to the ResourceRepositoryPage.
 
     return (
         <div className="flex h-screen bg-gray-100">
@@ -27,11 +23,21 @@ const PlatformAdminLayout: React.FC<PlatformAdminLayoutProps> = ({ children }) =
                         <h1 className="text-xl font-semibold text-gray-700">Administración Global Amauta</h1>
                     </div>
                     <div className="flex items-center space-x-2 sm:space-x-4">
-                         <div className="text-right hidden sm:block">
-                            <p className="font-semibold text-gray-800">{user?.name}</p>
-                            <p className="text-sm text-gray-500">{user?.role}</p>
-                        </div>
-                        <button onClick={logout} className="p-2 rounded-full hover:bg-red-100 text-red-500 transition-colors duration-200" aria-label="Cerrar sesión">
+                        <button 
+                            type="button"
+                            onClick={openProfileModal}
+                            className="flex items-center gap-2 p-1.5 rounded-xl hover:bg-slate-100 transition group text-left"
+                            title="Editar mi perfil / cambiar contraseña"
+                        >
+                            <div className="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-xs shadow-xs group-hover:scale-105 transition-transform">
+                                {user?.name ? user.name.charAt(0).toUpperCase() : 'U'}
+                            </div>
+                            <div className="hidden sm:block">
+                                <p className="font-semibold text-gray-800 text-xs sm:text-sm group-hover:text-blue-600 transition-colors leading-tight">{user?.name}</p>
+                                <p className="text-[11px] text-gray-500 leading-tight">{user?.role} <span className="text-blue-600 underline text-[10px]">Editar</span></p>
+                            </div>
+                        </button>
+                        <button onClick={logout} className="p-2 rounded-full hover:bg-red-100 text-red-500 transition-colors duration-200" aria-label="Cerrar sesión" title="Cerrar sesión">
                             <LogoutIcon className="h-6 w-6" />
                         </button>
                     </div>

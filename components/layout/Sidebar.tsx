@@ -14,7 +14,7 @@ interface SidebarProps {
 }
 
 const Sidebar: React.FC<SidebarProps> = ({ currentPage, setCurrentPage, isSidebarOpen, setSidebarOpen, onOpenAttendanceModal }) => {
-  const { user } = useContext(UserContext);
+  const { user, openProfileModal } = useContext(UserContext);
   const { institution } = useContext(InstitutionContext);
 
   const NavLink = ({ page, icon, text }: { page: any, icon: React.ReactNode, text: string }) => {
@@ -127,8 +127,25 @@ const Sidebar: React.FC<SidebarProps> = ({ currentPage, setCurrentPage, isSideba
             ))}
           </nav>
 
-          {isStaff && (
-            <div className="mt-auto pt-4 border-t border-slate-700">
+          <div className="mt-auto pt-4 border-t border-slate-700 space-y-2">
+            <button
+              onClick={() => {
+                if (openProfileModal) openProfileModal();
+                setSidebarOpen(false);
+              }}
+              className="w-full flex items-center gap-3 px-3 py-2 text-slate-300 hover:bg-slate-800 hover:text-white rounded-lg transition-colors text-sm"
+              title="Ver mi perfil y cambiar contraseña"
+            >
+              <div className="w-6 h-6 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-xs flex-shrink-0">
+                {user?.name ? user.name.charAt(0).toUpperCase() : 'U'}
+              </div>
+              <div className="truncate text-left flex-1">
+                <p className="font-medium text-xs truncate leading-tight">{user?.name || 'Mi Perfil'}</p>
+                <p className="text-[10px] text-slate-400 truncate leading-tight">Configuración de perfil ⚙</p>
+              </div>
+            </button>
+
+            {isStaff && (
               <button 
                 onClick={onOpenAttendanceModal}
                 className="w-full flex items-center justify-center gap-2 px-3 py-2.5 text-slate-200 bg-slate-800 hover:bg-primary-600 rounded-lg transition-colors duration-200"
@@ -136,8 +153,8 @@ const Sidebar: React.FC<SidebarProps> = ({ currentPage, setCurrentPage, isSideba
                 <FingerPrintIcon className="h-6 w-6" />
                 <span className="font-semibold">Registrar Asistencia</span>
               </button>
-            </div>
-          )}
+            )}
+          </div>
         </div>
       </aside>
     </>

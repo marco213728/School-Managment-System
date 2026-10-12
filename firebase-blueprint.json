@@ -156,9 +156,51 @@
         "agreements": { "type": "string", "maxLength": 3000 }
       },
       "required": ["id", "studentId", "date", "type", "summary"]
+    },
+    "AbsenceRequest": {
+      "title": "AbsenceRequest",
+      "description": "Teacher absence and substitution request with assignments",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "institutionId": { "type": "string", "maxLength": 128 },
+        "docenteTitularId": { "type": "string", "maxLength": 128 },
+        "fecha": { "type": "string", "maxLength": 50 },
+        "periodo": { "type": "number" },
+        "classId": { "type": "string", "maxLength": 128 },
+        "subjectId": { "type": "string", "maxLength": 128 },
+        "instrucciones": { "type": "string", "maxLength": 3000 },
+        "estado": { "type": "string", "maxLength": 50 }
+      },
+      "required": ["id", "docenteTitularId", "fecha", "classId", "subjectId"]
+    },
+    "LeccionarioEntry": {
+      "title": "LeccionarioEntry",
+      "description": "Daily official student class log and substitution record",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "institutionId": { "type": "string", "maxLength": 128 },
+        "teacherId": { "type": "string", "maxLength": 128 },
+        "classId": { "type": "string", "maxLength": 128 },
+        "subjectId": { "type": "string", "maxLength": 128 },
+        "date": { "type": "string", "maxLength": 50 },
+        "skillCode": { "type": "string", "maxLength": 200 },
+        "topics": { "type": "string", "maxLength": 2000 },
+        "tasks": { "type": "string", "maxLength": 2000 }
+      },
+      "required": ["id", "classId", "subjectId", "date"]
     }
   },
   "firestore": {
+    "/absence_requests/{requestId}": {
+      "schema": "AbsenceRequest",
+      "description": "Teacher absences and assigned substitutions"
+    },
+    "/leccionario/{entryId}": {
+      "schema": "LeccionarioEntry",
+      "description": "Official daily student class and leccionario logs"
+    },
     "/institutions/{institutionId}": {
       "schema": "Institution",
       "description": "Institution profiles"

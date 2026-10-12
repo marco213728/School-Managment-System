@@ -1,15 +1,17 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
-import { User, Institution, Role, Class, Student, ScheduleEntry, Notification, SupportContact, HealthRecord, MedicalVisit, Subject, TimeSlot, Room, Timetable, ViccIntervention, Intervention, AttendanceRecord, ExitPass, Citacion, AcademicCalendarEvent, LeccionarioEntry, MicroPlan, Dcd, EvaluationCriterion, EvaluationIndicator, Gradebook, Activity, ReinforcementPlan, StaffAttendanceRecord, PunchType, FormalRequest, TrainingPlan, InstitutionalDocument, MeetingRecord, Rubric, ConflictMediation, CronogramaEvent } from './types';
+import { User, Institution, Role, Class, Student, ScheduleEntry, Notification, SupportContact, HealthRecord, MedicalVisit, Subject, TimeSlot, Room, Timetable, ViccIntervention, Intervention, AttendanceRecord, ExitPass, Citacion, AcademicCalendarEvent, LeccionarioEntry, MicroPlan, Dcd, EvaluationCriterion, EvaluationIndicator, Gradebook, Activity, ReinforcementPlan, StaffAttendanceRecord, PunchType, FormalRequest, TrainingPlan, InstitutionalDocument, MeetingRecord, Rubric, ConflictMediation, CronogramaEvent, AbsenceRequest } from './types';
 import { MOCK_USERS, MOCK_INSTITUTIONS, MOCK_CLASSES, MOCK_STUDENTS, MOCK_SCHEDULE_ENTRIES, MOCK_NOTIFICATIONS, MOCK_SUPPORT_CONTACTS, MOCK_HEALTH_RECORDS, MOCK_MEDICAL_VISITS, MOCK_INTERVENTIONS, MOCK_SUBJECTS, MOCK_TIME_SLOTS, MOCK_ROOMS, MOCK_TIMETABLES, MOCK_VICC_INTERVENTIONS, MOCK_ATTENDANCE, MOCK_EXIT_PASSES, MOCK_CITACIONES, MOCK_ACADEMIC_CALENDAR_EVENTS, MOCK_LECCIONARIO_ENTRIES, MOCK_MICRO_PLANS, MOCK_DCDS, MOCK_EVALUATION_CRITERIA, MOCK_EVALUATION_INDICATORS, MOCK_GRADEBOOKS, MOCK_ACTIVITIES, MOCK_REINFORCEMENT_PLANS, MOCK_STAFF_ATTENDANCE, MOCK_FORMAL_REQUESTS, MOCK_TRAINING_PLANS, MOCK_INSTITUTIONAL_DOCUMENTS, MOCK_MEETING_RECORDS, MOCK_RUBRICS, MOCK_CONFLICT_MEDIATIONS, MOCK_CRONOGRAMA_EVENTS } from './constants';
 import LoginPage from './pages/LoginPage';
 import DashboardLayout from './components/layout/DashboardLayout';
 import { UserContext, InstitutionContext } from './contexts/UserContext';
 import SuperAdminPage from './pages/SuperAdminPage';
 import PlatformAdminLayout from './components/layout/PlatformAdminLayout';
+import UserProfileModal from './components/profile/UserProfileModal';
 import { AMAUTA_LOGO } from './branding';
-import { auth, googleProvider, db, handleFirestoreError, OperationType, saveDocument, deleteDocument, subscribeToCollection } from './lib/firebase';
+import { auth, googleProvider, db, handleFirestoreError, OperationType, saveDocument, deleteDocument, subscribeToCollection, updatePassword } from './lib/firebase';
 import { signInWithPopup, signOut as fbSignOut, onAuthStateChanged } from 'firebase/auth';
+import { collection, getDocs } from 'firebase/firestore';
 
 // Helper for Geofencing
 function getDistanceFromLatLonInM(lat1: number, lon1: number, lat2: number, lon2: number) {
@@ -70,33 +72,88 @@ export default function App() {
   const [rubrics, setRubrics] = useState<Rubric[]>(MOCK_RUBRICS || []);
   const [conflictMediations, setConflictMediations] = useState<ConflictMediation[]>(MOCK_CONFLICT_MEDIATIONS || []);
   const [cronogramaEvents, setCronogramaEvents] = useState<CronogramaEvent[]>(MOCK_CRONOGRAMA_EVENTS || []);
-  const [absenceRequests, setAbsenceRequests] = useState<any[]>([]);
+  const [absenceRequests, setAbsenceRequests] = useState<AbsenceRequest[]>([]);
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+
+  // Helper to match authenticated Firebase/Google user with their registered profile in Firestore or state
+  const resolveAndSetAuthenticatedUser = async (fbUser: { uid: string; email: string | null; displayName: string | null; photoURL?: string | null }) => {
+    if (!fbUser || !fbUser.email) return;
+    const cleanEmail = fbUser.email.toLowerCase().trim();
+
+    // 1. Check local users state first
+    let matchedUser = users.find(u => 
+      (u.authUid && u.authUid === fbUser.uid) ||
+      ((u.email || '').toLowerCase().trim() === cleanEmail)
+    );
+
+    // 2. If not found in local memory, query Firestore users collection directly
+    if (!matchedUser) {
+      try {
+        const snap = await getDocs(collection(db, 'users'));
+        const dbUsers = snap.docs.map(d => ({ id: d.id, ...d.data() } as User));
+        matchedUser = dbUsers.find(u => 
+          (u.authUid && u.authUid === fbUser.uid) ||
+          ((u.email || '').toLowerCase().trim() === cleanEmail)
+        );
+        if (matchedUser) {
+          setUsers(dbUsers);
+        }
+      } catch (err) {
+        console.warn("Aviso al consultar usuarios en Firestore:", err);
+      }
+    }
+
+    if (matchedUser) {
+      // Existing user registered with this Gmail account (e.g. registered by admin or previously logged in)
+      const updatedMatchedUser: User = {
+        ...matchedUser,
+        authUid: fbUser.uid,
+        photoUrl: fbUser.photoURL || matchedUser.photoUrl,
+      };
+
+      // Persist linked authUid & photoUrl in Firestore
+      saveDocument('users', updatedMatchedUser.id, updatedMatchedUser).catch(e => console.warn("Error guardando vinculación de usuario:", e));
+
+      setUsers(prev => prev.map(u => u.id === updatedMatchedUser.id ? updatedMatchedUser : u));
+      setCurrentUser(updatedMatchedUser);
+
+      const targetInst = (updatedMatchedUser.institutionId && institutions.find(i => i.id === updatedMatchedUser.institutionId)) 
+        || institutions[0] 
+        || MOCK_INSTITUTIONS[0];
+      setCurrentInstitution(targetInst);
+    } else {
+      // First-time Google user who wasn't pre-registered in the system
+      const isSuperAdminEmail = cleanEmail.includes('admin') || cleanEmail === 'marco213728@gmail.com';
+      const defaultRole = isSuperAdminEmail ? Role.SuperAdmin : Role.SuperAdmin;
+
+      const newUser: User = {
+        id: fbUser.uid,
+        name: fbUser.displayName || fbUser.email.split('@')[0],
+        email: fbUser.email,
+        password: '',
+        role: defaultRole,
+        authUid: fbUser.uid,
+        photoUrl: fbUser.photoURL || '',
+        institutionId: institutions[0]?.id || MOCK_INSTITUTIONS[0].id,
+      };
+
+      // Persist to Firestore
+      saveDocument('users', newUser.id, newUser).catch(e => console.warn("Error guardando nuevo usuario Google:", e));
+
+      setUsers(prev => {
+        if (prev.some(u => u.id === newUser.id)) return prev;
+        return [newUser, ...prev];
+      });
+      setCurrentUser(newUser);
+      setCurrentInstitution(institutions[0] || MOCK_INSTITUTIONS[0]);
+    }
+  };
 
   // Listen to Firebase Auth state
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (fbUser) => {
+    const unsubscribe = onAuthStateChanged(auth, async (fbUser) => {
       if (fbUser && fbUser.email) {
-        const existing = users.find(u => (u.email || '').toLowerCase() === (fbUser.email || '').toLowerCase());
-        if (existing) {
-          setCurrentUser(existing);
-          const inst = (existing.institutionId && institutions.find(i => i.id === existing.institutionId)) || institutions[0] || MOCK_INSTITUTIONS[0];
-          setCurrentInstitution(inst);
-        } else {
-          // New Google authenticated user gets SuperAdmin or institution access
-          const newUser: User = {
-            id: fbUser.uid,
-            name: fbUser.displayName || fbUser.email.split('@')[0],
-            email: fbUser.email,
-            password: '',
-            role: Role.SuperAdmin,
-          };
-          setUsers(prev => {
-            if (prev.some(u => u.id === newUser.id)) return prev;
-            return [newUser, ...prev];
-          });
-          setCurrentUser(newUser);
-          setCurrentInstitution(institutions[0] || MOCK_INSTITUTIONS[0]);
-        }
+        await resolveAndSetAuthenticatedUser(fbUser);
       }
     });
 
@@ -129,25 +186,8 @@ export default function App() {
   const handleGoogleLogin = async () => {
     try {
       const cred = await signInWithPopup(auth, googleProvider);
-      const fbUser = cred.user;
-      if (fbUser && fbUser.email) {
-        const existing = users.find(u => (u.email || '').toLowerCase() === (fbUser.email || '').toLowerCase());
-        if (existing) {
-          setCurrentUser(existing);
-          const inst = (existing.institutionId && institutions.find(i => i.id === existing.institutionId)) || institutions[0] || MOCK_INSTITUTIONS[0];
-          setCurrentInstitution(inst);
-        } else {
-          const newUser: User = {
-            id: fbUser.uid,
-            name: fbUser.displayName || fbUser.email.split('@')[0],
-            email: fbUser.email,
-            password: '',
-            role: Role.SuperAdmin,
-          };
-          setUsers(prev => [newUser, ...prev]);
-          setCurrentUser(newUser);
-          setCurrentInstitution(institutions[0] || MOCK_INSTITUTIONS[0]);
-        }
+      if (cred.user) {
+        await resolveAndSetAuthenticatedUser(cred.user);
       }
     } catch (err) {
       console.error("Error al autenticar con Google:", err);
@@ -225,6 +265,7 @@ export default function App() {
     const unsubSupport = subscribeToCollection<SupportContact>('support_contacts', items => items.length > 0 && setSupportContacts(items));
     const unsubVicc = subscribeToCollection<ViccIntervention>('vicc_interventions', items => items.length > 0 && setViccInterventions(items));
     const unsubInterventions = subscribeToCollection<Intervention>('interventions', items => items.length > 0 && setInterventions(items));
+    const unsubAbsenceRequests = subscribeToCollection<AbsenceRequest>('absence_requests', items => items.length > 0 && setAbsenceRequests(items));
 
     return () => {
       unsubInstitutions();
@@ -262,6 +303,7 @@ export default function App() {
       unsubSupport();
       unsubVicc();
       unsubInterventions();
+      unsubAbsenceRequests();
     };
   }, []);
 
@@ -497,6 +539,11 @@ export default function App() {
     setCronogramaEvents(events);
     events.forEach(e => saveDocument('cronograma_events', e.id, e));
   };
+
+  const handleUpdateAbsenceRequests = (updatedRequests: AbsenceRequest[]) => {
+    setAbsenceRequests(updatedRequests);
+    updatedRequests.forEach(r => saveDocument('absence_requests', r.id, r));
+  };
   
   const handleUpdateStaffAttendance = (userId: string, method: 'Biometric' | 'Manual' | 'Facial', location?: { latitude: number; longitude: number; }) => {
     
@@ -589,10 +636,64 @@ export default function App() {
 };
 
 
+  const handleUpdateCurrentUser = async (updatedData: Partial<User>): Promise<boolean> => {
+    if (!currentUser) return false;
+    const updatedUser: User = {
+      ...currentUser,
+      ...updatedData,
+    };
+    setCurrentUser(updatedUser);
+    setUsers(prev => prev.map(u => u.id === updatedUser.id ? updatedUser : u));
+    try {
+      await saveDocument('users', updatedUser.id, updatedUser);
+      return true;
+    } catch (err) {
+      console.error("Error al guardar perfil de usuario:", err);
+      return false;
+    }
+  };
+
+  const handleUpdateUserPassword = async (newPassword: string): Promise<{ success: boolean; error?: string }> => {
+    if (!currentUser) return { success: false, error: 'No hay usuario autenticado' };
+
+    // 1. If authenticated in Firebase Auth, update in cloud
+    if (auth.currentUser) {
+      try {
+        await updatePassword(auth.currentUser, newPassword);
+      } catch (err: any) {
+        console.warn("Aviso al actualizar clave en Firebase Auth:", err);
+        if (err?.code === 'auth/requires-recent-login') {
+          return {
+            success: false,
+            error: 'Por seguridad de Firebase, debes volver a iniciar sesión antes de modificar tu contraseña en la nube.',
+          };
+        }
+      }
+    }
+
+    // 2. Always persist password to Firestore user record
+    const updatedUser: User = {
+      ...currentUser,
+      password: newPassword,
+    };
+    setCurrentUser(updatedUser);
+    setUsers(prev => prev.map(u => u.id === updatedUser.id ? updatedUser : u));
+    try {
+      await saveDocument('users', updatedUser.id, updatedUser);
+      return { success: true };
+    } catch (err: any) {
+      console.error("Error al guardar nueva contraseña:", err);
+      return { success: false, error: err?.message || 'Error al guardar la contraseña.' };
+    }
+  };
+
   const userContextValue = useMemo(() => ({
     user: currentUser,
     logout: handleLogout,
-  }), [currentUser]);
+    openProfileModal: () => setIsProfileModalOpen(true),
+    updateCurrentUser: handleUpdateCurrentUser,
+    updateUserPassword: handleUpdateUserPassword,
+  }), [currentUser, users]);
 
   const institutionContextValue = useMemo(() => ({
     institution: currentInstitution,
@@ -675,7 +776,7 @@ export default function App() {
             cronogramaEvents={cronogramaEvents}
             onUpdateCronogramaEvents={handleUpdateCronogramaEvents}
             absenceRequests={absenceRequests}
-            onUpdateAbsenceRequests={setAbsenceRequests}
+            onUpdateAbsenceRequests={handleUpdateAbsenceRequests}
 
             onUpdateUsers={handleUpdateUsers}
             onUpdateClasses={handleUpdateClasses}
@@ -708,6 +809,10 @@ export default function App() {
             onUpdateTrainingPlans={handleUpdateTrainingPlans}
           />
         )}
+        <UserProfileModal 
+          isOpen={isProfileModalOpen} 
+          onClose={() => setIsProfileModalOpen(false)} 
+        />
       </InstitutionContext.Provider>
     </UserContext.Provider>
   );

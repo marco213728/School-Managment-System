@@ -1,7 +1,7 @@
 
 import React, { useState, useMemo, useContext } from 'react';
 import { AttendanceRecord, Student, Class, ExitPass, Notification, User, DisciplinaryAction, InspectionVisit,
-  AbsenceRequest, ConflictMediation, QualityMetric, DisciplinarySeverity, Gradebook, Subject, ScheduleEntry, StaffAttendanceRecord } from '../types';
+  AbsenceRequest, ConflictMediation, QualityMetric, DisciplinarySeverity, Gradebook, Subject, ScheduleEntry, StaffAttendanceRecord, LeccionarioEntry, TimeSlot, MicroPlan } from '../types';
 import { UserContext } from '../contexts/UserContext';
 import { MOCK_DISCIPLINARY_ACTIONS, MOCK_INSPECTION_VISITS, MOCK_QUALITY_METRICS } from '../constants';
 import JustificationManagement from '../components/inspection/JustificationManagement';
@@ -31,6 +31,10 @@ interface InspectionPageProps {
     onUpdateConflictMediations?: (conflicts: ConflictMediation[]) => void;
     // New props for Quality Module
     gradebooks?: Gradebook[];
+    leccionarioEntries?: LeccionarioEntry[];
+    onUpdateLeccionarioEntries?: (entries: LeccionarioEntry[]) => void;
+    timeSlots?: TimeSlot[];
+    microPlans?: MicroPlan[];
 }
 
 type InspectionView = 'dashboard' | 'justifications' | 'exit_passes';
@@ -366,7 +370,23 @@ const InspectionPage: React.FC<InspectionPageProps> = (props) => {
             )}
             
             {activeTab === 'coexistence' && renderCoexistenceTab()}
-            {activeTab === 'substitutions' && <InspectorSustituciones users={institutionUsers} schedule={schedule} classes={institutionClasses} subjects={subjects} staffAttendanceRecords={staffAttendanceRecords} absenceRequests={absenceRequests} onUpdateAbsenceRequests={onUpdateAbsenceRequests} />}
+            {activeTab === 'substitutions' && (
+              <InspectorSustituciones 
+                users={users} 
+                schedule={schedule} 
+                classes={institutionClasses} 
+                subjects={subjects} 
+                staffAttendanceRecords={staffAttendanceRecords} 
+                absenceRequests={absenceRequests} 
+                onUpdateAbsenceRequests={onUpdateAbsenceRequests}
+                notifications={notifications}
+                onUpdateNotifications={onUpdateNotifications}
+                leccionarioEntries={props.leccionarioEntries || []}
+                onUpdateLeccionarioEntries={props.onUpdateLeccionarioEntries}
+                timeSlots={props.timeSlots || []}
+                microPlans={props.microPlans || []}
+              />
+            )}
 
             {isVisitFormOpen && (
                 <InspectionVisitForm

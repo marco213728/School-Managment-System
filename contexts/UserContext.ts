@@ -1,14 +1,20 @@
 import React, { createContext } from 'react';
 import { User, Institution } from '../types';
 
-interface UserContextType {
+export interface UserContextType {
   user: User | null;
   logout: () => void;
+  openProfileModal?: () => void;
+  updateCurrentUser?: (updatedUser: Partial<User>) => Promise<boolean>;
+  updateUserPassword?: (newPassword: string) => Promise<{ success: boolean; error?: string }>;
 }
 
 export const UserContext = createContext<UserContextType>({
   user: null,
   logout: () => {},
+  openProfileModal: () => {},
+  updateCurrentUser: async () => false,
+  updateUserPassword: async () => ({ success: false }),
 });
 
 // New context for Institution data

@@ -1,12 +1,13 @@
 
 import React, { useContext, useState, useMemo } from 'react';
 import { UserContext } from '../contexts/UserContext';
-import { Role, Student, User, AbsenceRequest, Class, ActivityType, AttendanceStatus, ScheduleEntry, Subject, TimeSlot, Room, Timetable, ViccIntervention, FormalRequest, CronogramaEvent } from '../types';
+import { Role, Student, User, AbsenceRequest, Class, ActivityType, AttendanceStatus, ScheduleEntry, Subject, TimeSlot, Room, Timetable, ViccIntervention, FormalRequest, CronogramaEvent, Notification, LeccionarioEntry } from '../types';
 import StudentProfileCard from '../components/student/StudentProfileCard';
 import { MOCK_ATTENDANCE, MOCK_ACTIVITIES } from '../constants';
 import { UsersIcon, GraduationCapIcon, AttendanceIcon, ReportIcon, CalendarIcon, ChatBubbleIcon, ManageIcon, ClipboardListIcon, ClockIcon } from '../components/icons/Icons';
 import ScheduleView from '../components/schedule/ScheduleView';
 import CronogramaWidget from '../components/dashboard/CronogramaWidget';
+import { notifyInspeccionOnAbsenceRequest, notifyOnLeccionarioRegistered } from '../lib/notificationService';
 
 interface DashboardPageProps {
     students: Student[];
@@ -162,8 +163,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ users, students, classe
 };
 
 interface TeacherDashboardProps {
-    absenceRequests?: any[];
-    onUpdateAbsenceRequests?: (r: any[]) => void;
+    absenceRequests?: AbsenceRequest[];
+    onUpdateAbsenceRequests?: (r: AbsenceRequest[]) => void;
     schedule: ScheduleEntry[];
     subjects: Subject[];
     timeSlots: TimeSlot[];
@@ -173,10 +174,46 @@ interface TeacherDashboardProps {
     classes: Class[];
     cronogramaEvents: CronogramaEvent[];
     onUpdateCronogramaEvents: (events: CronogramaEvent[]) => void;
+    notifications?: Notification[];
+    onUpdateNotifications?: (notifs: Notification[]) => void;
+    leccionarioEntries?: LeccionarioEntry[];
+    onUpdateLeccionarioEntries?: (entries: LeccionarioEntry[]) => void;
 }
 
-const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ absenceRequests = [], onUpdateAbsenceRequests = (_r: any[]) => {}, schedule, subjects, timeSlots, rooms, timetables, users, classes, cronogramaEvents, onUpdateCronogramaEvents }) => {
+const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ 
+    absenceRequests = [], 
+    onUpdateAbsenceRequests = (_r: AbsenceRequest[]) => {}, 
+    schedule, 
+    subjects, 
+    timeSlots, 
+    rooms, 
+    timetables, 
+    users, 
+    classes, 
+    cronogramaEvents, 
+    onUpdateCronogramaEvents,
+    notifications = [],
+    onUpdateNotifications,
+    leccionarioEntries = [],
+    onUpdateLeccionarioEntries
+}) => {
     const { user: currentUser } = useContext(UserContext);
+    const [leccionarioModalData, setLeccionarioModalData] = useState<{
+        isOpen: boolean;
+        absence: AbsenceRequest | null;
+        topics: string;
+        tasks: string;
+        skillCode: string;
+        observations: string;
+    }>({
+        isOpen: false,
+        absence: null,
+        topics: '',
+        tasks: '',
+        skillCode: 'DCD-REEMPLAZO',
+        observations: ''
+    });
+    const [actionMessage, setActionMessage] = useState<string | null>(null);
 
     const teacherData = useMemo(() => {
         if (!currentUser) return null;
@@ -298,9 +335,109 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ absenceRequests = [
                 />
                 
                 {/* Substitution / Absence Management for Teachers */}
+                {actionMessage && (
+                    <div className="p-3.5 bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs rounded-xl shadow-xs flex justify-between items-center">
+                        <span>{actionMessage}</span>
+                        <button onClick={() => setActionMessage(null)} className="font-bold ml-2">✕</button>
+                    </div>
+                )}
+
+                {/* 1. SECCIÓN: MIS REEMPLAZOS ASIGNADOS (COMO SUSTITUTO) */}
+                <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm mt-6">
+                    <div className="flex justify-between items-center mb-2">
+                        <div>
+                            <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+                                📋 Mis Reemplazos Asignados (Docente Sustituto)
+                            </h3>
+                            <p className="text-xs text-slate-500">
+                                Clases que le han sido encomendadas para cubrir a compañeros docentes. Revise las instrucciones y registre la clase en el Leccionario.
+                            </p>
+                        </div>
+                    </div>
+
+                    {absenceRequests && absenceRequests.filter(r => r.docenteReemplazanteId === currentUser?.id).length > 0 ? (
+                        <div className="space-y-3 mt-4">
+                            {absenceRequests.filter(r => r.docenteReemplazanteId === currentUser?.id).map(r => {
+                                const cls = classes.find(c => c.id === r.classId);
+                                const sub = subjects.find(s => s.id === r.subjectId);
+                                const titular = users.find(u => u.id === r.docenteTitularId);
+                                const isRegistered = r.leccionarioRegistered;
+
+                                return (
+                                    <div key={r.id} className="p-4 border rounded-xl bg-slate-50 border-slate-200 hover:border-indigo-300 transition-all flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                                        <div className="space-y-1">
+                                            <div className="flex items-center gap-2">
+                                                <span className="font-bold text-sm text-slate-900">{sub?.name || 'Asignatura'}</span>
+                                                <span className="text-xs text-slate-600 bg-white px-2 py-0.5 rounded border border-slate-200">{cls?.name || 'Paralelo'}</span>
+                                                <span className="text-[10px] font-bold px-2 py-0.5 bg-indigo-100 text-indigo-800 rounded-full">
+                                                    Bloque {r.periodo} • {r.fecha}
+                                                </span>
+                                            </div>
+                                            <p className="text-xs text-slate-600">
+                                                Reemplazando a: <strong className="text-slate-800">{titular?.name || 'Docente Titular'}</strong>
+                                            </p>
+                                            <div className="p-2.5 bg-white border border-slate-200 rounded-lg text-xs text-slate-700 max-w-xl">
+                                                <strong>Instrucciones para la clase:</strong> {r.instrucciones}
+                                            </div>
+                                            {r.planificacionUrl && (
+                                                <a 
+                                                    href={r.planificacionUrl} 
+                                                    target="_blank" 
+                                                    rel="noreferrer" 
+                                                    className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-600 hover:underline mt-1"
+                                                >
+                                                    🔗 Ver Planificación y Material de Contingencia
+                                                </a>
+                                            )}
+                                        </div>
+
+                                        <div className="flex flex-col items-end gap-2 w-full md:w-auto">
+                                            {isRegistered ? (
+                                                <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2.5 py-1 bg-emerald-100 text-emerald-800 rounded-full">
+                                                    ✓ Registrado en Leccionario
+                                                </span>
+                                            ) : (
+                                                <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2.5 py-1 bg-amber-100 text-amber-800 rounded-full animate-pulse">
+                                                    ⏳ Pendiente de Leccionario
+                                                </span>
+                                            )}
+                                            <button
+                                                onClick={() => {
+                                                    const subObj = subjects.find(s => s.id === r.subjectId);
+                                                    setLeccionarioModalData({
+                                                        isOpen: true,
+                                                        absence: r,
+                                                        topics: `Clase de Reemplazo para ${titular?.name || 'Titular'} - ${subObj?.name || ''}`,
+                                                        tasks: r.instrucciones || '',
+                                                        skillCode: 'DCD-REEMPLAZO',
+                                                        observations: `Reemplazo ejecutado por ${currentUser?.name} en cobertura de ${titular?.name}.`
+                                                    });
+                                                }}
+                                                className={`px-3 py-1.5 rounded-lg text-xs font-semibold shadow-sm transition-colors whitespace-nowrap ${
+                                                    isRegistered 
+                                                        ? 'bg-slate-200 text-slate-700 hover:bg-slate-300' 
+                                                        : 'bg-primary-600 text-white hover:bg-primary-700'
+                                                }`}
+                                            >
+                                                {isRegistered ? 'Ver / Modificar Leccionario' : '📝 Registrar en Leccionario'}
+                                            </button>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    ) : (
+                        <p className="text-xs text-slate-400 italic py-4">No tiene asignaciones de reemplazo activas en este momento.</p>
+                    )}
+                </div>
+
+                {/* 2. SECCIÓN: MIS AUSENCIAS REPORTADAS (SOLICITANTE) */}
                 <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm mt-6">
                     <div className="flex justify-between items-center mb-4">
-                        <h3 className="text-lg font-semibold text-slate-800">Mis Ausencias Reportadas</h3>
+                        <div>
+                            <h3 className="text-lg font-semibold text-slate-800">Mis Ausencias Reportadas</h3>
+                            <p className="text-xs text-slate-500">Notifique novedades a Inspección para gestionar oportunamente su sustitución.</p>
+                        </div>
                         <button 
                             onClick={() => {
                                 const formEl = document.getElementById('report-absence-form');
@@ -308,18 +445,18 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ absenceRequests = [
                                     formEl.classList.toggle('hidden');
                                 }
                             }}
-                            className="bg-primary-50 text-primary-600 hover:bg-primary-100 px-3 py-1.5 rounded-md text-sm font-medium transition-colors"
+                            className="bg-primary-50 text-primary-600 hover:bg-primary-100 px-3 py-1.5 rounded-md text-xs font-semibold transition-colors"
                         >
                             + Reportar Ausencia
                         </button>
                     </div>
                     
                     <div id="report-absence-form" className="hidden mb-6 p-4 border border-primary-200 bg-primary-50 rounded-lg">
-                        <form onSubmit={(e) => {
+                        <form onSubmit={async (e) => {
                             e.preventDefault();
                             if (!currentUser?.institutionId || !onUpdateAbsenceRequests) return;
                             const target = e.target as HTMLFormElement;
-                            const newAbsence = {
+                            const newAbsence: AbsenceRequest = {
                                 id: `abs-${Date.now()}`,
                                 institutionId: currentUser.institutionId,
                                 docenteTitularId: currentUser.id,
@@ -334,6 +471,19 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ absenceRequests = [
                                 creadoPorRol: currentUser.role
                             };
                             onUpdateAbsenceRequests([...(absenceRequests || []), newAbsence]);
+
+                            // Disparar Notificación Push a Inspección
+                            await notifyInspeccionOnAbsenceRequest({
+                                absenceRequest: newAbsence,
+                                docenteTitular: currentUser,
+                                subject: subjects.find(s => s.id === newAbsence.subjectId),
+                                classObj: classes.find(c => c.id === newAbsence.classId),
+                                users,
+                                currentNotifications: notifications,
+                                onUpdateNotifications
+                            });
+
+                            setActionMessage("📢 Ausencia enviada a Inspección. Se notificó al equipo de inspectores vía Push.");
                             target.reset();
                             target.parentElement?.classList.add('hidden');
                         }} className="space-y-4">
@@ -341,24 +491,24 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ absenceRequests = [
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
                                     <label className="block text-xs font-medium text-gray-700 mb-1">Fecha</label>
-                                    <input type="date" name="fecha" required className="w-full p-2 text-sm border border-gray-300 rounded-md" defaultValue={new Date().toISOString().split('T')[0]} />
+                                    <input type="date" name="fecha" required className="w-full p-2 text-xs border border-gray-300 rounded-md" defaultValue={new Date().toISOString().split('T')[0]} />
                                 </div>
                                 <div>
                                     <label className="block text-xs font-medium text-gray-700 mb-1">Periodo (Bloque)</label>
-                                    <input type="number" name="periodo" min="1" max="10" required className="w-full p-2 text-sm border border-gray-300 rounded-md" />
+                                    <input type="number" name="periodo" min="1" max="10" required className="w-full p-2 text-xs border border-gray-300 rounded-md" />
                                 </div>
                             </div>
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
                                     <label className="block text-xs font-medium text-gray-700 mb-1">Clase/Paralelo</label>
-                                    <select name="classId" required className="w-full p-2 text-sm border border-gray-300 rounded-md">
+                                    <select name="classId" required className="w-full p-2 text-xs border border-gray-300 rounded-md">
                                         <option value="">Seleccione...</option>
                                         {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                                     </select>
                                 </div>
                                 <div>
                                     <label className="block text-xs font-medium text-gray-700 mb-1">Asignatura</label>
-                                    <select name="subjectId" required className="w-full p-2 text-sm border border-gray-300 rounded-md">
+                                    <select name="subjectId" required className="w-full p-2 text-xs border border-gray-300 rounded-md">
                                         <option value="">Seleccione...</option>
                                         {subjects.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                                     </select>
@@ -366,15 +516,15 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ absenceRequests = [
                             </div>
                             <div>
                                 <label className="block text-xs font-medium text-gray-700 mb-1">Instrucciones para el Reemplazo / Tareas</label>
-                                <textarea name="instrucciones" required className="w-full p-2 text-sm border border-gray-300 rounded-md" rows={2} placeholder="Ej: Resolver páginas 45 y 46 del libro..." />
+                                <textarea name="instrucciones" required className="w-full p-2 text-xs border border-gray-300 rounded-md" rows={2} placeholder="Ej: Resolver páginas 45 y 46 del libro..." />
                             </div>
                             <div>
                                 <label className="block text-xs font-medium text-gray-700 mb-1">URL Material (Opcional)</label>
-                                <input type="url" name="planificacionUrl" className="w-full p-2 text-sm border border-gray-300 rounded-md" placeholder="https://drive.google.com/..." />
+                                <input type="url" name="planificacionUrl" className="w-full p-2 text-xs border border-gray-300 rounded-md" placeholder="https://drive.google.com/..." />
                             </div>
                             <div className="flex justify-end gap-2 pt-2">
                                 <button type="button" onClick={(e) => (e.target as HTMLElement).closest('#report-absence-form')?.classList.add('hidden')} className="px-3 py-1.5 text-xs border border-gray-300 text-gray-700 rounded-md hover:bg-white">Cancelar</button>
-                                <button type="submit" className="px-3 py-1.5 text-xs bg-primary-600 text-white rounded-md hover:bg-primary-700">Enviar a Inspección</button>
+                                <button type="submit" className="px-3 py-1.5 text-xs bg-primary-600 text-white rounded-md hover:bg-primary-700 font-semibold">Enviar a Inspección</button>
                             </div>
                         </form>
                     </div>
@@ -384,15 +534,28 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ absenceRequests = [
                             {absenceRequests.filter(r => r.docenteTitularId === currentUser?.id).map(r => {
                                 const cls = classes.find(c => c.id === r.classId);
                                 const sub = subjects.find(s => s.id === r.subjectId);
+                                const reemplazante = users.find(u => u.id === r.docenteReemplazanteId);
                                 return (
-                                    <div key={r.id} className="p-3 border rounded-lg flex flex-col md:flex-row justify-between items-start md:items-center bg-gray-50 gap-3">
+                                    <div key={r.id} className="p-3.5 border rounded-lg flex flex-col md:flex-row justify-between items-start md:items-center bg-gray-50 gap-3">
                                         <div>
-                                            <p className="font-semibold text-sm text-gray-800">{r.fecha} - Bloque {r.periodo}</p>
-                                            <p className="text-xs text-gray-500">{sub?.name} en {cls?.name}</p>
-                                            {r.estado === 'Pendiente' && <span className="inline-block mt-1 px-2 py-0.5 bg-yellow-100 text-yellow-800 text-[10px] font-bold rounded">Pendiente de Aprobación</span>}
-                                            {r.estado === 'Aprobado' && <span className="inline-block mt-1 px-2 py-0.5 bg-green-100 text-green-800 text-[10px] font-bold rounded">Aprobado / Reasignado</span>}
+                                            <div className="flex items-center gap-2">
+                                                <p className="font-semibold text-sm text-gray-800">{r.fecha} - Bloque {r.periodo}</p>
+                                                {r.estado === 'Pendiente' && <span className="px-2 py-0.5 bg-yellow-100 text-yellow-800 text-[10px] font-bold rounded">Pendiente de Aprobación</span>}
+                                                {r.estado === 'Aprobado' && <span className="px-2 py-0.5 bg-green-100 text-green-800 text-[10px] font-bold rounded">✓ Reemplazo Asignado</span>}
+                                            </div>
+                                            <p className="text-xs text-gray-500 mt-0.5">{sub?.name} en {cls?.name}</p>
+                                            {r.docenteReemplazanteId && (
+                                                <p className="text-xs text-indigo-700 font-medium mt-1">
+                                                    Docente asignado: <strong>{reemplazante?.name || r.docenteReemplazanteNombre || 'Docente Sustituto'}</strong>
+                                                </p>
+                                            )}
+                                            {r.leccionarioRegistered && (
+                                                <span className="inline-block mt-1 text-[10px] text-emerald-700 font-bold bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded">
+                                                    ✓ Registrado en Leccionario por el reemplazante
+                                                </span>
+                                            )}
                                         </div>
-                                        <div className="text-xs text-gray-600 bg-white p-2 rounded border border-gray-100 w-full md:w-auto md:max-w-xs truncate">
+                                        <div className="text-xs text-gray-600 bg-white p-2.5 rounded border border-gray-100 w-full md:w-auto md:max-w-xs">
                                             <span className="font-medium">Instrucciones:</span> {r.instrucciones}
                                         </div>
                                     </div>
@@ -400,10 +563,155 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ absenceRequests = [
                             })}
                         </div>
                     ) : (
-                        <p className="text-sm text-gray-500 italic">No tienes ausencias reportadas.</p>
+                        <p className="text-xs text-gray-400 italic">No tienes ausencias reportadas.</p>
                     )}
                 </div>
             </div>
+
+            {/* Modal: Asentar en Leccionario desde el TeacherDashboard */}
+            {leccionarioModalData.isOpen && leccionarioModalData.absence && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                    <div className="bg-white rounded-xl shadow-xl w-full max-w-xl overflow-hidden flex flex-col max-h-[90vh]">
+                        <div className="p-4 border-b border-gray-200 flex justify-between items-center bg-gray-50">
+                            <div>
+                                <h3 className="text-base font-bold text-gray-800">
+                                    📖 Registrar Clase de Reemplazo en el Leccionario
+                                </h3>
+                                <p className="text-xs text-gray-500">
+                                    Complete los datos de la clase impartida para el Leccionario Oficial.
+                                </p>
+                            </div>
+                            <button onClick={() => setLeccionarioModalData(prev => ({ ...prev, isOpen: false }))} className="text-gray-500 hover:text-gray-700 text-xl font-bold">&times;</button>
+                        </div>
+                        <div className="p-5 overflow-y-auto">
+                            <form onSubmit={async (e) => {
+                                e.preventDefault();
+                                const req = leccionarioModalData.absence!;
+                                const currentInstId = currentUser?.institutionId || req.institutionId || 'uemol';
+                                const slotId = timeSlots[0]?.id || `slot-${req.periodo}`;
+
+                                const newLeccionarioEntry: LeccionarioEntry = {
+                                    id: req.leccionarioEntryId || `lec-rep-${Date.now()}`,
+                                    institutionId: currentInstId,
+                                    teacherId: currentUser?.id || '',
+                                    classId: req.classId,
+                                    subjectId: req.subjectId,
+                                    date: req.fecha,
+                                    timeSlotId: slotId,
+                                    skillCode: leccionarioModalData.skillCode,
+                                    topics: leccionarioModalData.topics,
+                                    tasks: leccionarioModalData.tasks,
+                                    observations: leccionarioModalData.observations,
+                                    isReplacement: true,
+                                    replacedTeacherId: req.docenteTitularId,
+                                    substituteTeacherName: currentUser?.name,
+                                    absenceRequestId: req.id,
+                                };
+
+                                if (onUpdateLeccionarioEntries) {
+                                    const filtered = (leccionarioEntries || []).filter(l => l.id !== newLeccionarioEntry.id);
+                                    onUpdateLeccionarioEntries([...filtered, newLeccionarioEntry]);
+                                }
+
+                                const updatedAbsences = (absenceRequests || []).map(r => 
+                                    r.id === req.id ? {
+                                        ...r,
+                                        leccionarioRegistered: true,
+                                        leccionarioEntryId: newLeccionarioEntry.id,
+                                        leccionarioDate: new Date().toISOString(),
+                                        reemplazoObservaciones: leccionarioModalData.observations
+                                    } : r
+                                );
+                                onUpdateAbsenceRequests(updatedAbsences);
+
+                                const titularTeacher = users.find(u => u.id === req.docenteTitularId);
+                                const sub = subjects.find(s => s.id === req.subjectId);
+                                const cls = classes.find(c => c.id === req.classId);
+
+                                await notifyOnLeccionarioRegistered({
+                                    absenceRequest: { ...req, leccionarioRegistered: true },
+                                    docenteReemplazante: currentUser,
+                                    docenteTitular: titularTeacher,
+                                    subject: sub,
+                                    classObj: cls,
+                                    users,
+                                    currentNotifications: notifications,
+                                    onUpdateNotifications
+                                });
+
+                                setLeccionarioModalData(prev => ({ ...prev, isOpen: false, absence: null }));
+                                setActionMessage("✅ ¡Clase de reemplazo registrada en el Leccionario! Se notificó al docente titular y a Inspección.");
+                            }} className="space-y-3.5">
+                                <div className="p-2.5 bg-indigo-50 border border-indigo-100 rounded-lg text-xs text-indigo-900">
+                                    <p><strong>Fecha:</strong> {leccionarioModalData.absence.fecha} | <strong>Bloque:</strong> {leccionarioModalData.absence.periodo}</p>
+                                    <p><strong>Docente Titular:</strong> {users.find(u => u.id === leccionarioModalData.absence?.docenteTitularId)?.name || 'Titular'}</p>
+                                </div>
+
+                                <div>
+                                    <label className="block text-xs font-medium text-gray-700 mb-1">Código de Destreza / DCD</label>
+                                    <input 
+                                        type="text" 
+                                        required
+                                        value={leccionarioModalData.skillCode}
+                                        onChange={e => setLeccionarioModalData(prev => ({ ...prev, skillCode: e.target.value }))}
+                                        className="w-full p-2 text-xs border border-gray-300 rounded-md"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="block text-xs font-medium text-gray-700 mb-1">Temas Tratados</label>
+                                    <textarea 
+                                        required
+                                        rows={2}
+                                        value={leccionarioModalData.topics}
+                                        onChange={e => setLeccionarioModalData(prev => ({ ...prev, topics: e.target.value }))}
+                                        className="w-full p-2 text-xs border border-gray-300 rounded-md"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="block text-xs font-medium text-gray-700 mb-1">Tareas / Actividades Desarrolladas</label>
+                                    <textarea 
+                                        required
+                                        rows={2}
+                                        value={leccionarioModalData.tasks}
+                                        onChange={e => setLeccionarioModalData(prev => ({ ...prev, tasks: e.target.value }))}
+                                        className="w-full p-2 text-xs border border-gray-300 rounded-md"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="block text-xs font-medium text-gray-700 mb-1">Observaciones</label>
+                                    <textarea 
+                                        rows={2}
+                                        value={leccionarioModalData.observations}
+                                        onChange={e => setLeccionarioModalData(prev => ({ ...prev, observations: e.target.value }))}
+                                        className="w-full p-2 text-xs border border-gray-300 rounded-md"
+                                        placeholder="Comportamiento, trabajo en aula o novedades..."
+                                    />
+                                </div>
+
+                                <div className="flex justify-end gap-2 pt-3 border-t">
+                                    <button 
+                                        type="button" 
+                                        onClick={() => setLeccionarioModalData(prev => ({ ...prev, isOpen: false }))} 
+                                        className="px-3 py-1.5 border border-gray-300 text-gray-700 rounded-md text-xs hover:bg-gray-50"
+                                    >
+                                        Cancelar
+                                    </button>
+                                    <button 
+                                        type="submit" 
+                                        className="px-3 py-1.5 bg-emerald-600 text-white rounded-md text-xs font-semibold hover:bg-emerald-700"
+                                    >
+                                        Guardar en Leccionario
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             <div>
                  <CronogramaWidget 
                     events={cronogramaEvents}

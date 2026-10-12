@@ -1,6 +1,13 @@
 import React, { useState, useEffect, useMemo, useContext } from 'react';
 import { UserContext, InstitutionContext } from '../../contexts/UserContext';
-import { Role, User, AbsenceRequest, ScheduleEntry, Class, Subject, PunchType, StaffAttendanceRecord } from '../../types';
+import { Role, User, AbsenceRequest, ScheduleEntry, Class, Subject, StaffAttendanceRecord, LeccionarioEntry, TimeSlot, MicroPlan } from '../../types';
+import type { Notification as AppNotification } from '../../types';
+import { 
+  requestNotificationPermission, 
+  notifyInspeccionOnAbsenceRequest, 
+  notifyOnReplacementAssigned, 
+  notifyOnLeccionarioRegistered 
+} from '../../lib/notificationService';
 
 interface DocenteDisponible {
   id: string;
@@ -18,10 +25,13 @@ interface AusenciaReportada {
   fecha: string;
   periodo: number;
   diaSemana: number;
+  classId: string;
+  subjectId: string;
   asignaturaNombre: string;
   especialidadRequerida: string;
   paraleloNombre: string;
   aulaNombre: string;
+  instrucciones?: string;
   planificacionUrl?: string;
 }
 
@@ -33,12 +43,33 @@ interface InspectorSustitucionesProps {
     classes: Class[];
     subjects: Subject[];
     staffAttendanceRecords: StaffAttendanceRecord[];
+    notifications?: AppNotification[];
+    onUpdateNotifications?: (notifs: AppNotification[]) => void;
+    leccionarioEntries?: LeccionarioEntry[];
+    onUpdateLeccionarioEntries?: (entries: LeccionarioEntry[]) => void;
+    timeSlots?: TimeSlot[];
+    microPlans?: MicroPlan[];
 }
 
-export const InspectorSustituciones: React.FC<InspectorSustitucionesProps> = ({ users, schedule, classes, subjects, staffAttendanceRecords, absenceRequests = [], onUpdateAbsenceRequests = (_r: AbsenceRequest[]) => {} }) => {
+export const InspectorSustituciones: React.FC<InspectorSustitucionesProps> = ({ 
+  users, 
+  schedule, 
+  classes, 
+  subjects, 
+  staffAttendanceRecords, 
+  absenceRequests = [], 
+  onUpdateAbsenceRequests = (_r: AbsenceRequest[]) => {},
+  notifications = [],
+  onUpdateNotifications,
+  leccionarioEntries = [],
+  onUpdateLeccionarioEntries,
+  timeSlots = [],
+  microPlans = []
+}) => {
   const { user: currentUser } = useContext(UserContext);
   const { institution } = useContext(InstitutionContext);
   
+  const [activeSubTab, setActiveSubTab] = useState<'pending' | 'assigned'>('pending');
   const [ausencias, setAusencias] = useState<AusenciaReportada[]>([]);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [formData, setFormData] = useState({
@@ -55,34 +86,76 @@ export const InspectorSustituciones: React.FC<InspectorSustitucionesProps> = ({ 
   const [candidatos, setCandidatos] = useState<DocenteDisponible[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [mensajeExito, setMensajeExito] = useState<string | null>(null);
+  const [pushStatus, setPushStatus] = useState<NotificationPermission>(
+    typeof window !== 'undefined' && 'Notification' in window ? window.Notification.permission : 'default'
+  );
 
-  // Carga inicial de ausencias pendientes de cubrir (Mock basado en contexto)
-  
+  // Leccionario Modal State
+  const [leccionarioModalData, setLeccionarioModalData] = useState<{
+    isOpen: boolean;
+    absence: AbsenceRequest | null;
+    topics: string;
+    tasks: string;
+    skillCode: string;
+    observations: string;
+  }>({
+    isOpen: false,
+    absence: null,
+    topics: '',
+    tasks: '',
+    skillCode: 'REEMPLAZO-01',
+    observations: ''
+  });
+
+  const handleRequestPush = async () => {
+    const res = await requestNotificationPermission();
+    setPushStatus(res);
+    if (res === 'granted') {
+      setMensajeExito('🔔 ¡Notificaciones Push activadas con éxito! Recibirá avisos en tiempo real en este dispositivo.');
+    }
+  };
+
+  // Carga inicial de ausencias pendientes de cubrir
   useEffect(() => {
-    if (institution) {
-        const pendingRequests = absenceRequests.filter(r => r.institutionId === institution.id && r.estado === 'Pendiente');
-        const mapped = pendingRequests.map(r => {
+    const currentInstId = institution?.id || currentUser?.institutionId;
+    if (currentInstId) {
+        const pendingRequests = absenceRequests.filter(r => 
+          (r.institutionId === currentInstId || r.institutionId === 'uemol' || !r.institutionId) && 
+          r.estado === 'Pendiente'
+        );
+        const mapped: AusenciaReportada[] = pendingRequests.map(r => {
             const teacher = users.find(u => u.id === r.docenteTitularId);
             const cls = classes.find(c => c.id === r.classId);
             const sub = subjects.find(s => s.id === r.subjectId);
             return {
                 id: r.id,
-                docenteTitular: teacher?.name || 'Desconocido',
-                docenteTitularId: teacher?.id || '',
+                docenteTitular: teacher?.name || 'Docente Titular',
+                docenteTitularId: r.docenteTitularId || '',
                 fecha: r.fecha,
                 periodo: r.periodo,
                 diaSemana: r.diaSemana,
-                asignaturaNombre: sub?.name || 'Desconocida',
+                classId: r.classId,
+                subjectId: r.subjectId,
+                asignaturaNombre: sub?.name || 'Asignatura Asignada',
                 especialidadRequerida: sub?.name || 'General',
-                paraleloNombre: cls?.name || 'Desconocido',
-                aulaNombre: 'Asignada',
+                paraleloNombre: cls?.name || 'Curso',
+                aulaNombre: 'Aula Oficial',
+                instrucciones: r.instrucciones,
                 planificacionUrl: r.planificacionUrl
             };
         });
         setAusencias(mapped);
     }
-  }, [institution, absenceRequests, users, classes, subjects]);
+  }, [institution, currentUser, absenceRequests, users, classes, subjects]);
 
+  // Lista de reemplazos aprobados / asignados
+  const reemplazosAsignados = useMemo(() => {
+    const currentInstId = institution?.id || currentUser?.institutionId;
+    return absenceRequests.filter(r => 
+      (r.institutionId === currentInstId || r.institutionId === 'uemol' || !r.institutionId) && 
+      r.estado === 'Aprobado'
+    );
+  }, [absenceRequests, institution, currentUser]);
 
   // Algoritmo de detección de Horas Huecas localmente usando los datos del sistema
   const consultarDocentesDisponibles = async (ausencia: AusenciaReportada) => {
@@ -91,8 +164,13 @@ export const InspectorSustituciones: React.FC<InspectorSustitucionesProps> = ({ 
     setMensajeExito(null);
     
     setTimeout(() => {
+        const currentInstId = institution?.id || currentUser?.institutionId;
         // Filtrar docentes de esta institucion
-        const docentesInstitucion = users.filter(u => u.institutionId === currentUser?.institutionId && u.role === Role.Teacher);
+        const docentesInstitucion = users.filter(u => 
+          (u.institutionId === currentInstId || u.institutionId === 'none' || !u.institutionId) && 
+          u.role === Role.Teacher && 
+          u.id !== ausencia.docenteTitularId
+        );
         
         const disponibles: DocenteDisponible[] = [];
         
@@ -109,30 +187,35 @@ export const InspectorSustituciones: React.FC<InspectorSustitucionesProps> = ({ 
             );
             
             // Verificar si el docente está ausente hoy
-            const isAusenteHoy = staffAttendanceRecords.some(r => r.userId === docente.id && r.date === ausencia.fecha && r.punches.length === 0);
+            const isAusenteHoy = staffAttendanceRecords.some(r => r.userId === docente.id && r.date === ausencia.fecha && r.punches?.length === 0);
 
             // Si es hora hueca
             if (!scheduleEntry && !isAusenteHoy) {
-                
-                // Calculo de carga
                 const totalHoras = schedule.filter(s => docenteSubjectIds.has(s.subjectId)).length;
-                
-                // Validar especialidad (simulada basada en la asignatura que imparte)
                 const subjectsDocente = subjects.filter(s => s.teacherId === docente.id);
-                const coincideEspecialidad = subjectsDocente.some(s => s.name.includes('Matemáticas') || s.name.includes('Ciencias Exactas'));
+                const coincideEspecialidad = subjectsDocente.some(s => 
+                  s.name.toLowerCase().includes(ausencia.asignaturaNombre.toLowerCase()) ||
+                  ausencia.asignaturaNombre.toLowerCase().includes(s.name.toLowerCase())
+                );
+
+                // Conteo de reemplazos reales asignados en el mes
+                const reemplazosMes = absenceRequests.filter(r => 
+                  r.docenteReemplazanteId === docente.id && 
+                  r.estado === 'Aprobado'
+                ).length;
 
                 disponibles.push({
                     id: docente.id,
                     nombre: docente.name,
-                    especialidad: subjectsDocente[0]?.name || 'General',
+                    especialidad: subjectsDocente[0]?.name || 'Educación General',
                     coincideEspecialidad: coincideEspecialidad,
-                    reemplazosAcumuladosMes: Math.floor(Math.random() * 5), // Mock de reemplazos historicos
+                    reemplazosAcumuladosMes: reemplazosMes,
                     horasAsignadasSemana: totalHoras
                 });
             }
         });
         
-        // Ordenar por rotacion equitativa (Indice de Sustitución Histórica)
+        // Ordenar por rotación equitativa (especialidad primero, luego menor carga de reemplazos)
         disponibles.sort((a, b) => {
             if (a.coincideEspecialidad && !b.coincideEspecialidad) return -1;
             if (!a.coincideEspecialidad && b.coincideEspecialidad) return 1;
@@ -141,20 +224,60 @@ export const InspectorSustituciones: React.FC<InspectorSustitucionesProps> = ({ 
 
         setCandidatos(disponibles);
         setLoading(false);
-    }, 800);
+    }, 400);
   };
 
   const ejecutarReasignacionYNotificar = async (docenteId: string) => {
     if (!ausenciaSeleccionada) return;
 
     try {
-      const updatedRequests = absenceRequests.map(r => 
-          r.id === ausenciaSeleccionada.id ? { ...r, estado: 'Aprobado' as const, docenteReemplazanteId: docenteId } : r
-      );
+      const candidato = candidatos.find(c => c.id === docenteId) || users.find(u => u.id === docenteId);
+      const originalReq = absenceRequests.find(r => r.id === ausenciaSeleccionada.id);
+      
+      const candidateName = candidato ? ('nombre' in candidato ? (candidato as DocenteDisponible).nombre : (candidato as User).name) : 'Docente Reemplazante';
+
+      const updatedReq: AbsenceRequest = {
+        ...(originalReq || {
+          id: ausenciaSeleccionada.id,
+          institutionId: institution?.id || currentUser?.institutionId || 'uemol',
+          docenteTitularId: ausenciaSeleccionada.docenteTitularId,
+          fecha: ausenciaSeleccionada.fecha,
+          periodo: ausenciaSeleccionada.periodo,
+          diaSemana: ausenciaSeleccionada.diaSemana,
+          classId: ausenciaSeleccionada.classId,
+          subjectId: ausenciaSeleccionada.subjectId,
+          instrucciones: ausenciaSeleccionada.instrucciones || 'Completar actividades en clase.',
+          creadoPorRol: currentUser?.role || Role.InspectorGeneral,
+        }),
+        estado: 'Aprobado',
+        docenteReemplazanteId: docenteId,
+        docenteReemplazanteNombre: candidateName,
+      };
+
+      const updatedRequests = absenceRequests.some(r => r.id === updatedReq.id)
+        ? absenceRequests.map(r => r.id === updatedReq.id ? updatedReq : r)
+        : [...absenceRequests, updatedReq];
+
       onUpdateAbsenceRequests(updatedRequests);
       
       const teacherTitular = users.find(u => u.id === ausenciaSeleccionada.docenteTitularId);
-      setMensajeExito(`¡Reasignación Exitosa! Se ha enviado una Notificación Push al dispositivo del docente reemplazante y a ${teacherTitular?.name || 'Titular'}. Se ha registrado el log de asistencia para Talento Humano.`);
+      const teacherReemplazante = users.find(u => u.id === docenteId);
+      const sub = subjects.find(s => s.id === ausenciaSeleccionada.subjectId);
+      const cls = classes.find(c => c.id === ausenciaSeleccionada.classId);
+
+      // Enviar notificaciones push a Inspección, al solicitante y al reemplazante
+      await notifyOnReplacementAssigned({
+        absenceRequest: updatedReq,
+        docenteTitular: teacherTitular,
+        docenteReemplazante: teacherReemplazante,
+        subject: sub,
+        classObj: cls,
+        users,
+        currentNotifications: notifications,
+        onUpdateNotifications
+      });
+
+      setMensajeExito(`✅ ¡Reemplazo asignado exitosamente! Se envió una Notificación Push a ${teacherTitular?.name || 'el solicitante'} (informándole sobre ${candidateName}) y a ${candidateName} (con las instrucciones de la clase).`);
       
       setAusencias(prev => prev.filter(a => a.id !== ausenciaSeleccionada.id));
       setAusenciaSeleccionada(null);
@@ -164,19 +287,38 @@ export const InspectorSustituciones: React.FC<InspectorSustitucionesProps> = ({ 
     }
   };
 
-  const handleAddAbsence = (e: React.FormEvent) => {
+  const handleAddAbsence = async (e: React.FormEvent) => {
       e.preventDefault();
-      if (!currentUser?.institutionId) return;
+      const currentInstId = institution?.id || currentUser?.institutionId || 'uemol';
       const newAbsence: AbsenceRequest = {
           ...formData,
           diaSemana: formData.diaSemana ?? new Date(formData.fecha).getDay(),
           id: `abs-${Date.now()}`,
-          institutionId: currentUser.institutionId,
+          institutionId: currentInstId,
           estado: 'Pendiente',
-          creadoPorRol: currentUser.role
+          creadoPorRol: currentUser?.role || Role.InspectorGeneral
       };
-      onUpdateAbsenceRequests([...absenceRequests, newAbsence]);
+
+      const updated = [...absenceRequests, newAbsence];
+      onUpdateAbsenceRequests(updated);
+
+      const titularTeacher = users.find(u => u.id === formData.docenteTitularId);
+      const sub = subjects.find(s => s.id === formData.subjectId);
+      const cls = classes.find(c => c.id === formData.classId);
+
+      // Enviar notificación push inmediata a Inspección
+      await notifyInspeccionOnAbsenceRequest({
+        absenceRequest: newAbsence,
+        docenteTitular: titularTeacher,
+        subject: sub,
+        classObj: cls,
+        users,
+        currentNotifications: notifications,
+        onUpdateNotifications
+      });
+
       setIsFormOpen(false);
+      setMensajeExito(`📢 Ausencia reportada correctamente. Se enviaron notificaciones push al equipo de Inspección.`);
       setFormData({
           docenteTitularId: "",
           fecha: new Date().toISOString().split('T')[0],
@@ -189,201 +331,544 @@ export const InspectorSustituciones: React.FC<InspectorSustitucionesProps> = ({ 
       });
   };
 
+  // Abrir modal para registrar en leccionario
+  const handleOpenLeccionarioModal = (req: AbsenceRequest) => {
+    const titularTeacher = users.find(u => u.id === req.docenteTitularId);
+    const sub = subjects.find(s => s.id === req.subjectId);
+    const cls = classes.find(c => c.id === req.classId);
+    const reemplazanteTeacher = users.find(u => u.id === req.docenteReemplazanteId);
+
+    // Buscar si ya existe una entrada previa
+    const existing = leccionarioEntries.find(l => 
+      l.absenceRequestId === req.id || 
+      (l.classId === req.classId && l.subjectId === req.subjectId && l.date === req.fecha)
+    );
+
+    setLeccionarioModalData({
+      isOpen: true,
+      absence: req,
+      topics: existing?.topics || `Clase de Reemplazo para ${titularTeacher?.name || 'Titular'} - ${sub?.name || 'Asignatura'}`,
+      tasks: existing?.tasks || req.instrucciones || 'Actividades de la planificación de contingencia.',
+      skillCode: existing?.skillCode || 'DCD-REEMPLAZO',
+      observations: existing?.observations || `Sustitución efectuada por ${reemplazanteTeacher?.name || req.docenteReemplazanteNombre || 'Docente'}. ${req.planificacionUrl ? `Material: ${req.planificacionUrl}` : ''}`
+    });
+  };
+
+  const handleSaveLeccionarioEntry = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!leccionarioModalData.absence) return;
+
+    const req = leccionarioModalData.absence;
+    const currentInstId = institution?.id || currentUser?.institutionId || req.institutionId || 'uemol';
+
+    // Resolver timeSlotId
+    let slotId = timeSlots.find(ts => ts.institutionId === currentInstId)?.id || `slot-${req.periodo}`;
+
+    const newLeccionarioEntry: LeccionarioEntry = {
+      id: req.leccionarioEntryId || `lec-rep-${Date.now()}`,
+      institutionId: currentInstId,
+      teacherId: req.docenteReemplazanteId || currentUser?.id || '',
+      classId: req.classId,
+      subjectId: req.subjectId,
+      date: req.fecha,
+      timeSlotId: slotId,
+      skillCode: leccionarioModalData.skillCode,
+      topics: leccionarioModalData.topics,
+      tasks: leccionarioModalData.tasks,
+      observations: leccionarioModalData.observations,
+      isReplacement: true,
+      replacedTeacherId: req.docenteTitularId,
+      substituteTeacherName: req.docenteReemplazanteNombre,
+      absenceRequestId: req.id,
+    };
+
+    // Actualizar leccionarioEntries
+    if (onUpdateLeccionarioEntries) {
+      const filtered = leccionarioEntries.filter(l => l.id !== newLeccionarioEntry.id);
+      onUpdateLeccionarioEntries([...filtered, newLeccionarioEntry]);
+    }
+
+    // Actualizar absenceRequest con leccionarioRegistered: true
+    const updatedAbsences = absenceRequests.map(r => 
+      r.id === req.id ? {
+        ...r,
+        leccionarioRegistered: true,
+        leccionarioEntryId: newLeccionarioEntry.id,
+        leccionarioDate: new Date().toISOString(),
+        reemplazoObservaciones: leccionarioModalData.observations
+      } : r
+    );
+    onUpdateAbsenceRequests(updatedAbsences);
+
+    // Notificar a inspección y al docente titular
+    const titularTeacher = users.find(u => u.id === req.docenteTitularId);
+    const reemplazanteTeacher = users.find(u => u.id === req.docenteReemplazanteId);
+    const sub = subjects.find(s => s.id === req.subjectId);
+    const cls = classes.find(c => c.id === req.classId);
+
+    await notifyOnLeccionarioRegistered({
+      absenceRequest: { ...req, leccionarioRegistered: true },
+      docenteReemplazante: reemplazanteTeacher,
+      docenteTitular: titularTeacher,
+      subject: sub,
+      classObj: cls,
+      users,
+      currentNotifications: notifications,
+      onUpdateNotifications
+    });
+
+    setLeccionarioModalData(prev => ({ ...prev, isOpen: false, absence: null }));
+    setMensajeExito(`📖 ¡Registro en Leccionario guardado con éxito! Se notificó al docente titular e inspección.`);
+  };
+
   return (
     <>
     <div className="bg-gray-50 animate-fade-in p-4 rounded-xl border border-gray-200">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-        
-        {/* Panel Izquierdo: Ausencias Pendientes */}
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-200">
-          <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-                 🚨 Ausencias Pendientes
-              </h2>
-              <button 
-                  onClick={() => setIsFormOpen(true)}
-                  className="bg-primary-600 hover:bg-primary-700 text-white px-3 py-1.5 rounded-md text-sm font-medium transition-colors"
-              >
-                  + Reportar Ausencia
-              </button>
-          </div>
-          <p className="text-xs text-gray-500 mb-6">Lista de novedades reportadas por inspección y docentes que requieren acompañamiento.</p>
-          
-          <div className="space-y-4">
-            {ausencias.length === 0 ? (
-                <div className="text-center py-10 text-gray-500 text-sm">
-                    No hay ausencias pendientes de cubrir hoy.
-                </div>
-            ) : ausencias.map(ausencia => (
-              <div 
-                key={ausencia.id}
-                onClick={() => consultarDocentesDisponibles(ausencia)}
-                className={`p-4 border rounded-xl cursor-pointer transition-all hover:border-indigo-400 ${
-                  ausenciaSeleccionada?.id === ausencia.id ? 'border-indigo-500 bg-indigo-50' : 'border-gray-200'
-                }`}
-              >
-                <div className="flex justify-between items-start mb-2">
-                  <h3 className="font-bold text-sm text-gray-900">{ausencia.docenteTitular}</h3>
-                  <span className="bg-amber-100 text-amber-800 text-[10px] font-bold px-2 py-0.5 rounded">
-                    Periodo {ausencia.periodo}
-                  </span>
-                </div>
-                <p className="text-xs text-gray-600 mb-1"><strong>Asignatura:</strong> {ausencia.asignaturaNombre} en {ausencia.paraleloNombre}</p>
-                <p className="text-xs text-gray-600 mb-2"><strong>Aula:</strong> {ausencia.aulaNombre}</p>
-                
-                {/* Instructions Box */}
-                {(() => {
-                    const absReq = absenceRequests.find(r => r.id === ausencia.id);
-                    if (absReq?.instrucciones) {
-                        return (
-                            <div className="mt-3 p-2 bg-gray-50 border border-gray-100 rounded text-xs text-gray-700">
-                                <strong>Instrucciones:</strong> {absReq.instrucciones}
-                            </div>
-                        );
-                    }
-                    return null;
-                })()}
+      
+      {/* Top Banner: Control de Notificaciones Push & Pestañas */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center bg-white p-4 rounded-xl border border-gray-200 shadow-sm mb-6 gap-4">
+        <div>
+          <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+            📋 Sistema de Sustituciones y Reemplazos
+          </h2>
+          <p className="text-xs text-gray-500">
+            Detección de horas huecas, asignación de docentes sustitutos, notificaciones push automáticas y registro en Leccionario.
+          </p>
+        </div>
 
-                {ausencia.planificacionUrl && (
-                  <span className="text-[11px] text-emerald-600 font-semibold flex items-center gap-1 mt-2">
-                      ✓ Planificación de Contingencia Adjunta
-                  </span>
+        <div className="flex items-center gap-2">
+          {pushStatus !== 'granted' ? (
+            <button
+              onClick={handleRequestPush}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-xs font-semibold shadow-sm transition-colors"
+              title="Habilitar notificaciones en el navegador para recibir alertas inmediatas"
+            >
+              🔔 Activar Notificaciones Push
+            </button>
+          ) : (
+            <span className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-lg text-xs font-semibold">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+              Push Activo
+            </span>
+          )}
+
+          <button 
+              onClick={() => setIsFormOpen(true)}
+              className="bg-primary-600 hover:bg-primary-700 text-white px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-colors shadow-sm"
+          >
+              + Reportar Ausencia
+          </button>
+        </div>
+      </div>
+
+      {mensajeExito && (
+        <div className="mb-6 p-4 bg-emerald-50 border-l-4 border-emerald-500 text-emerald-800 text-xs rounded-r-xl shadow-sm flex items-center justify-between">
+          <span>{mensajeExito}</span>
+          <button onClick={() => setMensajeExito(null)} className="text-emerald-700 font-bold ml-4">✕</button>
+        </div>
+      )}
+
+      {/* Navegación Secundaria: Pendientes vs Asignados */}
+      <div className="flex border-b border-gray-200 mb-6 bg-white rounded-t-xl px-4 pt-2">
+        <button
+          onClick={() => setActiveSubTab('pending')}
+          className={`py-2.5 px-4 font-semibold text-xs border-b-2 transition-colors flex items-center gap-2 ${
+            activeSubTab === 'pending'
+              ? 'border-primary-600 text-primary-600'
+              : 'border-transparent text-gray-500 hover:text-gray-700'
+          }`}
+        >
+          🚨 Ausencias Pendientes ({ausencias.length})
+        </button>
+        <button
+          onClick={() => setActiveSubTab('assigned')}
+          className={`py-2.5 px-4 font-semibold text-xs border-b-2 transition-colors flex items-center gap-2 ${
+            activeSubTab === 'assigned'
+              ? 'border-primary-600 text-primary-600'
+              : 'border-transparent text-gray-500 hover:text-gray-700'
+          }`}
+        >
+          ✅ Reemplazos Asignados ({reemplazosAsignados.length})
+        </button>
+      </div>
+
+      {activeSubTab === 'pending' ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          {/* Panel Izquierdo: Ausencias Pendientes */}
+          <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-200">
+            <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                   🚨 Ausencias Pendientes de Cubrir
+                </h3>
+            </div>
+            <p className="text-xs text-gray-500 mb-6">Lista de novedades reportadas por inspección y docentes que requieren acompañamiento.</p>
+            
+            <div className="space-y-4">
+              {ausencias.length === 0 ? (
+                  <div className="text-center py-12 text-gray-400 text-xs bg-gray-50 rounded-xl border border-dashed border-gray-200">
+                      No hay ausencias pendientes de cubrir hoy.
+                  </div>
+              ) : ausencias.map(ausencia => (
+                <div 
+                  key={ausencia.id}
+                  onClick={() => consultarDocentesDisponibles(ausencia)}
+                  className={`p-4 border rounded-xl cursor-pointer transition-all hover:border-indigo-400 ${
+                    ausenciaSeleccionada?.id === ausencia.id ? 'border-indigo-500 bg-indigo-50 shadow-sm' : 'border-gray-200 bg-white'
+                  }`}
+                >
+                  <div className="flex justify-between items-start mb-2">
+                    <h4 className="font-bold text-sm text-gray-900">{ausencia.docenteTitular}</h4>
+                    <span className="bg-amber-100 text-amber-800 text-[10px] font-bold px-2 py-0.5 rounded">
+                      Bloque / Periodo {ausencia.periodo}
+                    </span>
+                  </div>
+                  <p className="text-xs text-gray-600 mb-1"><strong>Fecha:</strong> {ausencia.fecha}</p>
+                  <p className="text-xs text-gray-600 mb-1"><strong>Asignatura:</strong> {ausencia.asignaturaNombre} en {ausencia.paraleloNombre}</p>
+                  
+                  {ausencia.instrucciones && (
+                    <div className="mt-2 p-2.5 bg-gray-50 border border-gray-200 rounded-lg text-xs text-gray-700">
+                        <strong className="text-indigo-900">Instrucciones para el reemplazo:</strong> {ausencia.instrucciones}
+                    </div>
+                  )}
+
+                  {ausencia.planificacionUrl && (
+                    <div className="mt-2">
+                      <a 
+                        href={ausencia.planificacionUrl} 
+                        target="_blank" 
+                        rel="noreferrer" 
+                        className="text-[11px] text-emerald-600 font-semibold flex items-center gap-1 hover:underline"
+                        onClick={e => e.stopPropagation()}
+                      >
+                        🔗 Ver Planificación de Contingencia Adjunta
+                      </a>
+                    </div>
+                  )}
+
+                  <div className="mt-3 flex justify-end">
+                    <span className="text-[11px] text-indigo-600 font-medium hover:underline">
+                      Buscar docentes en hora hueca →
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Panel Derecho: Buscador de Horas Libres y Asignador de Reemplazos */}
+          <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-200">
+            <h3 className="text-lg font-bold text-gray-900 mb-2">🔎 Buscador de Horas Libres y Sustitutos</h3>
+            <p className="text-xs text-gray-500 mb-4">Algoritmo de balanceo por especialidad y menor carga de sustitución en el mes.</p>
+
+            {ausenciaSeleccionada ? (
+              <div>
+                <div className="mb-4 p-4 bg-indigo-50 rounded-xl border border-indigo-100 text-xs text-indigo-900 leading-relaxed">
+                  Reemplazo para el <strong>Bloque {ausenciaSeleccionada.periodo}</strong> en <strong>{ausenciaSeleccionada.asignaturaNombre} ({ausenciaSeleccionada.paraleloNombre})</strong>. Especialidad: <span className="font-bold underline">{ausenciaSeleccionada.especialidadRequerida}</span>.
+                </div>
+
+                {loading ? (
+                  <div className="text-center py-12 text-sm text-indigo-600 font-medium animate-pulse">
+                      Analizando horarios y franjas libres del distributivo docente...
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    <h4 className="text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">Docentes Disponibles ({candidatos.length})</h4>
+                    {candidatos.length === 0 ? (
+                        <div className="text-center py-8 text-xs text-gray-500 italic bg-gray-50 rounded-lg border border-dashed border-gray-200">
+                          No se encontraron docentes con hora libre en este periodo.
+                        </div>
+                    ) : candidatos.map(candidato => (
+                      <div 
+                        key={candidato.id} 
+                        className="p-4 border border-gray-200 rounded-xl flex flex-col md:flex-row justify-between items-start md:items-center hover:bg-gray-50 gap-4 transition-colors"
+                      >
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2">
+                            <h5 className="font-semibold text-sm text-gray-900">{candidato.nombre}</h5>
+                            {candidato.coincideEspecialidad && (
+                              <span className="bg-emerald-100 text-emerald-800 text-[9px] font-bold px-2 py-0.5 rounded-full">
+                                Especialista
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-xs text-gray-500 mt-1">Especialidad: {candidato.especialidad}</p>
+                          <div className="flex items-center gap-2 mt-1">
+                            <span className="text-[11px] text-indigo-600 font-medium bg-indigo-50 px-2 py-0.5 rounded">
+                              Reemplazos este mes: {candidato.reemplazosAcumuladosMes}
+                            </span>
+                            <span className="text-[11px] text-gray-500">
+                              Horas asignadas: {candidato.horasAsignadasSemana}h
+                            </span>
+                          </div>
+                        </div>
+
+                        <button 
+                          onClick={() => ejecutarReasignacionYNotificar(candidato.id)}
+                          className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold px-4 py-2 rounded-lg transition-colors whitespace-nowrap shadow-sm hover:shadow"
+                        >
+                          Asignar y Notificar
+                        </button>
+                      </div>
+                    ))}
+                  </div>
                 )}
               </div>
-            ))}
+            ) : (
+              <div className="text-center py-20 px-8 text-xs text-gray-400 bg-gray-50 rounded-xl border border-dashed border-gray-300">
+                Selecciona una ausencia en el panel izquierdo para analizar las horas huecas disponibles del personal en tiempo real.
+              </div>
+            )}
           </div>
         </div>
-
-        {/* Panel Derecho: Buscador de Horas Libres y Asignador de Reemplazos */}
+      ) : (
+        /* Pestaña: Historial de Reemplazos Asignados y Estado de Leccionario */
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-200">
-          <h2 className="text-xl font-bold text-gray-900 mb-4">🔎 Buscador de Sustitutos</h2>
-          
-          {mensajeExito && (
-            <div className="mb-6 p-4 bg-green-50 border-l-4 border-green-500 text-green-800 text-xs rounded-r-xl shadow-sm">
-              {mensajeExito}
-            </div>
-          )}
-
-          {ausenciaSeleccionada ? (
+          <div className="flex justify-between items-center mb-4">
             <div>
-              <div className="mb-6 p-4 bg-indigo-50 rounded-xl border border-indigo-100 text-xs text-indigo-900 leading-relaxed">
-                Reemplazo para el <strong>Bloque {ausenciaSeleccionada.periodo}</strong> en <strong>{ausenciaSeleccionada.asignaturaNombre}</strong>. Se requiere un docente especialista en: <span className="underline font-bold">{ausenciaSeleccionada.especialidadRequerida}</span>.
-              </div>
+              <h3 className="text-lg font-bold text-gray-900">Historial de Reemplazos y Leccionarios Oficiales</h3>
+              <p className="text-xs text-gray-500">Monitoreo de docentes que cubrieron clases y verificación de registro en el Leccionario.</p>
+            </div>
+          </div>
 
-              {loading ? (
-                <div className="text-center py-12 text-sm text-indigo-600 font-medium animate-pulse">
-                    Buscando horas huecas en el horario presencial...
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  <h3 className="text-xs font-bold text-gray-700 uppercase tracking-wider mb-3">Docentes Disponibles (Criterio de Rotación)</h3>
-                  {candidatos.length === 0 ? (
-                      <p className="text-sm text-gray-500 italic">No se encontraron docentes disponibles en este horario.</p>
-                  ) : candidatos.map(candidato => (
-                    <div 
-                      key={candidato.id} 
-                      className="p-4 border border-gray-200 rounded-xl flex flex-col md:flex-row justify-between items-start md:items-center hover:bg-gray-50 gap-4 transition-colors"
-                    >
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2">
-                          <h4 className="font-semibold text-sm text-gray-900">{candidato.nombre}</h4>
-                          {candidato.coincideEspecialidad && (
-                            <span className="bg-green-100 text-green-800 text-[9px] font-bold px-2 py-0.5 rounded-full">
-                              Especialista
-                            </span>
-                          )}
-                        </div>
-                        <p className="text-xs text-gray-500 mt-1">Especialidad: {candidato.especialidad}</p>
-                        <p className="text-[11px] text-indigo-600 font-semibold mt-1 bg-indigo-50 inline-block px-2 py-1 rounded">
-                          Sustituciones este mes: {candidato.reemplazosAcumuladosMes}
-                        </p>
-                      </div>
-                      <button 
-                        onClick={() => ejecutarReasignacionYNotificar(candidato.id)}
-                        className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold px-4 py-2.5 rounded-lg transition-colors whitespace-nowrap shadow-sm hover:shadow"
-                      >
-                        Asignar y Notificar
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
+          {reemplazosAsignados.length === 0 ? (
+            <div className="text-center py-16 text-gray-400 text-xs bg-gray-50 rounded-xl border border-dashed border-gray-200">
+              Aún no se registran reemplazos asignados en este periodo.
             </div>
           ) : (
-            <div className="text-center py-20 px-8 text-sm text-gray-400 bg-gray-50 rounded-xl border border-dashed border-gray-300">
-              Selecciona una ausencia en el panel izquierdo para analizar las horas huecas disponibles del personal en tiempo real.
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-gray-50 text-gray-600 font-semibold border-b">
+                  <tr>
+                    <th className="p-3">Fecha / Bloque</th>
+                    <th className="p-3">Paralelo y Asignatura</th>
+                    <th className="p-3">Docente Titular (Ausente)</th>
+                    <th className="p-3">Docente Reemplazante</th>
+                    <th className="p-3">Instrucciones Entregadas</th>
+                    <th className="p-3">Estado Leccionario</th>
+                    <th className="p-3 text-right">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {reemplazosAsignados.map(req => {
+                    const titular = users.find(u => u.id === req.docenteTitularId);
+                    const reemplazante = users.find(u => u.id === req.docenteReemplazanteId);
+                    const cls = classes.find(c => c.id === req.classId);
+                    const sub = subjects.find(s => s.id === req.subjectId);
+                    const isRegistered = req.leccionarioRegistered;
+
+                    return (
+                      <tr key={req.id} className="hover:bg-gray-50 transition-colors">
+                        <td className="p-3 whitespace-nowrap">
+                          <p className="font-semibold text-gray-900">{req.fecha}</p>
+                          <span className="text-[10px] text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded">Bloque {req.periodo}</span>
+                        </td>
+                        <td className="p-3">
+                          <p className="font-medium text-gray-800">{sub?.name || 'Asignatura'}</p>
+                          <p className="text-[11px] text-gray-500">{cls?.name || 'Paralelo'}</p>
+                        </td>
+                        <td className="p-3">
+                          <span className="text-red-700 font-medium">{titular?.name || 'Titular'}</span>
+                        </td>
+                        <td className="p-3">
+                          <span className="text-emerald-700 font-bold">{reemplazante?.name || req.docenteReemplazanteNombre || 'Reemplazante'}</span>
+                        </td>
+                        <td className="p-3 max-w-xs">
+                          <p className="text-gray-700 truncate" title={req.instrucciones}>{req.instrucciones}</p>
+                          {req.planificacionUrl && (
+                            <a href={req.planificacionUrl} target="_blank" rel="noreferrer" className="text-[10px] text-indigo-600 hover:underline">
+                              Material Adjunto
+                            </a>
+                          )}
+                        </td>
+                        <td className="p-3">
+                          {isRegistered ? (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-emerald-100 text-emerald-800 rounded-full font-bold text-[10px]">
+                              ✓ Registrado
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-amber-100 text-amber-800 rounded-full font-bold text-[10px]">
+                              ⏳ Pendiente
+                            </span>
+                          )}
+                        </td>
+                        <td className="p-3 text-right whitespace-nowrap">
+                          <button
+                            onClick={() => handleOpenLeccionarioModal(req)}
+                            className={`px-3 py-1.5 rounded-lg text-xs font-semibold shadow-sm transition-colors ${
+                              isRegistered 
+                                ? 'bg-gray-100 text-gray-700 hover:bg-gray-200' 
+                                : 'bg-primary-600 text-white hover:bg-primary-700'
+                            }`}
+                          >
+                            {isRegistered ? 'Ver / Editar Leccionario' : '📝 Registrar en Leccionario'}
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
             </div>
           )}
         </div>
+      )}
 
-      </div>
     </div>
 
+    {/* Modal: Reportar Ausencia */}
     {isFormOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-xl shadow-xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]">
                 <div className="p-4 border-b border-gray-200 flex justify-between items-center bg-gray-50">
-                    <h3 className="text-lg font-bold text-gray-800">Reportar Nueva Ausencia</h3>
-                    <button onClick={() => setIsFormOpen(false)} className="text-gray-500 hover:text-gray-700">&times;</button>
+                    <h3 className="text-lg font-bold text-gray-800">Reportar Novedad / Solicitud de Ausencia</h3>
+                    <button onClick={() => setIsFormOpen(false)} className="text-gray-500 hover:text-gray-700 text-xl font-bold">&times;</button>
                 </div>
                 <div className="p-6 overflow-y-auto">
                     <form onSubmit={handleAddAbsence} className="space-y-4">
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Docente Ausente</label>
+                            <label className="block text-xs font-medium text-gray-700 mb-1">Docente Ausente</label>
                             <select 
                                 required
-                                className="w-full p-2 border border-gray-300 rounded-md"
+                                className="w-full p-2 text-xs border border-gray-300 rounded-md"
                                 value={formData.docenteTitularId}
                                 onChange={e => setFormData({...formData, docenteTitularId: e.target.value})}
                             >
                                 <option value="">Seleccione un docente...</option>
-                                {users.filter(u => u.institutionId === currentUser?.institutionId && u.role === Role.Teacher).map(t => (
+                                {users.filter(u => u.role === Role.Teacher).map(t => (
                                     <option key={t.id} value={t.id}>{t.name}</option>
                                 ))}
                             </select>
                         </div>
                         <div className="grid grid-cols-2 gap-4">
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Fecha</label>
-                                <input type="date" required className="w-full p-2 border border-gray-300 rounded-md" value={formData.fecha} onChange={e => setFormData({...formData, fecha: e.target.value, diaSemana: new Date(e.target.value).getDay()})} />
+                                <label className="block text-xs font-medium text-gray-700 mb-1">Fecha</label>
+                                <input type="date" required className="w-full p-2 text-xs border border-gray-300 rounded-md" value={formData.fecha} onChange={e => setFormData({...formData, fecha: e.target.value, diaSemana: new Date(e.target.value).getDay()})} />
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Periodo (Bloque)</label>
-                                <input type="number" min="1" max="10" required className="w-full p-2 border border-gray-300 rounded-md" value={formData.periodo} onChange={e => setFormData({...formData, periodo: parseInt(e.target.value)})} />
+                                <label className="block text-xs font-medium text-gray-700 mb-1">Periodo (Bloque)</label>
+                                <input type="number" min="1" max="10" required className="w-full p-2 text-xs border border-gray-300 rounded-md" value={formData.periodo} onChange={e => setFormData({...formData, periodo: parseInt(e.target.value)})} />
                             </div>
                         </div>
                         <div className="grid grid-cols-2 gap-4">
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Clase/Paralelo</label>
-                                <select required className="w-full p-2 border border-gray-300 rounded-md" value={formData.classId} onChange={e => setFormData({...formData, classId: e.target.value})}>
+                                <label className="block text-xs font-medium text-gray-700 mb-1">Clase / Paralelo</label>
+                                <select required className="w-full p-2 text-xs border border-gray-300 rounded-md" value={formData.classId} onChange={e => setFormData({...formData, classId: e.target.value})}>
                                     <option value="">Seleccione...</option>
-                                    {classes.filter(c => c.institutionId === currentUser?.institutionId).map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                                    {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                                 </select>
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Asignatura</label>
-                                <select required className="w-full p-2 border border-gray-300 rounded-md" value={formData.subjectId} onChange={e => setFormData({...formData, subjectId: e.target.value})}>
+                                <label className="block text-xs font-medium text-gray-700 mb-1">Asignatura</label>
+                                <select required className="w-full p-2 text-xs border border-gray-300 rounded-md" value={formData.subjectId} onChange={e => setFormData({...formData, subjectId: e.target.value})}>
                                     <option value="">Seleccione...</option>
-                                    {subjects.filter(s => s.institutionId === currentUser?.institutionId).map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                                    {subjects.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                                 </select>
                             </div>
                         </div>
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Instrucciones / Tareas para el curso</label>
-                            <textarea required className="w-full p-2 border border-gray-300 rounded-md" rows={3} value={formData.instrucciones} onChange={e => setFormData({...formData, instrucciones: e.target.value})} placeholder="Ej: Resolver páginas 45 y 46 del libro..." />
+                            <label className="block text-xs font-medium text-gray-700 mb-1">Instrucciones / Tareas para el curso</label>
+                            <textarea required className="w-full p-2 text-xs border border-gray-300 rounded-md" rows={3} value={formData.instrucciones} onChange={e => setFormData({...formData, instrucciones: e.target.value})} placeholder="Ej: Resolver ejercicios de la página 35 a la 38..." />
                         </div>
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">URL Planificación / Material (Opcional)</label>
-                            <input type="url" className="w-full p-2 border border-gray-300 rounded-md" value={formData.planificacionUrl} onChange={e => setFormData({...formData, planificacionUrl: e.target.value})} placeholder="https://drive.google.com/..." />
+                            <label className="block text-xs font-medium text-gray-700 mb-1">URL Planificación / Material (Opcional)</label>
+                            <input type="url" className="w-full p-2 text-xs border border-gray-300 rounded-md" value={formData.planificacionUrl} onChange={e => setFormData({...formData, planificacionUrl: e.target.value})} placeholder="https://drive.google.com/..." />
                         </div>
                         <div className="flex justify-end gap-2 pt-4">
-                            <button type="button" onClick={() => setIsFormOpen(false)} className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50">Cancelar</button>
-                            <button type="submit" className="px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700">Guardar Ausencia</button>
+                            <button type="button" onClick={() => setIsFormOpen(false)} className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md text-xs hover:bg-gray-50">Cancelar</button>
+                            <button type="submit" className="px-4 py-2 bg-primary-600 text-white rounded-md text-xs font-semibold hover:bg-primary-700">Guardar y Notificar</button>
                         </div>
                     </form>
                 </div>
             </div>
         </div>
+    )}
+
+    {/* Modal: Registrar Información en el Leccionario */}
+    {leccionarioModalData.isOpen && leccionarioModalData.absence && (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]">
+          <div className="p-4 border-b border-gray-200 flex justify-between items-center bg-gray-50">
+            <div>
+              <h3 className="text-lg font-bold text-gray-800">
+                📖 Registrar Clase de Reemplazo en el Leccionario
+              </h3>
+              <p className="text-xs text-gray-500">
+                Esta información quedará asentada en el Leccionario Oficial Estudiantil.
+              </p>
+            </div>
+            <button onClick={() => setLeccionarioModalData(prev => ({ ...prev, isOpen: false }))} className="text-gray-500 hover:text-gray-700 text-xl font-bold">&times;</button>
+          </div>
+          <div className="p-6 overflow-y-auto">
+            <form onSubmit={handleSaveLeccionarioEntry} className="space-y-4">
+              <div className="p-3 bg-indigo-50 border border-indigo-100 rounded-lg text-xs text-indigo-900">
+                <p><strong>Fecha:</strong> {leccionarioModalData.absence.fecha} | <strong>Bloque:</strong> {leccionarioModalData.absence.periodo}</p>
+                <p><strong>Docente Titular:</strong> {users.find(u => u.id === leccionarioModalData.absence?.docenteTitularId)?.name || 'Titular'}</p>
+                <p><strong>Docente Reemplazante:</strong> {users.find(u => u.id === leccionarioModalData.absence?.docenteReemplazanteId)?.name || leccionarioModalData.absence?.docenteReemplazanteNombre || 'Reemplazante'}</p>
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">Código de Destreza / DCD</label>
+                <input 
+                  type="text" 
+                  required
+                  value={leccionarioModalData.skillCode}
+                  onChange={e => setLeccionarioModalData(prev => ({ ...prev, skillCode: e.target.value }))}
+                  className="w-full p-2 text-xs border border-gray-300 rounded-md"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">Temas Tratados</label>
+                <textarea 
+                  required
+                  rows={2}
+                  value={leccionarioModalData.topics}
+                  onChange={e => setLeccionarioModalData(prev => ({ ...prev, topics: e.target.value }))}
+                  className="w-full p-2 text-xs border border-gray-300 rounded-md"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">Tareas / Actividades Desarrolladas</label>
+                <textarea 
+                  required
+                  rows={3}
+                  value={leccionarioModalData.tasks}
+                  onChange={e => setLeccionarioModalData(prev => ({ ...prev, tasks: e.target.value }))}
+                  className="w-full p-2 text-xs border border-gray-300 rounded-md"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">Observaciones / Novedades de la Sustitución</label>
+                <textarea 
+                  rows={2}
+                  value={leccionarioModalData.observations}
+                  onChange={e => setLeccionarioModalData(prev => ({ ...prev, observations: e.target.value }))}
+                  className="w-full p-2 text-xs border border-gray-300 rounded-md"
+                  placeholder="Detallar si todos los estudiantes cumplieron o incidencias..."
+                />
+              </div>
+
+              <div className="flex justify-end gap-2 pt-4 border-t">
+                <button 
+                  type="button" 
+                  onClick={() => setLeccionarioModalData(prev => ({ ...prev, isOpen: false }))} 
+                  className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md text-xs hover:bg-gray-50"
+                >
+                  Cancelar
+                </button>
+                <button 
+                  type="submit" 
+                  className="px-4 py-2 bg-emerald-600 text-white rounded-md text-xs font-semibold hover:bg-emerald-700"
+                >
+                  Asentar en Leccionario
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
     )}
     </>
   );

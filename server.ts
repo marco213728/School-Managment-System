@@ -5,7 +5,10 @@ import { MotorOptimizadorHorarios } from "./lib/scheduler.ts";
 
 async function startServer() {
   const app = express();
-  const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
+  // In development, the AI Studio dev environment requires port 3000.
+  // In production (e.g. Cloud Run), process.env.PORT is used.
+  const isDev = process.env.NODE_ENV !== "production";
+  const PORT = isDev ? 3000 : (process.env.PORT ? parseInt(process.env.PORT, 10) : 3000);
 
   app.use(express.json());
 
@@ -75,7 +78,7 @@ async function startServer() {
   const indexHtmlPath = path.join(distPath, 'index.html');
   const hasBuiltDist = fs.existsSync(indexHtmlPath);
 
-  if ((process.env.NODE_ENV !== "production" && !process.env.K_SERVICE) || !hasBuiltDist) {
+  if (isDev || !hasBuiltDist) {
     const { createServer: createViteServer } = await import("vite");
     const vite = await createViteServer({
       server: { middlewareMode: true },

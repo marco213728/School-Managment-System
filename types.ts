@@ -140,6 +140,8 @@ export interface User {
   password: string;
   role: Role;
   institutionId?: string;
+  photoUrl?: string;
+  authUid?: string;
   classIds?: string[];
   childIds?: string[];
   phone?: string;
@@ -513,6 +515,10 @@ export interface LeccionarioEntry {
     topics: string; 
     tasks: string; 
     observations: string; 
+    isReplacement?: boolean;
+    replacedTeacherId?: string;
+    substituteTeacherName?: string;
+    absenceRequestId?: string;
 }
 
 export interface Dcd { 
@@ -1200,5 +1206,10 @@ export interface AbsenceRequest {
     planificacionUrl?: string;
     estado: 'Pendiente' | 'Aprobado' | 'Rechazado';
     docenteReemplazanteId?: string;
+    docenteReemplazanteNombre?: string;
     creadoPorRol: string;
+    leccionarioRegistered?: boolean;
+    leccionarioEntryId?: string;
+    leccionarioDate?: string;
+    reemplazoObservaciones?: string;
 }

@@ -12,7 +12,7 @@ interface HeaderProps {
 }
 
 const Header: React.FC<HeaderProps> = ({ toggleSidebar, notifications, onUpdateNotifications }) => {
-  const { user, logout } = useContext(UserContext);
+  const { user, logout, openProfileModal } = useContext(UserContext);
   const { institution } = useContext(InstitutionContext);
   const [isNotificationsOpen, setNotificationsOpen] = useState(false);
   const notificationsRef = useRef<HTMLDivElement>(null);
@@ -102,11 +102,25 @@ const Header: React.FC<HeaderProps> = ({ toggleSidebar, notifications, onUpdateN
 
         <div className="h-8 border-l border-slate-200 mx-2 hidden sm:block"></div>
         
-        <div className="text-right hidden sm:block">
-          <p className="font-semibold text-slate-800">{user?.name}</p>
-          <p className="text-sm text-slate-500">{user?.role}</p>
-        </div>
-        <button onClick={logout} className="p-2 rounded-full hover:bg-rose-100 text-rose-500 transition-colors duration-200" aria-label="Cerrar sesión">
+        <button 
+          type="button"
+          onClick={openProfileModal}
+          className="flex items-center gap-2.5 p-1 rounded-xl hover:bg-slate-100 transition group text-left"
+          title="Ver y editar mi perfil / cambiar contraseña"
+        >
+          <div className="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-xs shadow-xs group-hover:scale-105 transition-transform flex-shrink-0">
+            {user?.name ? user.name.charAt(0).toUpperCase() : 'U'}
+          </div>
+          <div className="hidden sm:block">
+            <p className="font-semibold text-slate-800 text-xs sm:text-sm group-hover:text-blue-600 transition-colors leading-tight">
+              {user?.name}
+            </p>
+            <p className="text-[11px] text-slate-500 leading-tight">
+              {user?.role} <span className="text-blue-600 font-medium ml-1 opacity-80 group-hover:opacity-100">· Mi Perfil ⚙</span>
+            </p>
+          </div>
+        </button>
+        <button onClick={logout} className="p-2 rounded-full hover:bg-rose-100 text-rose-500 transition-colors duration-200" aria-label="Cerrar sesión" title="Cerrar sesión">
           <LogoutIcon className="h-6 w-6" />
         </button>
       </div>
