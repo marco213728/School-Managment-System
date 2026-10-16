@@ -4,6 +4,7 @@ import { Role } from '../../types';
 import { UserContext, InstitutionContext } from '../../contexts/UserContext';
 import { DashboardIcon, AttendanceIcon, ActivityIcon, ReportIcon, ManageIcon, CloseIcon, DeceIcon, HealthIcon, UsersIcon, ChatBubbleIcon, CalendarIcon, VicerrectoradoIcon, InspectionIcon, CitacionIcon, LeccionarioIcon, ClipboardDocumentCheckIcon, ArchiveBoxIcon, ClipboardListIcon, GraduationCapIcon, FingerPrintIcon, SparklesIcon } from '../icons/Icons';
 import { AMAUTA_LOGO } from '../../branding';
+import AmautaLogo from '../branding/AmautaLogo';
 
 interface SidebarProps {
   currentPage: string;
@@ -104,8 +105,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentPage, setCurrentPage, isSideba
 
   const links = user ? roleLinks[user.role] || [] : [];
   
-  const logo = institution?.logoUrl && !institution.logoUrl.includes('placehold') ? institution.logoUrl : AMAUTA_LOGO;
-  
+  const hasCustomLogo = institution?.logoUrl && !institution.logoUrl.includes('placehold') && !institution.logoUrl.startsWith('data:image/svg+xml');
   const isStaff = user && user.role !== Role.Parent && user.role !== Role.Student && user.role !== Role.SuperAdmin;
 
   return (
@@ -114,7 +114,11 @@ const Sidebar: React.FC<SidebarProps> = ({ currentPage, setCurrentPage, isSideba
       <aside className={`flex flex-col w-64 h-full px-4 py-5 bg-slate-900 transform transition-transform duration-300 ease-in-out fixed lg:static lg:translate-x-0 z-30 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
         <div className="flex items-center justify-between px-2">
             <a href="#" onClick={(e) => { e.preventDefault(); setCurrentPage('dashboard'); }} className="flex items-center gap-3">
-              <img src={logo} alt="Logo" className="h-10 w-auto" />
+              {hasCustomLogo ? (
+                <img src={institution.logoUrl} alt={institution.name || 'Logo'} className="h-10 w-auto rounded-md object-contain" />
+              ) : (
+                <AmautaLogo mode="dark" className="h-9 w-auto" />
+              )}
             </a>
             <button onClick={() => setSidebarOpen(false)} className="text-slate-400 lg:hidden">
               <CloseIcon className="h-6 w-6" />

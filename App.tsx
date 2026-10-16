@@ -1,6 +1,6 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
-import { User, Institution, Role, Class, Student, ScheduleEntry, Notification, SupportContact, HealthRecord, MedicalVisit, Subject, TimeSlot, Room, Timetable, ViccIntervention, Intervention, AttendanceRecord, ExitPass, Citacion, AcademicCalendarEvent, LeccionarioEntry, MicroPlan, Dcd, EvaluationCriterion, EvaluationIndicator, Gradebook, Activity, ReinforcementPlan, StaffAttendanceRecord, PunchType, FormalRequest, TrainingPlan, InstitutionalDocument, MeetingRecord, Rubric, ConflictMediation, CronogramaEvent, AbsenceRequest } from './types';
+import { User, Institution, Role, Class, Student, ScheduleEntry, Notification, SupportContact, HealthRecord, MedicalVisit, Subject, TimeSlot, Room, Timetable, ViccIntervention, Intervention, AttendanceRecord, ExitPass, Citacion, AcademicCalendarEvent, LeccionarioEntry, MicroPlan, Dcd, EvaluationCriterion, EvaluationIndicator, Gradebook, Activity, ReinforcementPlan, StaffAttendanceRecord, PunchType, AttendancePunch, AttendanceJustification, FormalRequest, TrainingPlan, InstitutionalDocument, MeetingRecord, Rubric, ConflictMediation, CronogramaEvent, AbsenceRequest } from './types';
 import { MOCK_USERS, MOCK_INSTITUTIONS, MOCK_CLASSES, MOCK_STUDENTS, MOCK_SCHEDULE_ENTRIES, MOCK_NOTIFICATIONS, MOCK_SUPPORT_CONTACTS, MOCK_HEALTH_RECORDS, MOCK_MEDICAL_VISITS, MOCK_INTERVENTIONS, MOCK_SUBJECTS, MOCK_TIME_SLOTS, MOCK_ROOMS, MOCK_TIMETABLES, MOCK_VICC_INTERVENTIONS, MOCK_ATTENDANCE, MOCK_EXIT_PASSES, MOCK_CITACIONES, MOCK_ACADEMIC_CALENDAR_EVENTS, MOCK_LECCIONARIO_ENTRIES, MOCK_MICRO_PLANS, MOCK_DCDS, MOCK_EVALUATION_CRITERIA, MOCK_EVALUATION_INDICATORS, MOCK_GRADEBOOKS, MOCK_ACTIVITIES, MOCK_REINFORCEMENT_PLANS, MOCK_STAFF_ATTENDANCE, MOCK_FORMAL_REQUESTS, MOCK_TRAINING_PLANS, MOCK_INSTITUTIONAL_DOCUMENTS, MOCK_MEETING_RECORDS, MOCK_RUBRICS, MOCK_CONFLICT_MEDIATIONS, MOCK_CRONOGRAMA_EVENTS } from './constants';
 import LoginPage from './pages/LoginPage';
 import DashboardLayout from './components/layout/DashboardLayout';
@@ -545,10 +545,18 @@ export default function App() {
     updatedRequests.forEach(r => saveDocument('absence_requests', r.id, r));
   };
   
-  const handleUpdateStaffAttendance = (userId: string, method: 'Biometric' | 'Manual' | 'Facial', location?: { latitude: number; longitude: number; }) => {
-    
-    // --- GEOFENCE LOGIC START ---
-    let verificationStatus: 'Success' | 'Failed' | 'Pending' = 'Pending';
+  const handleUpdateStaffAttendance = (
+    userId: string, 
+    method: 'Biometric' | 'Manual' | 'Facial', 
+    location?: { latitude: number; longitude: number; },
+    justification?: AttendanceJustification,
+    photoProof?: string,
+    facialConfidence?: number,
+    facialMatch?: boolean,
+    flagReason?: string
+  ) => {
+    // --- GEOFENCE & VERIFICATION LOGIC START ---
+    let verificationStatus: 'Success' | 'Failed' | 'Pending' | 'Flagged' = 'Pending';
     let distance = 0;
     const user = users.find(u => u.id === userId);
 
@@ -563,31 +571,60 @@ export default function App() {
         if (distance <= currentInstitution.geofenceConfig.radius) {
             verificationStatus = 'Success';
         } else {
-            verificationStatus = 'Failed';
+            // Out of range: if justified, mark as Flagged, otherwise Failed
+            verificationStatus = justification ? 'Flagged' : 'Failed';
             
-            // ALERT GENERATION
-            const adminUsers = users.filter(u => 
-                u.institutionId === currentInstitution.id && 
-                (u.role === Role.InstitutionAdmin || u.role === Role.InspectorGeneral || u.role === Role.Rector)
+            // ALERT GENERATION FOR ADMINS (GEOFENCE)
+            const targetAdmins = users.filter(u => 
+                (u.institutionId === currentInstitution.id || u.role === Role.SuperAdmin) && 
+                (u.role === Role.InstitutionAdmin || u.role === Role.InspectorGeneral || u.role === Role.Rector || u.role === Role.SuperAdmin)
             );
             
-            const newAlerts: Notification[] = adminUsers.map(admin => ({
-                id: `alert-geo-${Date.now()}-${admin.id}`,
+            const justificationText = justification 
+                ? ` Justificación: [${justification.reason}] "${justification.note}"`
+                : ' Sin justificación proporcionada.';
+
+            const alertRecipientIds = targetAdmins.length > 0 ? targetAdmins.map(a => a.id) : [currentUser?.id || 'admin'];
+
+            const newAlerts: Notification[] = alertRecipientIds.map(recipientId => ({
+                id: `alert-geo-${Date.now()}-${recipientId}`,
                 institutionId: currentInstitution.id,
-                userId: admin.id,
-                title: 'Alerta de Seguridad: Asistencia Fuera de Rango',
-                message: `El usuario ${user?.name} ha registrado asistencia a ${Math.round(distance)}m de la institución (Radio permitido: ${currentInstitution.geofenceConfig?.radius}m).`,
+                userId: recipientId,
+                title: 'Alerta de Marcaje: Fuera de Rango Institucional',
+                message: `El usuario ${user?.name || 'Personal'} ha registrado asistencia a ${Math.round(distance)}m de la institución (Radio permitido: ${currentInstitution.geofenceConfig?.radius}m).${justificationText}`,
                 date: new Date().toISOString(),
                 read: false
             }));
             
             setNotifications(prev => [...prev, ...newAlerts]);
+            newAlerts.forEach(a => saveDocument('notifications', a.id, a));
         }
     } else {
-        // Fallback if no config
+        // Fallback if no geofence configured
         verificationStatus = 'Success'; 
     }
-    // --- GEOFENCE LOGIC END ---
+
+    // Check facial match inconsistency
+    if (method === 'Facial' && facialMatch === false) {
+        verificationStatus = 'Flagged';
+        const targetAdmins = users.filter(u => 
+            (u.institutionId === currentInstitution.id || u.role === Role.SuperAdmin) && 
+            (u.role === Role.InstitutionAdmin || u.role === Role.InspectorGeneral || u.role === Role.Rector || u.role === Role.SuperAdmin)
+        );
+        const alertRecipientIds = targetAdmins.length > 0 ? targetAdmins.map(a => a.id) : [currentUser?.id || 'admin'];
+        const facialAlerts: Notification[] = alertRecipientIds.map(recipientId => ({
+            id: `alert-face-${Date.now()}-${recipientId}`,
+            institutionId: currentInstitution.id,
+            userId: recipientId,
+            title: '🚨 Alerta: Inconsistencia Facial en Marcaje',
+            message: `El colaborador ${user?.name || 'Personal'} registró marcaje pero el rostro capturado en cámara difiere de su foto oficial (${facialConfidence || 0}% de similitud). Se adjuntó foto al reporte de asistencia.`,
+            date: new Date().toISOString(),
+            read: false
+        }));
+        setNotifications(prev => [...prev, ...facialAlerts]);
+        facialAlerts.forEach(a => saveDocument('notifications', a.id, a));
+    }
+    // --- VERIFICATION LOGIC END ---
 
     setStaffAttendanceRecords(prev => {
         const now = new Date();
@@ -609,31 +646,57 @@ export default function App() {
                     case 'out_break': newPunchType = 'in_break'; break;
                     case 'in_break': newPunchType = 'out'; break;
                     case 'out': 
-                        alert("Ya ha registrado su salida por hoy.");
-                        return prev; // Do nothing if already clocked out
+                        // Already completed all punches
+                        return prev;
                 }
             }
 
-            recordToUpdate.punches = [
-                ...recordToUpdate.punches,
-                { time: currentTime, type: newPunchType, method, location, verificationStatus, distanceFromInstitution: Math.round(distance) },
-            ];
+            const newPunch: AttendancePunch = {
+                time: currentTime,
+                type: newPunchType,
+                method,
+                location,
+                verificationStatus,
+                distanceFromInstitution: Math.round(distance),
+                justification,
+                photoProof,
+                facialConfidence,
+                facialMatch,
+                flagReason
+            };
+
+            recordToUpdate.punches = [...recordToUpdate.punches, newPunch];
             updatedRecords[existingRecordIndex] = recordToUpdate;
             saveDocument('staff_attendance', recordToUpdate.id, recordToUpdate);
             return updatedRecords;
         } else {
+            const newPunch: AttendancePunch = {
+                time: currentTime,
+                type: 'in',
+                method,
+                location,
+                verificationStatus,
+                distanceFromInstitution: Math.round(distance),
+                justification,
+                photoProof,
+                facialConfidence,
+                facialMatch,
+                flagReason
+            };
+
             const newRecord: StaffAttendanceRecord = {
                 id: `sa-${userId}-${today}`,
-                institutionId: user.institutionId!,
+                institutionId: user.institutionId || currentInstitution?.id || 'inst-1',
                 userId: userId,
                 date: today,
-                punches: [{ time: currentTime, type: 'in', method, location, verificationStatus, distanceFromInstitution: Math.round(distance) }],
+                punches: [newPunch]
             };
+
             saveDocument('staff_attendance', newRecord.id, newRecord);
-            return [newRecord, ...prev];
+            return [...prev, newRecord];
         }
     });
-};
+  };
 
 
   const handleUpdateCurrentUser = async (updatedData: Partial<User>): Promise<boolean> => {
@@ -725,6 +788,8 @@ export default function App() {
                 institutions={institutions} 
                 onUpdateInstitutions={handleUpdateInstitutions}
                 users={users}
+                classes={classes}
+                students={students}
                 dcds={dcds}
                 evaluationCriteria={evaluationCriteria}
                 evaluationIndicators={evaluationIndicators}

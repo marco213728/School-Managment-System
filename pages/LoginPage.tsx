@@ -4,7 +4,10 @@ import {
   auth,
   signInWithEmailAndPassword,
   sendPasswordResetEmail,
+  FIREBASE_PROJECT_ID,
 } from '../lib/firebase';
+
+import AmautaLogo from '../components/branding/AmautaLogo';
 
 interface LoginPageProps {
   onLogin: (email: string, password: string) => boolean;
@@ -17,6 +20,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin, onGoogleLogin, isLoading
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [unauthorizedDomain, setUnauthorizedDomain] = useState<{ domain: string; consoleUrl: string } | null>(null);
   const [resetMessage, setResetMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
@@ -86,18 +90,26 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin, onGoogleLogin, isLoading
     } catch (err: any) {
       console.error("Error al autenticar con Google:", err);
       let msg = 'Error al autenticar con Google. Por favor, inténtalo nuevamente.';
-      if (err?.code === 'auth/popup-closed-by-user') {
-        msg = 'Se cerró la ventana emergente de Google antes de completar el inicio de sesión.';
-      } else if (err?.code === 'auth/popup-blocked') {
-        msg = 'Tu navegador bloqueó la ventana emergente de Google. Por favor, permite ventanas emergentes para este sitio e inténtalo de nuevo.';
-      } else if (err?.code === 'auth/cancelled-popup-request') {
-        msg = 'La solicitud de inicio de sesión con Google fue cancelada.';
-      } else if (err?.code === 'auth/account-exists-with-different-credential') {
-        msg = 'Ya existe una cuenta con este correo registrada mediante contraseña. Ingresa tu correo y contraseña en el formulario para acceder.';
-      } else if (err?.code === 'auth/unauthorized-domain') {
-        msg = 'El dominio de la aplicación no está en la lista de dominios autorizados en Firebase Authentication Console.';
-      } else if (err?.message) {
-        msg = err.message;
+      if (err?.code === 'auth/unauthorized-domain') {
+        const currentHost = typeof window !== 'undefined' ? (window.location.hostname || 'amautaapp.com') : 'amautaapp.com';
+        setUnauthorizedDomain({
+          domain: currentHost,
+          consoleUrl: `https://console.firebase.google.com/project/${FIREBASE_PROJECT_ID}/authentication/settings`,
+        });
+        msg = `El dominio "${currentHost}" no está autorizado en Firebase Authentication.`;
+      } else {
+        setUnauthorizedDomain(null);
+        if (err?.code === 'auth/popup-closed-by-user') {
+          msg = 'Se cerró la ventana emergente de Google antes de completar el inicio de sesión.';
+        } else if (err?.code === 'auth/popup-blocked') {
+          msg = 'Tu navegador bloqueó la ventana emergente de Google. Por favor, permite ventanas emergentes para este sitio e inténtalo de nuevo.';
+        } else if (err?.code === 'auth/cancelled-popup-request') {
+          msg = 'La solicitud de inicio de sesión con Google fue cancelada.';
+        } else if (err?.code === 'auth/account-exists-with-different-credential') {
+          msg = 'Ya existe una cuenta con este correo registrada mediante contraseña. Ingresa tu correo y contraseña en el formulario para acceder.';
+        } else if (err?.message) {
+          msg = err.message;
+        }
       }
       setError(msg);
     } finally {
@@ -110,20 +122,21 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin, onGoogleLogin, isLoading
       <div className="w-full max-w-md p-6 sm:p-8 space-y-6 bg-white rounded-2xl shadow-xl border border-slate-200">
         
         {/* Header */}
-        <div className="text-center">
-          {institution?.logoUrl ? (
-            <img 
-              src={institution.logoUrl} 
-              alt="Logo de la Institución" 
-              className="w-16 h-16 mx-auto mb-3 rounded-full object-cover shadow-sm border border-slate-200" 
-            />
-          ) : (
-            <div className="w-16 h-16 mx-auto mb-3 rounded-full bg-blue-600 text-white flex items-center justify-center text-xl font-bold shadow-sm">
-              AM
+        <div className="text-center space-y-2.5">
+          <div className="flex justify-center">
+            <AmautaLogo className="h-16 w-auto drop-shadow-xs" mode="light" />
+          </div>
+          {institution && institution.name !== 'Amauta' && institution.logoUrl && !institution.logoUrl.includes('placehold') && !institution.logoUrl.startsWith('data:image/svg+xml') && (
+            <div className="flex items-center justify-center gap-2 pt-1 border-t border-slate-100">
+              <img 
+                src={institution.logoUrl} 
+                alt={institution.name} 
+                className="w-7 h-7 rounded-full object-cover border border-slate-200" 
+              />
+              <span className="text-xs font-semibold text-slate-700">{institution.name}</span>
             </div>
           )}
-          <h1 className="text-2xl font-bold text-slate-800">{institution?.name || 'Amauta'}</h1>
-          <p className="mt-1 text-sm text-slate-600">Sistema Integral de Gestión Educativa</p>
+          <p className="text-xs text-slate-500 font-medium">Sistema Integral de Gestión Educativa</p>
         </div>
 
         {/* Google Sign-In */}
@@ -218,7 +231,37 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin, onGoogleLogin, isLoading
             </div>
           )}
 
-          {error && (
+          {unauthorizedDomain && (
+            <div className="p-3.5 bg-amber-50 border border-amber-300 rounded-xl text-xs space-y-2 text-amber-900 leading-relaxed shadow-xs">
+              <div className="flex items-center gap-1.5 font-bold text-amber-800 text-sm">
+                <span>🔐</span>
+                <span>Configurar Dominio en Firebase</span>
+              </div>
+              <p>
+                Para habilitar <strong>Continuar con Google</strong> en <strong>{unauthorizedDomain.domain}</strong>, se debe registrar este dominio en Firebase Authentication:
+              </p>
+              <ol className="list-decimal list-inside space-y-1 pl-1 text-[11px] text-amber-800">
+                <li>
+                  Abre la configuración de Firebase Authentication:
+                  <a 
+                    href={unauthorizedDomain.consoleUrl} 
+                    target="_blank" 
+                    rel="noopener noreferrer" 
+                    className="ml-1 text-blue-600 underline font-semibold hover:text-blue-800 break-all"
+                  >
+                    Abrir Configuración de Firebase ↗
+                  </a>
+                </li>
+                <li>Ve a la pestaña <strong>Settings (Configuración)</strong> → <strong>Authorized domains (Dominios autorizados)</strong>.</li>
+                <li>Haz clic en <strong>Add domain (Agregar dominio)</strong> e ingresa: <code className="bg-amber-100 px-1 py-0.5 rounded font-mono font-bold text-amber-950">{unauthorizedDomain.domain}</code></li>
+              </ol>
+              <p className="text-[11px] text-slate-600 pt-1 border-t border-amber-200">
+                💡 Mientras tanto, puedes iniciar sesión ingresando tu correo y contraseña aquí abajo.
+              </p>
+            </div>
+          )}
+
+          {error && !unauthorizedDomain && (
             <div className="p-3 bg-red-50 border border-red-200 text-red-700 rounded-xl text-xs leading-relaxed" role="alert">
               {error}
             </div>

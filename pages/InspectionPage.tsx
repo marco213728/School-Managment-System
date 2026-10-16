@@ -6,11 +6,12 @@ import { UserContext } from '../contexts/UserContext';
 import { MOCK_DISCIPLINARY_ACTIONS, MOCK_INSPECTION_VISITS, MOCK_QUALITY_METRICS } from '../constants';
 import JustificationManagement from '../components/inspection/JustificationManagement';
 import ExitPassManagement from '../components/inspection/ExitPassManagement';
-import { InspectionIcon, AlertTriangleIcon, CheckCircleIcon, UsersIcon, ClipboardListIcon, ChartBarIcon, EditIcon } from '../components/icons/Icons';
+import { InspectionIcon, AlertTriangleIcon, CheckCircleIcon, UsersIcon, ClipboardListIcon, ChartBarIcon, EditIcon, ClockIcon } from '../components/icons/Icons';
 import { InspectorSustituciones } from "../components/inspection/InspectorSustituciones";
 import ProtocolManagement from '../components/inspection/ProtocolManagement';
 import InspectionVisitForm from '../components/inspection/InspectionVisitForm';
 import QualityDashboard from '../components/inspection/QualityDashboard';
+import StaffAttendanceReport from '../components/staff/StaffAttendanceReport';
 
 interface InspectionPageProps {
     absenceRequests: AbsenceRequest[];
@@ -37,7 +38,7 @@ interface InspectionPageProps {
     microPlans?: MicroPlan[];
 }
 
-type InspectionView = 'dashboard' | 'justifications' | 'exit_passes';
+type InspectionView = 'dashboard' | 'justifications' | 'exit_passes' | 'staff_attendance';
 type DashboardTab = 'compliance' | 'quality' | 'coexistence' | 'substitutions';
 
 const InspectionPage: React.FC<InspectionPageProps> = (props) => {
@@ -116,6 +117,27 @@ const InspectionPage: React.FC<InspectionPageProps> = (props) => {
         />
     }
 
+    if (currentView === 'staff_attendance') {
+        return (
+            <div className="space-y-4">
+                <button 
+                    onClick={() => setCurrentView('dashboard')} 
+                    className="flex items-center gap-2 text-sm font-semibold text-primary-600 hover:underline mb-2"
+                >
+                    &larr; Volver al Panel de Inspección
+                </button>
+                <div className="bg-white p-6 rounded-xl shadow-xs border border-slate-200 mb-4">
+                    <h2 className="text-xl font-bold text-slate-800">Control de Asistencia del Personal e Inconsistencias</h2>
+                    <p className="text-sm text-slate-500">Supervise registros de asistencia, marcajes fuera de rango perimetral y evidencias fotográficas.</p>
+                </div>
+                <StaffAttendanceReport 
+                    records={staffAttendanceRecords}
+                    users={users}
+                />
+            </div>
+        );
+    }
+
     const renderComplianceTab = () => (
         <div className="space-y-6 animate-fade-in">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -125,12 +147,19 @@ const InspectionPage: React.FC<InspectionPageProps> = (props) => {
                         Control Diario
                     </h3>
                     <div className="space-y-3">
+                        <button onClick={() => setCurrentView('staff_attendance')} className="w-full flex justify-between items-center p-3 bg-purple-50 hover:bg-purple-100 rounded-lg text-purple-900 font-semibold transition-colors border border-purple-200">
+                            <span className="flex items-center gap-2">
+                                <ClockIcon className="h-4 w-4 text-purple-600" />
+                                Asistencia de Personal e Inconsistencias
+                            </span>
+                            <span>&rarr;</span>
+                        </button>
                         <button onClick={() => setCurrentView('justifications')} className="w-full flex justify-between items-center p-3 bg-blue-50 hover:bg-blue-100 rounded-lg text-blue-800 font-medium transition-colors">
-                            <span>Gestión de Justificaciones</span>
+                            <span>Gestión de Justificaciones (Estudiantes)</span>
                             <span>&rarr;</span>
                         </button>
                         <button onClick={() => setCurrentView('exit_passes')} className="w-full flex justify-between items-center p-3 bg-green-50 hover:bg-green-100 rounded-lg text-green-800 font-medium transition-colors">
-                            <span>Pases de Salida</span>
+                            <span>Pases de Salida (Estudiantes)</span>
                             <span>&rarr;</span>
                         </button>
                     </div>

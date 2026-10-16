@@ -3,6 +3,7 @@ import React, { useState, useContext } from 'react';
 import { UserContext } from '../../contexts/UserContext';
 import { LogoutIcon, DashboardIcon, SparklesIcon, MenuIcon } from '../icons/Icons';
 import Sidebar from './Sidebar'; // Import standard sidebar for navigation
+import AmautaLogo from '../branding/AmautaLogo';
 
 interface PlatformAdminLayoutProps {
     children: React.ReactNode;
@@ -15,12 +16,20 @@ const PlatformAdminLayout: React.FC<PlatformAdminLayoutProps> = ({ children }) =
     return (
         <div className="flex h-screen bg-gray-100">
             <div className="flex-1 flex flex-col overflow-hidden">
-                <header className="flex items-center justify-between p-4 bg-white border-b shadow-sm">
+                <header className="flex items-center justify-between px-6 py-3.5 bg-white border-b border-slate-200 shadow-xs">
                     <div className="flex items-center gap-4">
                         <button onClick={() => setSidebarOpen(true)} className="lg:hidden p-1">
                             <MenuIcon className="h-6 w-6 text-gray-500" />
                         </button>
-                        <h1 className="text-xl font-semibold text-gray-700">Administración Global Amauta</h1>
+                        <div className="flex items-center gap-3">
+                            <AmautaLogo className="h-9 w-auto" mode="light" />
+                            <div className="hidden sm:flex items-center gap-2 pl-3 border-l border-slate-200">
+                                <span className="text-xs bg-slate-900 text-amber-400 font-black px-2.5 py-0.5 rounded-full uppercase tracking-wider">
+                                    Consola SuperAdmin
+                                </span>
+                                <span className="text-xs text-slate-500 font-medium">Control Federado</span>
+                            </div>
+                        </div>
                     </div>
                     <div className="flex items-center space-x-2 sm:space-x-4">
                         <button 

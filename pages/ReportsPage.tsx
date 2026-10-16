@@ -2,13 +2,14 @@
 import React, { useState, useContext, useMemo } from 'react';
 import { UserContext } from '../contexts/UserContext';
 import { MOCK_STUDENTS, MOCK_CLASSES } from '../constants';
-import { AttendanceStatus, AttendanceRecord, Student, AcademicCalendarEvent, Class, TimeSlot, Timetable, User, Subject, ScheduleEntry, Gradebook, Intervention, HealthRecord, ViccIntervention } from '../types';
+import { AttendanceStatus, AttendanceRecord, Student, AcademicCalendarEvent, Class, TimeSlot, Timetable, User, Subject, ScheduleEntry, Gradebook, Intervention, HealthRecord, ViccIntervention, StaffAttendanceRecord, Role } from '../types';
 import PieChart from '../components/reports/PieChart';
 import { DownloadIcon, PrinterIcon } from '../components/icons/Icons';
 import StudentComprehensiveReport from '../components/reports/StudentComprehensiveReport';
 import AttendanceMatrixReport from '../components/reports/AttendanceMatrixReport';
 import DailyAttendanceBehavioralReport from '../components/reports/DailyAttendanceBehavioralReport';
 import StudentReportCard from '../components/reports/StudentReportCard';
+import StaffAttendanceReport from '../components/staff/StaffAttendanceReport';
 
 const attendanceColors: Record<AttendanceStatus, string> = {
     [AttendanceStatus.Present]: '#4ade80', // green-400
@@ -35,12 +36,13 @@ interface ReportsPageProps {
     interventions?: Intervention[];
     healthRecords?: HealthRecord[];
     viccInterventions?: ViccIntervention[];
+    staffAttendanceRecords?: StaffAttendanceRecord[];
 }
 
 const ReportsPage: React.FC<ReportsPageProps> = (props) => {
-    const { attendanceRecords, academicCalendarEvents, students, classes, schedule, timeSlots, timetables, users, subjects, gradebooks = [], interventions = [], healthRecords = [], viccInterventions = [] } = props;
+    const { attendanceRecords, academicCalendarEvents, students, classes, schedule, timeSlots, timetables, users, subjects, gradebooks = [], interventions = [], healthRecords = [], viccInterventions = [], staffAttendanceRecords = [] } = props;
     const { user } = useContext(UserContext);
-    const [reportType, setReportType] = useState<'student' | 'class' | 'comprehensive_student' | 'attendance_matrix' | 'daily_attendance_behavior' | 'student_report_card' | ''>('');
+    const [reportType, setReportType] = useState<'student' | 'class' | 'comprehensive_student' | 'attendance_matrix' | 'daily_attendance_behavior' | 'student_report_card' | 'staff_attendance' | ''>('');
     const [selectedId, setSelectedId] = useState('');
     const [startDate, setStartDate] = useState('');
     const [endDate, setEndDate] = useState('');
@@ -157,6 +159,7 @@ const ReportsPage: React.FC<ReportsPageProps> = (props) => {
                             className="w-full p-2 border rounded-md"
                         >
                             <option value="">Seleccionar Tipo</option>
+                            <option value="staff_attendance">Asistencia del Personal (Docentes y Administrativos)</option>
                             <option value="student">Asistencia por Estudiante (Gráfico)</option>
                             <option value="class">Asistencia por Clase (Gráfico)</option>
                             <option value="attendance_matrix">Matriz de Asistencia (Mensual/Periodo)</option>
@@ -166,7 +169,7 @@ const ReportsPage: React.FC<ReportsPageProps> = (props) => {
                         </select>
                     </div>
                     
-                    {reportType && (
+                    {reportType && reportType !== 'staff_attendance' && (
                          <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">
                                 {['student', 'comprehensive_student', 'student_report_card'].includes(reportType) ? 'Seleccionar Estudiante' : 'Seleccionar Clase'}
@@ -212,16 +215,27 @@ const ReportsPage: React.FC<ReportsPageProps> = (props) => {
                     </div>
                 )}
 
-                <div className="flex justify-end">
-                    <button 
-                        onClick={handleGenerateReport} 
-                        disabled={!selectedId || (reportType === 'attendance_matrix' && (!startDate || !endDate))}
-                        className="px-4 py-2 bg-primary-600 text-white font-semibold rounded-md hover:bg-primary-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
-                    >
-                        Generar Informe
-                    </button>
-                </div>
+                {reportType !== 'staff_attendance' && (
+                    <div className="flex justify-end">
+                        <button 
+                            onClick={handleGenerateReport} 
+                            disabled={!selectedId || (reportType === 'attendance_matrix' && (!startDate || !endDate))}
+                            className="px-4 py-2 bg-primary-600 text-white font-semibold rounded-md hover:bg-primary-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
+                        >
+                            Generar Informe
+                        </button>
+                    </div>
+                )}
             </div>
+
+            {reportType === 'staff_attendance' && (
+                <div className="mt-6">
+                    <StaffAttendanceReport 
+                        records={staffAttendanceRecords} 
+                        users={users.filter(u => !user?.institutionId || u.institutionId === user.institutionId || user?.role === Role.SuperAdmin)} 
+                    />
+                </div>
+            )}
 
             {attendanceReportData && (
                 <div className="bg-white p-6 rounded-xl shadow-md mt-6">

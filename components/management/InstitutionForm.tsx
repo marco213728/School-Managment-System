@@ -11,9 +11,23 @@ interface InstitutionFormProps {
     allUsers: User[];
 }
 
-const initialFormData: Omit<Institution, 'id' | 'contact'> & { id?: string; contact: { phone: string; email: string; address: string; }; adminIds: string[] } = {
+const initialFormData: Omit<Institution, 'id' | 'contact'> & { 
+    id?: string; 
+    codeAMIE?: string;
+    status?: 'active' | 'pending' | 'suspended';
+    regime?: 'Sierra' | 'Costa' | 'Insular';
+    province?: string;
+    canton?: string;
+    contact: { phone: string; email: string; address: string; }; 
+    adminIds: string[];
+} = {
     id: undefined,
     name: '',
+    codeAMIE: '',
+    status: 'active',
+    regime: 'Sierra',
+    province: '',
+    canton: '',
     logoUrl: 'https://placehold.co/150x150/cccccc/333333?text=Logo',
     contact: { phone: '', email: '', address: '' },
     activeModules: { dece: false, health: false },
@@ -35,6 +49,11 @@ const InstitutionForm: React.FC<InstitutionFormProps> = ({ isOpen, onClose, onSa
             setFormData({
                 id: institutionToEdit.id,
                 name: institutionToEdit.name || '',
+                codeAMIE: institutionToEdit.codeAMIE || '',
+                status: institutionToEdit.status || 'active',
+                regime: institutionToEdit.regime || 'Sierra',
+                province: institutionToEdit.province || '',
+                canton: institutionToEdit.canton || '',
                 logoUrl: institutionToEdit.logoUrl || 'https://placehold.co/150x150/cccccc/333333?text=Logo',
                 contact: {
                     phone: institutionToEdit.contact?.phone || '',
@@ -124,9 +143,38 @@ const InstitutionForm: React.FC<InstitutionFormProps> = ({ isOpen, onClose, onSa
                             <input id="logo-upload" type="file" accept="image/*" onChange={handleLogoChange} className="hidden" />
                         </div>
                     </div>
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700">Nombre de la Institución</label>
-                        <input type="text" name="name" value={formData.name} onChange={handleChange} required className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500" />
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700">Nombre de la Institución *</label>
+                            <input type="text" name="name" value={formData.name} onChange={handleChange} required className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 text-sm" />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700">Código AMIE Ministerial</label>
+                            <input type="text" name="codeAMIE" value={formData.codeAMIE || ''} onChange={handleChange} placeholder="Ej. 17H00123" className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 text-sm font-mono" />
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700">Estado</label>
+                            <select name="status" value={formData.status || 'active'} onChange={(e) => setFormData(prev => ({ ...prev, status: e.target.value as any }))} className="mt-1 block w-full px-3 py-2 border border-gray-300 bg-white rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 text-sm">
+                                <option value="active">Activa</option>
+                                <option value="pending">En Configuración</option>
+                                <option value="suspended">Suspendida</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700">Régimen</label>
+                            <select name="regime" value={formData.regime || 'Sierra'} onChange={(e) => setFormData(prev => ({ ...prev, regime: e.target.value as any }))} className="mt-1 block w-full px-3 py-2 border border-gray-300 bg-white rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 text-sm">
+                                <option value="Sierra">Sierra / Amazonía</option>
+                                <option value="Costa">Costa / Galápagos</option>
+                                <option value="Insular">Insular</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700">Provincia / Cantón</label>
+                            <input type="text" name="province" value={formData.province || ''} onChange={handleChange} placeholder="Ej. Pichincha / Quito" className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 text-sm" />
+                        </div>
                     </div>
                     
                     {/* DUA Requirement */}

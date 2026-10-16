@@ -1,7 +1,7 @@
 
 import React, { useState, useContext, useMemo } from 'react';
 import { UserContext, InstitutionContext } from '../contexts/UserContext';
-import { Role, User, Class, Student, ScheduleEntry, SupportContact, Subject, TimeSlot, Room, Timetable, AcademicCalendarEvent, StaffAttendanceRecord, Gradebook } from '../types';
+import { Role, User, Class, Student, ScheduleEntry, SupportContact, Subject, TimeSlot, Room, Timetable, AcademicCalendarEvent, StaffAttendanceRecord, AttendanceJustification, Gradebook } from '../types';
 import UserManagement from '../components/management/UserManagement';
 import InstitutionManagement from '../components/management/InstitutionManagement';
 import ClassManagement from '../components/management/ClassManagement';
@@ -48,7 +48,13 @@ interface ManagePageProps {
   onUpdateRooms: (rooms: Room[]) => void;
   onUpdateTimetables: (timetables: Timetable[]) => void;
   onUpdateAcademicCalendarEvents: (events: AcademicCalendarEvent[]) => void;
-  onUpdateStaffAttendance: (userId: string, method: 'Biometric' | 'Manual' | 'Facial', location?: { latitude: number; longitude: number; }) => void;
+  onUpdateStaffAttendance: (
+    userId: string, 
+    method: 'Biometric' | 'Manual' | 'Facial', 
+    location?: { latitude: number; longitude: number; },
+    justification?: AttendanceJustification,
+    photoProof?: string
+  ) => void;
 }
 
 interface ManageCardProps {
@@ -140,12 +146,13 @@ const ManagePage: React.FC<ManagePageProps> = ({
         return <div className="bg-white p-6 rounded-xl shadow-md"><h2 className="text-xl font-bold text-slate-800 mb-4">Gestión del Centro</h2><p>No tiene los permisos necesarios para acceder a esta sección.</p></div>
     }
 
-    const handleEnrollBiometric = (success: boolean) => {
-        if (success && userToEnroll) {
-            const updatedUsers = allUsers.map(u => u.id === userToEnroll.id ? { ...u, biometricRegistered: true } : u);
+    const handleSaveStaffBiometrics = (updatedData: Partial<User>) => {
+        if (userToEnroll) {
+            const updatedUser = { ...userToEnroll, ...updatedData };
+            setUserToEnroll(updatedUser);
+            const updatedUsers = allUsers.map(u => u.id === userToEnroll.id ? updatedUser : u);
             onUpdateUsers(updatedUsers);
         }
-        setIsEnrollmentOpen(false);
     };
 
     const startEnrollment = (user: User) => {
@@ -362,28 +369,72 @@ const ManagePage: React.FC<ManagePageProps> = ({
                 <p className="text-sm text-slate-600 mb-4">Utilice este terminal para simular el registro de asistencia como cualquier usuario de la institución.</p>
                 <StaffAttendanceKiosk 
                     users={institutionData.users}
+                    records={staffAttendanceRecords}
                     onRecordAttendance={onUpdateStaffAttendance}
                 />
             </div>
 
-            <div className="bg-white p-6 rounded-xl shadow-md">
-                <h3 className="text-lg font-bold text-slate-800 mb-4">Inscripción Biométrica del Personal</h3>
-                <p className="text-sm text-slate-500 mb-4">Seleccione un miembro del personal para registrar o actualizar su huella dactilar.</p>
-                <ul className="divide-y max-h-80 overflow-y-auto border rounded-md">
+            <div className="bg-white p-6 rounded-xl shadow-md border border-slate-200">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-2">
+                    <div>
+                        <h3 className="text-lg font-bold text-slate-800">Inscripción y Credenciales del Personal (Rostro, Huella y PIN)</h3>
+                        <p className="text-sm text-slate-500">Configure la fotografía facial oficial, huella dactilar y código PIN de acceso para cada colaborador.</p>
+                    </div>
+                </div>
+                <div className="divide-y divide-slate-100 max-h-96 overflow-y-auto border border-slate-200 rounded-xl">
                     {institutionData.users.filter(u => u.role !== Role.Parent && u.role !== Role.Student).map(staff => (
-                        <li key={staff.id} className="p-3 flex justify-between items-center">
-                            <div>
-                                <p className="font-semibold">{staff.name}</p>
-                                <p className="text-xs text-slate-500">{staff.role}</p>
+                        <div key={staff.id} className="p-3.5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 hover:bg-slate-50 transition-colors">
+                            <div className="flex items-center gap-3">
+                                <div className="h-10 w-10 rounded-full bg-slate-200 overflow-hidden flex-shrink-0 border border-slate-300">
+                                    {staff.facialPhotoUrl || staff.photoUrl ? (
+                                        <img src={staff.facialPhotoUrl || staff.photoUrl} alt={staff.name} className="h-full w-full object-cover" />
+                                    ) : (
+                                        <div className="h-full w-full flex items-center justify-center font-bold text-slate-600 text-xs">
+                                            {staff.name.substring(0, 2).toUpperCase()}
+                                        </div>
+                                    )}
+                                </div>
+                                <div>
+                                    <p className="font-bold text-slate-900 text-sm">{staff.name}</p>
+                                    <p className="text-xs text-slate-500">{staff.role} · {staff.email}</p>
+                                </div>
                             </div>
-                            {staff.biometricRegistered ? (
-                                <span className="px-2 py-1 text-xs font-semibold text-emerald-700 bg-emerald-100 rounded-full">Registrado</span>
-                            ) : (
-                                <button onClick={() => startEnrollment(staff)} className="text-sm font-semibold text-primary-600 hover:underline">Inscribir</button>
-                            )}
-                        </li>
+
+                            <div className="flex items-center gap-2 flex-wrap">
+                                <span className={`text-[11px] px-2 py-0.5 rounded-full font-semibold border ${
+                                    staff.facialRegistered || staff.facialPhotoUrl 
+                                        ? 'bg-emerald-50 text-emerald-800 border-emerald-200' 
+                                        : 'bg-slate-100 text-slate-500 border-slate-200'
+                                }`}>
+                                    {staff.facialRegistered || staff.facialPhotoUrl ? '✓ Rostro' : '✕ Sin Rostro'}
+                                </span>
+
+                                <span className={`text-[11px] px-2 py-0.5 rounded-full font-semibold border ${
+                                    staff.biometricRegistered 
+                                        ? 'bg-purple-50 text-purple-800 border-purple-200' 
+                                        : 'bg-slate-100 text-slate-500 border-slate-200'
+                                }`}>
+                                    {staff.biometricRegistered ? '✓ Huella' : '✕ Sin Huella'}
+                                </span>
+
+                                <span className={`text-[11px] px-2 py-0.5 rounded-full font-semibold border ${
+                                    staff.accessPin 
+                                        ? 'bg-sky-50 text-sky-800 border-sky-200 font-mono' 
+                                        : 'bg-amber-50 text-amber-800 border-amber-200'
+                                }`}>
+                                    {staff.accessPin ? `PIN: ${staff.accessPin}` : 'Sin PIN'}
+                                </span>
+
+                                <button 
+                                    onClick={() => startEnrollment(staff)} 
+                                    className="text-xs font-bold text-white bg-slate-900 hover:bg-slate-800 px-3 py-1.5 rounded-lg shadow-xs transition-colors ml-2"
+                                >
+                                    Configurar
+                                </button>
+                            </div>
+                        </div>
                     ))}
-                </ul>
+                </div>
             </div>
 
             <div className="bg-white p-6 rounded-xl shadow-md">
@@ -423,9 +474,12 @@ const ManagePage: React.FC<ManagePageProps> = ({
             {userToEnroll && (
                 <BiometricEnrollmentModal 
                     isOpen={isEnrollmentOpen}
-                    onClose={() => setIsEnrollmentOpen(false)}
-                    onEnroll={handleEnrollBiometric}
-                    userName={userToEnroll.name}
+                    onClose={() => {
+                        setIsEnrollmentOpen(false);
+                        setUserToEnroll(null);
+                    }}
+                    onSaveUser={handleSaveStaffBiometrics}
+                    user={userToEnroll}
                 />
             )}
             {isPromotionOpen && (

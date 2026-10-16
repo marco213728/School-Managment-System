@@ -11,7 +11,7 @@ import HRISDashboard from '../management/HRISDashboard';
 import DecePage from '../../pages/DecePage';
 import HealthPage from '../../pages/HealthPage';
 // FIX: Added Role to imports to resolve "Cannot find name 'Role'" error
-import { Role, User, Class, Student, ScheduleEntry, Notification, SupportContact, HealthRecord, MedicalVisit, Subject, TimeSlot, Room, Timetable, ViccIntervention, Intervention, AttendanceRecord, ExitPass, Citacion, AcademicCalendarEvent, LeccionarioEntry, MicroPlan, Dcd, EvaluationCriterion, EvaluationIndicator, Gradebook, Activity, ReinforcementPlan, StaffAttendanceRecord, FormalRequest, TrainingPlan, InstitutionalDocument, MeetingRecord, Rubric, ConflictMediation, CronogramaEvent } from '../../types';
+import { Role, User, Class, Student, ScheduleEntry, Notification, SupportContact, HealthRecord, MedicalVisit, Subject, TimeSlot, Room, Timetable, ViccIntervention, Intervention, AttendanceRecord, ExitPass, Citacion, AcademicCalendarEvent, LeccionarioEntry, MicroPlan, Dcd, EvaluationCriterion, EvaluationIndicator, Gradebook, Activity, ReinforcementPlan, StaffAttendanceRecord, AttendanceJustification, FormalRequest, TrainingPlan, InstitutionalDocument, MeetingRecord, Rubric, ConflictMediation, CronogramaEvent } from '../../types';
 import StudentManagementPage from '../../pages/StudentManagementPage';
 import CommunicationsPage from '../../pages/CommunicationsPage';
 import SchedulePage from '../../pages/SchedulePage';
@@ -96,7 +96,13 @@ interface DashboardLayoutProps {
   onUpdateGradebooks: (gradebooks: Gradebook[]) => void;
   onUpdateActivities: (activities: Activity[]) => void;
   onUpdateReinforcementPlans: (plans: ReinforcementPlan[]) => void;
-  onUpdateStaffAttendance: (userId: string, method: 'Biometric' | 'Manual' | 'Facial', location?: { latitude: number; longitude: number; }) => void;
+  onUpdateStaffAttendance: (
+    userId: string, 
+    method: 'Biometric' | 'Manual' | 'Facial', 
+    location?: { latitude: number; longitude: number; },
+    justification?: AttendanceJustification,
+    photoProof?: string
+  ) => void;
   onUpdateFormalRequests: (requests: FormalRequest[]) => void;
   onUpdateTrainingPlans: (plans: TrainingPlan[]) => void;
   onUpdateDocuments: (docs: InstitutionalDocument[]) => void;
@@ -346,7 +352,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = (props) => {
                     rubrics={rubrics} 
                     onUpdateRubrics={handleUpdateRubrics} 
                 />,
-                'reports': <ReportsPage attendanceRecords={restProps.attendanceRecords} academicCalendarEvents={restProps.academicCalendarEvents} students={institutionStudents} classes={institutionClasses} schedule={schedule} timeSlots={institutionTimeSlots} timetables={institutionTimetables} users={users} subjects={subjects} gradebooks={gradebooks} interventions={props.interventions || []} healthRecords={props.healthRecords || []} viccInterventions={restProps.viccInterventions || []} />,
+                'reports': <ReportsPage attendanceRecords={restProps.attendanceRecords} staffAttendanceRecords={staffAttendanceRecords} academicCalendarEvents={restProps.academicCalendarEvents} students={institutionStudents} classes={institutionClasses} schedule={schedule} timeSlots={institutionTimeSlots} timetables={institutionTimetables} users={users} subjects={subjects} gradebooks={gradebooks} interventions={props.interventions || []} healthRecords={props.healthRecords || []} viccInterventions={restProps.viccInterventions || []} />,
                 'dece': <DecePage {...restProps} users={users} classes={institutionClasses} schedule={schedule} subjects={subjects} timeSlots={institutionTimeSlots} students={institutionStudents} onUpdateStudents={restProps.onUpdateStudents} viccInterventions={restProps.viccInterventions} onUpdateViccInterventions={restProps.onUpdateViccInterventions} conflictMediations={conflictMediations} onUpdateConflictMediations={onUpdateConflictMediations} interventions={props.interventions || []} onUpdateInterventions={props.onUpdateInterventions} healthRecords={props.healthRecords || []} onUpdateHealthRecords={props.onUpdateHealthRecords} medicalVisits={props.medicalVisits || []} onUpdateMedicalVisits={props.onUpdateMedicalVisits} />,
                 'health': <HealthPage {...restProps} users={users} classes={institutionClasses} schedule={schedule} subjects={subjects} timeSlots={institutionTimeSlots} students={institutionStudents} onUpdateStudents={restProps.onUpdateStudents} viccInterventions={restProps.viccInterventions} onUpdateViccInterventions={restProps.onUpdateViccInterventions} healthRecords={props.healthRecords || []} onUpdateHealthRecords={props.onUpdateHealthRecords} medicalVisits={props.medicalVisits || []} onUpdateMedicalVisits={props.onUpdateMedicalVisits} interventions={props.interventions || []} onUpdateInterventions={props.onUpdateInterventions} />,
                 'students': <StudentManagementPage 

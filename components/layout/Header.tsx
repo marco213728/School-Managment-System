@@ -1,7 +1,7 @@
 import React, { useContext, useState, useEffect, useMemo, useRef } from 'react';
 import { UserContext, InstitutionContext } from '../../contexts/UserContext';
 import { LogoutIcon, MenuIcon, BellIcon } from '../icons/Icons';
-import { Notification } from '../../types';
+import { Notification, Role } from '../../types';
 import NotificationsPanel from './NotificationsPanel';
 import { FIRESTORE_CONSOLE_URL } from '../../lib/firebase';
 
@@ -19,8 +19,13 @@ const Header: React.FC<HeaderProps> = ({ toggleSidebar, notifications, onUpdateN
 
   const userNotifications = useMemo(() => {
       if (!user) return [];
+      const isAdmin = user.role === Role.SuperAdmin || 
+                      user.role === Role.InstitutionAdmin || 
+                      user.role === Role.InspectorGeneral || 
+                      user.role === Role.Rector;
+
       return notifications
-        .filter(n => n.userId === user.id)
+        .filter(n => n.userId === user.id || (isAdmin && (!n.institutionId || n.institutionId === user.institutionId || user.role === Role.SuperAdmin)))
         .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   }, [user, notifications]);
   

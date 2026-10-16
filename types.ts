@@ -147,6 +147,9 @@ export interface User {
   phone?: string;
   address?: string;
   biometricRegistered?: boolean;
+  facialRegistered?: boolean;
+  facialPhotoUrl?: string;
+  biometricEnrolledAt?: string;
   accessPin?: string;
   maxMonthlyHours?: number;
   workSchedule?: Record<string, { startTime: string; endTime: string }>;
@@ -306,6 +309,11 @@ export interface Institution {
     activeModules?: { dece: boolean; health: boolean };
     adminIds?: string[];
     methodologyFocus?: string;
+    status?: 'active' | 'pending' | 'suspended';
+    regime?: 'Sierra' | 'Costa' | 'Insular';
+    province?: string;
+    canton?: string;
+    zone?: string;
 }
 
 export interface Class { 
@@ -643,19 +651,32 @@ export interface Activity {
 
 export type EvaluationCategory = 'ACTIVIDAD_INDIVIDUAL' | 'ACTIVIDAD_GRUPAL' | 'PORTAFOLIO' | 'EVALUACION_SUMATIVA' | 'PROYECTO_INTEGRADOR';
 
+export interface AttendanceJustification {
+    reason: string;
+    note: string;
+    timestamp: string;
+}
+
+export interface AttendancePunch {
+    time: string; 
+    type: PunchType; 
+    method: 'Biometric' | 'Manual' | 'Facial'; 
+    location?: { latitude: number; longitude: number; }; 
+    verificationStatus: 'Success' | 'Failed' | 'Pending' | 'Flagged'; 
+    distanceFromInstitution: number;
+    photoProof?: string;
+    justification?: AttendanceJustification;
+    facialConfidence?: number;
+    facialMatch?: boolean;
+    flagReason?: string;
+}
+
 export interface StaffAttendanceRecord { 
     id: string; 
     institutionId: string; 
     userId: string; 
     date: string; 
-    punches: { 
-        time: string; 
-        type: PunchType; 
-        method: 'Biometric' | 'Manual' | 'Facial'; 
-        location?: { latitude: number; longitude: number; }; 
-        verificationStatus: 'Success' | 'Failed' | 'Pending'; 
-        distanceFromInstitution: number; 
-    }[]; 
+    punches: AttendancePunch[]; 
 }
 
 export type PunchType = 'in' | 'out_break' | 'in_break' | 'out';

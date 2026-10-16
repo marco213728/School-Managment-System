@@ -1,10 +1,11 @@
 import React, { useState, useMemo, useContext } from 'react';
 import { UserContext } from '../../contexts/UserContext';
 import { User, Role, Class, Student, ScheduleEntry, Subject, TimeSlot, Room, Timetable } from '../../types';
-import { PlusIcon, EditIcon, TrashIcon, SearchIcon, UsersIcon, CalendarIcon } from '../icons/Icons';
+import { PlusIcon, EditIcon, TrashIcon, SearchIcon, UsersIcon, CalendarIcon, FingerPrintIcon } from '../icons/Icons';
 import UserForm from './UserForm';
 import { FormularioCaracterizacionDocente } from './FormularioCaracterizacion';
 import TeacherProfileModal from '../teacher/TeacherProfileModal';
+import BiometricEnrollmentModal from '../staff/BiometricEnrollmentModal';
 
 interface UserManagementProps {
   users: User[];
@@ -35,6 +36,7 @@ const UserManagement: React.FC<UserManagementProps> = ({
     const [isGethModalOpen, setIsGethModalOpen] = useState(false);
     const [selectedTeacherForProfile, setSelectedTeacherForProfile] = useState<User | null>(null);
     const [editingUser, setEditingUser] = useState<User | null>(null);
+    const [enrollingUser, setEnrollingUser] = useState<User | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
 
     const filteredUsers = useMemo(() => {
@@ -107,6 +109,18 @@ const UserManagement: React.FC<UserManagementProps> = ({
         setIsGethModalOpen(false);
     };
 
+    const handleSaveBiometrics = (updatedData: Partial<User>) => {
+        if (!enrollingUser) return;
+        const updatedUsers = users.map(u => {
+            if (u.id === enrollingUser.id) {
+                return { ...u, ...updatedData };
+            }
+            return u;
+        });
+        onUpdateUsers(updatedUsers);
+        setEnrollingUser(prev => prev ? { ...prev, ...updatedData } : null);
+    };
+
     return (
         <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 gap-4">
@@ -165,6 +179,15 @@ const UserManagement: React.FC<UserManagementProps> = ({
                                                     <UsersIcon className="h-5 w-5" />
                                                 </button>
                                             </>
+                                        )}
+                                        {user.role !== Role.Parent && user.role !== Role.Student && (
+                                            <button 
+                                                onClick={() => setEnrollingUser(user)} 
+                                                className="p-2 text-purple-600 hover:text-purple-700 rounded-full hover:bg-purple-100 transition" 
+                                                title="Configurar Biometría (Rostro Oficial, Huella y PIN)"
+                                            >
+                                                <FingerPrintIcon className="h-5 w-5" />
+                                            </button>
                                         )}
                                         <button onClick={() => handleEdit(user)} className="p-2 text-slate-500 hover:text-primary-600 rounded-full hover:bg-primary-100 transition" title="Editar Usuario"><EditIcon className="h-5 w-5" /></button>
                                         <button onClick={() => handleDelete(user.id)} className="p-2 text-slate-500 hover:text-rose-600 rounded-full hover:bg-rose-100 transition" title="Eliminar Usuario"><TrashIcon className="h-5 w-5" /></button>
@@ -235,6 +258,15 @@ const UserManagement: React.FC<UserManagementProps> = ({
                         />
                     </div>
                 </div>
+            )}
+
+            {enrollingUser && (
+                <BiometricEnrollmentModal
+                    isOpen={!!enrollingUser}
+                    onClose={() => setEnrollingUser(null)}
+                    user={enrollingUser}
+                    onSaveUser={handleSaveBiometrics}
+                />
             )}
         </div>
     );

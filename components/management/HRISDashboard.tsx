@@ -4,6 +4,7 @@ import { MOCK_JOB_VACANCIES, MOCK_CANDIDATES, MOCK_PERFORMANCE_EVALUATIONS } fro
 import { UsersIcon, ClipboardDocumentCheckIcon, SparklesIcon, CalendarIcon } from '../icons/Icons';
 import AmautaGETHForm from "./AmautaGETHForm";
 import { InstitutionContext } from "../../contexts/UserContext";
+import StaffAttendanceReport from '../staff/StaffAttendanceReport';
 
 interface HRISDashboardProps {
     users: User[];
@@ -138,57 +139,10 @@ const HRISDashboard: React.FC<HRISDashboardProps> = ({ users, staffAttendanceRec
 
     const renderAsistencia = () => (
         <div className="space-y-6">
-            <h3 className="text-xl font-bold text-gray-800">Control de Asistencia y Permanencia</h3>
-            <div className="bg-amber-50 border-l-4 border-amber-500 p-4 rounded text-sm text-amber-800">
-                <span className="font-bold">Monitoreo Antifraude:</span> Todos los registros de asistencia en sitio están auditados mediante georreferenciación. Las desviaciones al perímetro permitido se reportan automáticamente.
-            </div>
-            
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden mt-4">
-                <table className="min-w-full divide-y divide-gray-200">
-                    <thead className="bg-gray-50">
-                        <tr>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Colaborador</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Marcaciones</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Validación Geo</th>
-                        </tr>
-                    </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
-                        {filteredAttendance.map(record => {
-                            const user = filteredUsers.find(u => u.id === record.userId);
-                            return (
-                                <tr key={record.id}>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-medium">{record.date}</td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{user?.name}</td>
-                                    <td className="px-6 py-4 text-sm text-gray-500">
-                                        <div className="flex flex-wrap gap-2">
-                                            {record.punches.map((p, i) => (
-                                                <span key={i} className={`px-2 py-1 text-xs rounded-full ${p.type.includes('in') ? 'bg-green-100 text-green-800' : 'bg-rose-100 text-rose-800'}`}>
-                                                    {p.time} ({p.type})
-                                                </span>
-                                            ))}
-                                        </div>
-                                    </td>
-                                    <td className="px-6 py-4 whitespace-nowrap">
-                                        {record.punches[0]?.verificationStatus === 'Failed' ? (
-                                            <span className="text-xs font-bold text-red-600 bg-red-100 px-2 py-1 rounded">Fuera de Rango ({record.punches[0].distanceFromInstitution}m)</span>
-                                        ) : (
-                                            <span className="text-xs font-bold text-emerald-600 bg-emerald-100 px-2 py-1 rounded">Verificado en Campus</span>
-                                        )}
-                                    </td>
-                                </tr>
-                            )
-                        })}
-                        {filteredAttendance.length === 0 && (
-                            <tr>
-                                <td colSpan={4} className="px-6 py-8 text-center text-sm text-gray-500">
-                                    No hay registros de asistencia en el sistema.
-                                </td>
-                            </tr>
-                        )}
-                    </tbody>
-                </table>
-            </div>
+            <StaffAttendanceReport 
+                records={filteredAttendance}
+                users={filteredUsers}
+            />
         </div>
     );
 
