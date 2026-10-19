@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useContext } from 'react';
 import { UserContext } from '../../contexts/UserContext';
 import { User, Role, Class, Student, ScheduleEntry, Subject, TimeSlot, Room, Timetable } from '../../types';
-import { PlusIcon, EditIcon, TrashIcon, SearchIcon, UsersIcon, CalendarIcon, FingerPrintIcon } from '../icons/Icons';
+import { PlusIcon, EditIcon, TrashIcon, SearchIcon, UsersIcon, CalendarIcon, FingerPrintIcon, CameraIcon, ClockIcon } from '../icons/Icons';
 import UserForm from './UserForm';
 import { FormularioCaracterizacionDocente } from './FormularioCaracterizacion';
 import TeacherProfileModal from '../teacher/TeacherProfileModal';
@@ -150,50 +150,149 @@ const UserManagement: React.FC<UserManagementProps> = ({
                     <table className="min-w-full divide-y divide-gray-200">
                         <thead className="bg-slate-50">
                             <tr>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Nombre</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Contacto</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Rol</th>
-                                <th className="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">Acciones</th>
+                                <th className="px-5 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Usuario / Nombre</th>
+                                <th className="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Contacto</th>
+                                <th className="px-3 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Rol</th>
+                                <th className="px-3 py-3 text-center text-xs font-bold text-slate-600 uppercase tracking-wider">Régimen & Almuerzo</th>
+                                <th className="px-3 py-3 text-center text-xs font-bold text-slate-600 uppercase tracking-wider">Biometría & Facial</th>
+                                <th className="px-5 py-3 text-right text-xs font-bold text-slate-600 uppercase tracking-wider">Acciones</th>
                             </tr>
                         </thead>
                         <tbody className="bg-white divide-y divide-gray-200">
-                            {filteredUsers.map(user => (
-                                <tr key={user.id}>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900">{user.name}</td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">
-                                        <a href={`mailto:${user.email}`} className="text-primary-600 hover:underline block">{user.email}</a>
-                                        {user.phone && <a href={`tel:${user.phone}`} className="text-slate-500 hover:underline block">{user.phone}</a>}
+                            {filteredUsers.map(user => {
+                                const isStaff = user.role !== Role.Parent && user.role !== Role.Student;
+                                const isFD = user.tipoFuncionario === 'FD' || user.role === Role.Rector || user.role === Role.Vicerrector || user.role === Role.InspectorGeneral;
+                                const lunchMins = user.allowedLunchMinutes ?? 30;
+                                const hasFacial = !!(user.facialRegistered || user.facialPhotoUrl);
+                                const hasFingerprint = !!user.biometricRegistered;
+
+                                return (
+                                <tr key={user.id} className="hover:bg-slate-50/70 transition-colors">
+                                    <td className="px-5 py-3.5 whitespace-nowrap text-sm font-medium text-slate-900">
+                                        <div className="flex items-center gap-3">
+                                            {user.facialPhotoUrl || user.photoUrl ? (
+                                                <img 
+                                                    src={user.facialPhotoUrl || user.photoUrl} 
+                                                    alt={user.name} 
+                                                    className="w-9 h-9 rounded-full object-cover border-2 border-indigo-200 shadow-xs" 
+                                                />
+                                            ) : (
+                                                <div className="w-9 h-9 rounded-full bg-slate-100 border border-slate-200 text-slate-600 font-bold flex items-center justify-center text-xs">
+                                                    {user.name.charAt(0)}
+                                                </div>
+                                            )}
+                                            <div>
+                                                <p className="font-bold text-slate-800 leading-tight">{user.name}</p>
+                                                {user.cedula && (
+                                                    <p className="text-[11px] text-slate-400 font-mono">CI: {user.cedula}</p>
+                                                )}
+                                            </div>
+                                        </div>
                                     </td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">{user.role}</td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-1">
+                                    <td className="px-4 py-3.5 whitespace-nowrap text-xs text-slate-500">
+                                        <a href={`mailto:${user.email}`} className="text-primary-600 hover:underline block font-medium">{user.email}</a>
+                                        {user.phone && <a href={`tel:${user.phone}`} className="text-slate-400 hover:underline block font-mono text-[11px]">{user.phone}</a>}
+                                    </td>
+                                    <td className="px-3 py-3.5 whitespace-nowrap text-xs text-slate-600 font-medium">
+                                        <span className="px-2 py-0.5 bg-slate-100 rounded-md border border-slate-200 text-slate-700">
+                                            {user.role}
+                                        </span>
+                                    </td>
+
+                                    {/* Régimen & Almuerzo (DMTH) */}
+                                    <td className="px-3 py-3.5 whitespace-nowrap text-center text-xs">
+                                        {isStaff ? (
+                                            <div className="flex flex-col items-center gap-1">
+                                                <div className="flex items-center gap-1">
+                                                    <span className={`px-2 py-0.5 rounded text-[10px] font-black ${
+                                                        isFD 
+                                                            ? 'bg-purple-100 text-purple-800 border border-purple-200' 
+                                                            : 'bg-sky-100 text-sky-800 border border-sky-200'
+                                                    }`} title={isFD ? 'Funcionario Directivo (Jornada 8.5h flexible)' : 'Otros (Docente/Administrativo horario estricto)'}>
+                                                        {isFD ? 'FD (Directivo)' : 'OTROS'}
+                                                    </span>
+                                                    <span className="px-2 py-0.5 rounded bg-amber-50 text-amber-800 border border-amber-200 text-[10px] font-bold" title="Tiempo de almuerzo autorizado">
+                                                        <ClockIcon className="h-2.5 w-2.5 inline mr-0.5" />
+                                                        {lunchMins} min
+                                                    </span>
+                                                </div>
+                                                {user.grupoOcupacional && (
+                                                    <span className="text-[9px] text-slate-400 uppercase font-semibold truncate max-w-[140px]">
+                                                        {user.grupoOcupacional}
+                                                    </span>
+                                                )}
+                                            </div>
+                                        ) : (
+                                            <span className="text-slate-400 text-[11px]">-</span>
+                                        )}
+                                    </td>
+
+                                    {/* Biometría & Facial Status */}
+                                    <td className="px-3 py-3.5 whitespace-nowrap text-center text-xs">
+                                        {isStaff ? (
+                                            <div className="inline-flex items-center gap-1.5 flex-wrap justify-center">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setEnrollingUser(user)}
+                                                    className={`px-2 py-1 rounded-lg text-[10px] font-bold flex items-center gap-1 border transition ${
+                                                        hasFacial 
+                                                            ? 'bg-emerald-50 text-emerald-700 border-emerald-300 hover:bg-emerald-100' 
+                                                            : 'bg-amber-50 text-amber-700 border-amber-300 hover:bg-amber-100'
+                                                    }`}
+                                                    title={hasFacial ? 'Rostro oficial registrado. Click para ver o actualizar' : '¡Sin rostro oficial! Click para enrolar foto'}
+                                                >
+                                                    <CameraIcon className="h-3 w-3" />
+                                                    {hasFacial ? 'Rostro OK' : 'Sin Rostro'}
+                                                </button>
+
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setEnrollingUser(user)}
+                                                    className={`p-1 rounded-md text-[10px] border transition ${
+                                                        hasFingerprint
+                                                            ? 'bg-purple-50 text-purple-700 border-purple-200 hover:bg-purple-100'
+                                                            : 'bg-slate-50 text-slate-400 border-slate-200 hover:bg-slate-100'
+                                                    }`}
+                                                    title={hasFingerprint ? 'Huella vinculada' : 'Sin huella registrada'}
+                                                >
+                                                    <FingerPrintIcon className="h-3.5 w-3.5" />
+                                                </button>
+                                            </div>
+                                        ) : (
+                                            <span className="text-slate-400 text-[11px]">-</span>
+                                        )}
+                                    </td>
+
+                                    <td className="px-5 py-3.5 whitespace-nowrap text-right text-sm font-medium space-x-1">
                                         {user.role === Role.Teacher && (
                                             <>
                                                 <button 
                                                     onClick={() => setSelectedTeacherForProfile(user)} 
-                                                    className="p-2 text-primary-600 hover:text-primary-700 rounded-full hover:bg-primary-50 transition" 
+                                                    className="p-1.5 text-primary-600 hover:text-primary-700 rounded-lg hover:bg-primary-50 transition" 
                                                     title="Ver Ficha y Horario Asignado del Docente"
                                                 >
-                                                    <CalendarIcon className="h-5 w-5" />
+                                                    <CalendarIcon className="h-4 w-4" />
                                                 </button>
-                                                <button onClick={() => handleGeth(user)} className="p-2 text-indigo-500 hover:text-indigo-600 rounded-full hover:bg-indigo-100 transition" title="Caracterización GETH">
-                                                    <UsersIcon className="h-5 w-5" />
+                                                <button onClick={() => handleGeth(user)} className="p-1.5 text-indigo-500 hover:text-indigo-600 rounded-lg hover:bg-indigo-100 transition" title="Caracterización GETH">
+                                                    <UsersIcon className="h-4 w-4" />
                                                 </button>
                                             </>
                                         )}
-                                        {user.role !== Role.Parent && user.role !== Role.Student && (
+                                        {isStaff && (
                                             <button 
                                                 onClick={() => setEnrollingUser(user)} 
-                                                className="p-2 text-purple-600 hover:text-purple-700 rounded-full hover:bg-purple-100 transition" 
-                                                title="Configurar Biometría (Rostro Oficial, Huella y PIN)"
+                                                className="p-1.5 text-purple-600 hover:text-purple-700 rounded-lg hover:bg-purple-100 transition" 
+                                                title="Configurar Biometría (Rostro Oficial, Huella, PIN y Almuerzo)"
                                             >
-                                                <FingerPrintIcon className="h-5 w-5" />
+                                                <FingerPrintIcon className="h-4 w-4" />
                                             </button>
                                         )}
-                                        <button onClick={() => handleEdit(user)} className="p-2 text-slate-500 hover:text-primary-600 rounded-full hover:bg-primary-100 transition" title="Editar Usuario"><EditIcon className="h-5 w-5" /></button>
-                                        <button onClick={() => handleDelete(user.id)} className="p-2 text-slate-500 hover:text-rose-600 rounded-full hover:bg-rose-100 transition" title="Eliminar Usuario"><TrashIcon className="h-5 w-5" /></button>
+                                        <button onClick={() => handleEdit(user)} className="p-1.5 text-slate-500 hover:text-primary-600 rounded-lg hover:bg-primary-100 transition" title="Editar Usuario"><EditIcon className="h-4 w-4" /></button>
+                                        <button onClick={() => handleDelete(user.id)} className="p-1.5 text-slate-500 hover:text-rose-600 rounded-lg hover:bg-rose-100 transition" title="Eliminar Usuario"><TrashIcon className="h-4 w-4" /></button>
                                     </td>
                                 </tr>
-                            ))}
+                                );
+                            })}
                         </tbody>
                     </table>
                 ) : (

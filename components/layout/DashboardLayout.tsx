@@ -11,7 +11,7 @@ import HRISDashboard from '../management/HRISDashboard';
 import DecePage from '../../pages/DecePage';
 import HealthPage from '../../pages/HealthPage';
 // FIX: Added Role to imports to resolve "Cannot find name 'Role'" error
-import { Role, User, Class, Student, ScheduleEntry, Notification, SupportContact, HealthRecord, MedicalVisit, Subject, TimeSlot, Room, Timetable, ViccIntervention, Intervention, AttendanceRecord, ExitPass, Citacion, AcademicCalendarEvent, LeccionarioEntry, MicroPlan, Dcd, EvaluationCriterion, EvaluationIndicator, Gradebook, Activity, ReinforcementPlan, StaffAttendanceRecord, AttendanceJustification, FormalRequest, TrainingPlan, InstitutionalDocument, MeetingRecord, Rubric, ConflictMediation, CronogramaEvent } from '../../types';
+import { Role, User, Class, Student, ScheduleEntry, Notification, SupportContact, HealthRecord, MedicalVisit, Subject, TimeSlot, Room, Timetable, ViccIntervention, Intervention, AttendanceRecord, ExitPass, Citacion, AcademicCalendarEvent, LeccionarioEntry, MicroPlan, Dcd, EvaluationCriterion, EvaluationIndicator, Gradebook, Activity, ReinforcementPlan, StaffAttendanceRecord, AttendanceJustification, FormalRequest, TrainingPlan, InstitutionalDocument, MeetingRecord, Rubric, ConflictMediation, CronogramaEvent, Appointment, ChatChannel, ChatMessage } from '../../types';
 import StudentManagementPage from '../../pages/StudentManagementPage';
 import CommunicationsPage from '../../pages/CommunicationsPage';
 import SchedulePage from '../../pages/SchedulePage';
@@ -30,7 +30,7 @@ import JuntaManager from '../vicerrectorado/JuntaManager';
 import { UserContext, InstitutionContext } from '../../contexts/UserContext';
 import { MOCK_RUBRICS } from '../../constants'; 
 
-type Page = 'dashboard' | 'attendance' | 'activities' | 'reports' | 'manage' | 'dece' | 'health' | 'students' | 'communications' | 'schedule' | 'inspection' | 'citaciones' | 'leccionario' | 'curricular_planning' | 'curriculum_repository' | 'gradebook' | 'vicerrector_dashboard' | 'reinforcement' | 'teacher_training' | 'resource_bank' | 'juntas' | 'hris'; 
+type Page = 'dashboard' | 'attendance' | 'activities' | 'reports' | 'manage' | 'dece' | 'health' | 'students' | 'communications' | 'schedule' | 'inspection' | 'citaciones' | 'leccionario' | 'curricular_planning' | 'curriculum_repository' | 'gradebook' | 'vicerrector_dashboard' | 'reinforcement' | 'teacher_training' | 'resource_bank' | 'juntas' | 'hris' | 'appointments' | 'teacher_chat'; 
 
 interface DashboardLayoutProps {
   absenceRequests: any[];
@@ -110,6 +110,12 @@ interface DashboardLayoutProps {
   onUpdateRubrics?: (rubrics: Rubric[]) => void; 
   onUpdateConflictMediations?: (conflicts: ConflictMediation[]) => void;
   onUpdateCronogramaEvents?: (events: CronogramaEvent[]) => void;
+  appointments?: Appointment[];
+  onUpdateAppointments?: (appointments: Appointment[]) => void;
+  chatChannels?: ChatChannel[];
+  onUpdateChatChannels?: (channels: ChatChannel[]) => void;
+  chatMessages?: ChatMessage[];
+  onSendMessage?: (msg: ChatMessage) => void;
 }
 
 const DashboardLayout: React.FC<DashboardLayoutProps> = (props) => {
@@ -299,6 +305,54 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = (props) => {
                 onUpdateNotifications={restProps.onUpdateNotifications}
                 formalRequests={formalRequests}
                 onUpdateFormalRequests={onUpdateFormalRequests}
+                appointments={props.appointments}
+                onUpdateAppointments={props.onUpdateAppointments}
+                chatChannels={props.chatChannels}
+                onUpdateChatChannels={props.onUpdateChatChannels}
+                chatMessages={props.chatMessages}
+                onSendMessage={props.onSendMessage}
+                schedule={schedule}
+                timeSlots={institutionTimeSlots}
+            />;
+        case 'appointments':
+            return <CommunicationsPage
+                {...restProps}
+                users={users}
+                students={institutionStudents}
+                classes={institutionClasses}
+                allNotifications={restProps.notifications}
+                onUpdateNotifications={restProps.onUpdateNotifications}
+                formalRequests={formalRequests}
+                onUpdateFormalRequests={onUpdateFormalRequests}
+                appointments={props.appointments}
+                onUpdateAppointments={props.onUpdateAppointments}
+                chatChannels={props.chatChannels}
+                onUpdateChatChannels={props.onUpdateChatChannels}
+                chatMessages={props.chatMessages}
+                onSendMessage={props.onSendMessage}
+                schedule={schedule}
+                timeSlots={institutionTimeSlots}
+                initialTab="appointments"
+            />;
+        case 'teacher_chat':
+            return <CommunicationsPage
+                {...restProps}
+                users={users}
+                students={institutionStudents}
+                classes={institutionClasses}
+                allNotifications={restProps.notifications}
+                onUpdateNotifications={restProps.onUpdateNotifications}
+                formalRequests={formalRequests}
+                onUpdateFormalRequests={onUpdateFormalRequests}
+                appointments={props.appointments}
+                onUpdateAppointments={props.onUpdateAppointments}
+                chatChannels={props.chatChannels}
+                onUpdateChatChannels={props.onUpdateChatChannels}
+                chatMessages={props.chatMessages}
+                onSendMessage={props.onSendMessage}
+                schedule={schedule}
+                timeSlots={institutionTimeSlots}
+                initialTab="chat"
             />;
         case 'resource_bank':
             return <ResourceRepositoryPage 
@@ -394,7 +448,16 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = (props) => {
                     gradebooks={gradebooks} 
                     subjects={subjects} 
                 />,
-                'citaciones': <CitacionesPage {...restProps} users={users} students={institutionStudents} />,
+                'citaciones': <CitacionesPage 
+                    {...restProps} 
+                    users={users} 
+                    students={institutionStudents} 
+                    classes={institutionClasses}
+                    schedule={schedule}
+                    timeSlots={institutionTimeSlots}
+                    appointments={props.appointments}
+                    onUpdateAppointments={props.onUpdateAppointments}
+                />,
                 'leccionario': <LeccionarioPage 
                     leccionarioEntries={leccionarioEntries} 
                     onUpdateLeccionarioEntries={onUpdateLeccionarioEntries} 

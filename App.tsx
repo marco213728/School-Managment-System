@@ -1,7 +1,7 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
-import { User, Institution, Role, Class, Student, ScheduleEntry, Notification, SupportContact, HealthRecord, MedicalVisit, Subject, TimeSlot, Room, Timetable, ViccIntervention, Intervention, AttendanceRecord, ExitPass, Citacion, AcademicCalendarEvent, LeccionarioEntry, MicroPlan, Dcd, EvaluationCriterion, EvaluationIndicator, Gradebook, Activity, ReinforcementPlan, StaffAttendanceRecord, PunchType, AttendancePunch, AttendanceJustification, FormalRequest, TrainingPlan, InstitutionalDocument, MeetingRecord, Rubric, ConflictMediation, CronogramaEvent, AbsenceRequest } from './types';
-import { MOCK_USERS, MOCK_INSTITUTIONS, MOCK_CLASSES, MOCK_STUDENTS, MOCK_SCHEDULE_ENTRIES, MOCK_NOTIFICATIONS, MOCK_SUPPORT_CONTACTS, MOCK_HEALTH_RECORDS, MOCK_MEDICAL_VISITS, MOCK_INTERVENTIONS, MOCK_SUBJECTS, MOCK_TIME_SLOTS, MOCK_ROOMS, MOCK_TIMETABLES, MOCK_VICC_INTERVENTIONS, MOCK_ATTENDANCE, MOCK_EXIT_PASSES, MOCK_CITACIONES, MOCK_ACADEMIC_CALENDAR_EVENTS, MOCK_LECCIONARIO_ENTRIES, MOCK_MICRO_PLANS, MOCK_DCDS, MOCK_EVALUATION_CRITERIA, MOCK_EVALUATION_INDICATORS, MOCK_GRADEBOOKS, MOCK_ACTIVITIES, MOCK_REINFORCEMENT_PLANS, MOCK_STAFF_ATTENDANCE, MOCK_FORMAL_REQUESTS, MOCK_TRAINING_PLANS, MOCK_INSTITUTIONAL_DOCUMENTS, MOCK_MEETING_RECORDS, MOCK_RUBRICS, MOCK_CONFLICT_MEDIATIONS, MOCK_CRONOGRAMA_EVENTS } from './constants';
+import { User, Institution, Role, Class, Student, ScheduleEntry, Notification, SupportContact, HealthRecord, MedicalVisit, Subject, TimeSlot, Room, Timetable, ViccIntervention, Intervention, AttendanceRecord, ExitPass, Citacion, AcademicCalendarEvent, LeccionarioEntry, MicroPlan, Dcd, EvaluationCriterion, EvaluationIndicator, Gradebook, Activity, ReinforcementPlan, StaffAttendanceRecord, PunchType, AttendancePunch, AttendanceJustification, FormalRequest, TrainingPlan, InstitutionalDocument, MeetingRecord, Rubric, ConflictMediation, CronogramaEvent, AbsenceRequest, Appointment, ChatChannel, ChatMessage } from './types';
+import { MOCK_USERS, MOCK_INSTITUTIONS, MOCK_CLASSES, MOCK_STUDENTS, MOCK_SCHEDULE_ENTRIES, MOCK_NOTIFICATIONS, MOCK_SUPPORT_CONTACTS, MOCK_HEALTH_RECORDS, MOCK_MEDICAL_VISITS, MOCK_INTERVENTIONS, MOCK_SUBJECTS, MOCK_TIME_SLOTS, MOCK_ROOMS, MOCK_TIMETABLES, MOCK_VICC_INTERVENTIONS, MOCK_ATTENDANCE, MOCK_EXIT_PASSES, MOCK_CITACIONES, MOCK_ACADEMIC_CALENDAR_EVENTS, MOCK_LECCIONARIO_ENTRIES, MOCK_MICRO_PLANS, MOCK_DCDS, MOCK_EVALUATION_CRITERIA, MOCK_EVALUATION_INDICATORS, MOCK_GRADEBOOKS, MOCK_ACTIVITIES, MOCK_REINFORCEMENT_PLANS, MOCK_STAFF_ATTENDANCE, MOCK_FORMAL_REQUESTS, MOCK_TRAINING_PLANS, MOCK_INSTITUTIONAL_DOCUMENTS, MOCK_MEETING_RECORDS, MOCK_RUBRICS, MOCK_CONFLICT_MEDIATIONS, MOCK_CRONOGRAMA_EVENTS, MOCK_APPOINTMENTS, MOCK_CHAT_CHANNELS, MOCK_CHAT_MESSAGES } from './constants';
 import LoginPage from './pages/LoginPage';
 import DashboardLayout from './components/layout/DashboardLayout';
 import { UserContext, InstitutionContext } from './contexts/UserContext';
@@ -73,6 +73,9 @@ export default function App() {
   const [conflictMediations, setConflictMediations] = useState<ConflictMediation[]>(MOCK_CONFLICT_MEDIATIONS || []);
   const [cronogramaEvents, setCronogramaEvents] = useState<CronogramaEvent[]>(MOCK_CRONOGRAMA_EVENTS || []);
   const [absenceRequests, setAbsenceRequests] = useState<AbsenceRequest[]>([]);
+  const [appointments, setAppointments] = useState<Appointment[]>(MOCK_APPOINTMENTS || []);
+  const [chatChannels, setChatChannels] = useState<ChatChannel[]>(MOCK_CHAT_CHANNELS || []);
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>(MOCK_CHAT_MESSAGES || []);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
 
   // Helper to match authenticated Firebase/Google user with their registered profile in Firestore or state
@@ -266,6 +269,9 @@ export default function App() {
     const unsubVicc = subscribeToCollection<ViccIntervention>('vicc_interventions', items => items.length > 0 && setViccInterventions(items));
     const unsubInterventions = subscribeToCollection<Intervention>('interventions', items => items.length > 0 && setInterventions(items));
     const unsubAbsenceRequests = subscribeToCollection<AbsenceRequest>('absence_requests', items => items.length > 0 && setAbsenceRequests(items));
+    const unsubAppointments = subscribeToCollection<Appointment>('appointments', items => items.length > 0 && setAppointments(items));
+    const unsubChatChannels = subscribeToCollection<ChatChannel>('chat_channels', items => items.length > 0 && setChatChannels(items));
+    const unsubChatMessages = subscribeToCollection<ChatMessage>('chat_messages', items => items.length > 0 && setChatMessages(items));
 
     return () => {
       unsubInstitutions();
@@ -304,6 +310,9 @@ export default function App() {
       unsubVicc();
       unsubInterventions();
       unsubAbsenceRequests();
+      unsubAppointments();
+      unsubChatChannels();
+      unsubChatMessages();
     };
   }, []);
 
@@ -543,6 +552,21 @@ export default function App() {
   const handleUpdateAbsenceRequests = (updatedRequests: AbsenceRequest[]) => {
     setAbsenceRequests(updatedRequests);
     updatedRequests.forEach(r => saveDocument('absence_requests', r.id, r));
+  };
+
+  const handleUpdateAppointments = (updatedAppts: Appointment[]) => {
+    setAppointments(updatedAppts);
+    updatedAppts.forEach(a => saveDocument('appointments', a.id, a));
+  };
+
+  const handleUpdateChatChannels = (updatedChannels: ChatChannel[]) => {
+    setChatChannels(updatedChannels);
+    updatedChannels.forEach(c => saveDocument('chat_channels', c.id, c));
+  };
+
+  const handleSendMessage = (msg: ChatMessage) => {
+    setChatMessages(prev => [...prev, msg]);
+    saveDocument('chat_messages', msg.id, msg);
   };
   
   const handleUpdateStaffAttendance = (
@@ -872,6 +896,12 @@ export default function App() {
             onUpdateStaffAttendance={handleUpdateStaffAttendance}
             onUpdateFormalRequests={handleUpdateFormalRequests}
             onUpdateTrainingPlans={handleUpdateTrainingPlans}
+            appointments={appointments}
+            onUpdateAppointments={handleUpdateAppointments}
+            chatChannels={chatChannels}
+            onUpdateChatChannels={handleUpdateChatChannels}
+            chatMessages={chatMessages}
+            onSendMessage={handleSendMessage}
           />
         )}
         <UserProfileModal 

@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { User, Class, Subject, ScheduleEntry, TimeSlot, Timetable, Room, Role } from '../../types';
-import { CloseIcon, CalendarIcon, GraduationCapIcon, ClipboardListIcon, PhoneIcon, EmailIcon, LocationMarkerIcon, ClockIcon, EditIcon } from '../icons/Icons';
+import { CloseIcon, CalendarIcon, GraduationCapIcon, ClipboardListIcon, PhoneIcon, EmailIcon, LocationMarkerIcon, ClockIcon, EditIcon, FingerPrintIcon, CameraIcon, CheckCircleIcon } from '../icons/Icons';
 import ScheduleView from '../schedule/ScheduleView';
 
 interface TeacherProfileModalProps {
@@ -429,32 +429,78 @@ const TeacherProfileModal: React.FC<TeacherProfileModalProps> = ({
                                 </div>
                             </div>
 
-                            {/* Labor Schedule */}
-                            {teacher.workSchedule && Object.keys(teacher.workSchedule).length > 0 && (
-                                <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-xs">
-                                    <div className="flex items-center gap-2 mb-3 border-b pb-2">
-                                        <ClockIcon className="h-5 w-5 text-primary-600" />
-                                        <h4 className="font-bold text-slate-800 text-sm">Horario Laboral Registrado (Entrada y Salida)</h4>
+                            {/* Attendance & Labor Parameters (DMTH) */}
+                            <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-xs">
+                                <div className="flex items-center justify-between border-b pb-2 mb-3">
+                                    <div className="flex items-center gap-2">
+                                        <ClockIcon className="h-5 w-5 text-indigo-600" />
+                                        <h4 className="font-bold text-slate-800 text-sm">Régimen de Asistencia y Almuerzo (Talento Humano)</h4>
                                     </div>
-                                    <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
-                                        {['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes'].map(day => {
-                                            const sch = teacher.workSchedule?.[day];
-                                            return (
-                                                <div key={day} className="p-2.5 bg-slate-50 rounded-lg border border-slate-200 text-center">
-                                                    <p className="font-bold text-xs text-slate-700">{day}</p>
-                                                    {sch?.startTime && sch?.endTime ? (
-                                                        <p className="text-xs font-mono text-primary-700 font-semibold mt-1">
-                                                            {sch.startTime} - {sch.endTime}
-                                                        </p>
-                                                    ) : (
-                                                        <p className="text-[11px] text-slate-400 mt-1">Sin horario</p>
-                                                    )}
-                                                </div>
-                                            );
-                                        })}
+                                    {onEdit && (
+                                        <button 
+                                            onClick={() => onEdit(teacher)}
+                                            className="text-xs font-semibold text-indigo-600 hover:text-indigo-800 hover:underline flex items-center gap-1"
+                                        >
+                                            <EditIcon className="h-3.5 w-3.5" />
+                                            Modificar Parámetros
+                                        </button>
+                                    )}
+                                </div>
+                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
+                                    <div className="p-3 bg-slate-50 rounded-lg border border-slate-200">
+                                        <span className="text-[11px] font-bold text-slate-500 uppercase block">Tipo de Funcionario</span>
+                                        <div className="mt-1 flex items-center gap-1.5">
+                                            <span className={`px-2.5 py-0.5 rounded text-xs font-black ${
+                                                teacher.tipoFuncionario === 'FD' 
+                                                    ? 'bg-purple-100 text-purple-800 border border-purple-200' 
+                                                    : 'bg-sky-100 text-sky-800 border border-sky-200'
+                                            }`}>
+                                                {teacher.tipoFuncionario === 'FD' ? 'FD (Funcionario Directivo)' : 'OTROS (Docente / Administrativo)'}
+                                            </span>
+                                        </div>
+                                        <p className="text-[10px] text-slate-400 mt-1">
+                                            {teacher.tipoFuncionario === 'FD' 
+                                                ? 'Jornada flexible de 8.5h. Sin penalización por tiempo de almuerzo.' 
+                                                : 'Horario regular con control estricto de atrasos y exceso de almuerzo.'}
+                                        </p>
+                                    </div>
+
+                                    <div className="p-3 bg-slate-50 rounded-lg border border-slate-200">
+                                        <span className="text-[11px] font-bold text-slate-500 uppercase block">Almuerzo Autorizado</span>
+                                        <p className="text-xl font-black text-indigo-700 mt-0.5 font-mono">
+                                            {teacher.allowedLunchMinutes ?? 30} <span className="text-xs font-normal text-slate-500">minutos</span>
+                                        </p>
+                                        <p className="text-[10px] text-slate-400 mt-1">
+                                            Límite oficial antes de registrar novedad por exceso de almuerzo.
+                                        </p>
+                                    </div>
+
+                                    <div className="p-3 bg-slate-50 rounded-lg border border-slate-200">
+                                        <span className="text-[11px] font-bold text-slate-500 uppercase block">Biometría y Rostro Oficial</span>
+                                        <div className="mt-1 flex items-center gap-2">
+                                            {teacher.facialRegistered || teacher.facialPhotoUrl ? (
+                                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 text-xs font-bold border border-emerald-200">
+                                                    <CameraIcon className="h-3.5 w-3.5" /> Rostro Enrolado
+                                                </span>
+                                            ) : (
+                                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-amber-100 text-amber-800 text-xs font-bold border border-amber-200">
+                                                    <CameraIcon className="h-3.5 w-3.5" /> Sin Rostro Oficial
+                                                </span>
+                                            )}
+                                        </div>
+                                        {teacher.facialPhotoUrl && (
+                                            <div className="mt-2 flex items-center gap-2">
+                                                <img 
+                                                    src={teacher.facialPhotoUrl} 
+                                                    alt="Rostro Enrolado" 
+                                                    className="w-10 h-10 rounded-full object-cover border border-slate-300 shadow-xs" 
+                                                />
+                                                <span className="text-[10px] text-slate-500">Foto de referencia para comparación facial</span>
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
-                            )}
+                            </div>
                         </div>
                     )}
                 </main>

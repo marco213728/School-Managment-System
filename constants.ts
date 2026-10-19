@@ -13,7 +13,8 @@ import {
   Intervention, AreaOfKnowledge, StandardIndicator, StandardDimension, StandardLevel, 
   StandardCompliance, SubjectLevel, TrainingCourse, InterventionType, PeiProfile, 
   PeiStatus, ViccInterventionType, OcrSubmissionStatus, DisciplinarySeverity, OvpAxis,
-  EvaluationCategory
+  EvaluationCategory,
+  Appointment, ChatChannel, ChatMessage, DepartmentCode
 } from './types';
 
 export * from './types';
@@ -305,6 +306,216 @@ export const MOCK_VICC_INTERVENTIONS: ViccIntervention[] = [];
 export const MOCK_ATTENDANCE: AttendanceRecord[] = [];
 export const MOCK_EXIT_PASSES: ExitPass[] = [];
 export const MOCK_CITACIONES: Citacion[] = [];
+
+export const MOCK_APPOINTMENTS: Appointment[] = [
+    {
+        id: 'appt-1',
+        institutionId: 'uemol',
+        studentId: 'student1',
+        studentName: 'Carlos Andrade',
+        studentGrade: '10mo EGB A',
+        parentId: 'parent1',
+        parentName: 'Maria Gomez',
+        parentPhone: '0991234567',
+        parentEmail: 'maria@gmail.com',
+        staffId: 'teacher1',
+        staffName: 'Prof. Juan Pérez',
+        staffRole: 'Profesor / Tutor',
+        departmentCode: 'DOCENTE',
+        startTime: new Date(Date.now() + 86400000 * 2).toISOString().split('T')[0] + 'T09:30:00.000Z',
+        endTime: new Date(Date.now() + 86400000 * 2).toISOString().split('T')[0] + 'T10:15:00.000Z',
+        status: 'CONFIRMED',
+        parentReasonCategory: 'Rendimiento Académico',
+        parentNotes: 'Deseo revisar el progreso de Carlos en la asignatura de Matemática y los refuerzos pedagógicos.',
+        createdAt: new Date(Date.now() - 86400000).toISOString()
+    },
+    {
+        id: 'appt-2',
+        institutionId: 'uemol',
+        studentId: 'student1',
+        studentName: 'Carlos Andrade',
+        studentGrade: '10mo EGB A',
+        parentId: 'parent1',
+        parentName: 'Maria Gomez',
+        parentPhone: '0991234567',
+        parentEmail: 'maria@gmail.com',
+        staffId: 'dece1',
+        staffName: 'Psic. Ana Rivadeneira',
+        staffRole: 'Jefe DECE',
+        departmentCode: 'DECE',
+        startTime: new Date(Date.now() + 86400000 * 4).toISOString().split('T')[0] + 'T11:00:00.000Z',
+        endTime: new Date(Date.now() + 86400000 * 4).toISOString().split('T')[0] + 'T11:45:00.000Z',
+        status: 'PENDING',
+        parentReasonCategory: 'Acompañamiento Socioemocional',
+        parentNotes: 'Consulta sobre orientación vocacional y proyecto de vida del estudiante.',
+        isConfidentialDece: true,
+        createdAt: new Date().toISOString()
+    },
+    {
+        id: 'appt-3',
+        institutionId: 'uemol',
+        studentId: 'student1',
+        studentName: 'Carlos Andrade',
+        studentGrade: '10mo EGB A',
+        parentId: 'parent1',
+        parentName: 'Maria Gomez',
+        parentPhone: '0991234567',
+        parentEmail: 'maria@gmail.com',
+        staffId: 'insp1',
+        staffName: 'Abg. Luis Morales',
+        staffRole: 'Inspector General',
+        departmentCode: 'INSPECCION',
+        startTime: new Date(Date.now() - 86400000 * 3).toISOString().split('T')[0] + 'T08:00:00.000Z',
+        endTime: new Date(Date.now() - 86400000 * 3).toISOString().split('T')[0] + 'T08:40:00.000Z',
+        status: 'COMPLETED',
+        parentReasonCategory: 'Justificación de Inasistencias',
+        parentNotes: 'Justificación médica por inasistencia de dos días a clases.',
+        internalResolutionNotes: 'Se presentó certificado médico del centro de salud. Se procede a justificar las faltas y coordinar tareas atrasadas.',
+        commitmentsAcuerdos: [
+            { id: 'c1', description: 'Presentar tareas pendientes de Matemática y Ciencias en el plazo de 3 días', responsible: 'ESTUDIANTE', dueDate: '2026-10-22', status: 'CUMPLIDO' },
+            { id: 'c2', description: 'Monitorear la entrega oportuna de las actividades justificadas', responsible: 'PADRE', dueDate: '2026-10-25', status: 'PENDIENTE' }
+        ],
+        attendedAt: new Date(Date.now() - 86400000 * 3).toISOString(),
+        digitalSignature: {
+            signedByStaffId: 'insp1',
+            signedByStaffName: 'Abg. Luis Morales',
+            staffRole: 'Inspector General',
+            timestamp: new Date(Date.now() - 86400000 * 3).toISOString()
+        },
+        createdAt: new Date(Date.now() - 86400000 * 5).toISOString()
+    }
+];
+
+export const MOCK_CHAT_CHANNELS: ChatChannel[] = [
+    {
+        id: 'chan-1',
+        institutionId: 'uemol',
+        channelType: 'GRADE_LEVEL',
+        name: 'Junta de Curso - 10mo EGB A',
+        description: 'Canal oficial de docentes del paralelo 10mo EGB A para seguimiento de rendimiento, conducta y evaluación continua.',
+        relatedEntityId: 'class1',
+        relatedEntityName: '10mo EGB A',
+        participantIds: ['teacher1', 'teacher_lc', 'dece1', 'insp1', 'vice1'],
+        createdAt: new Date(Date.now() - 86400000 * 15).toISOString(),
+        isArchived: false,
+        lastMessage: {
+            content: 'Estimados compañeros, favor revisar el informe de refuerzo pedagógico para la junta parcial.',
+            senderId: 'teacher1',
+            senderName: 'Prof. Juan Pérez',
+            sentAt: new Date(Date.now() - 3600000 * 2).toISOString()
+        }
+    },
+    {
+        id: 'chan-2',
+        institutionId: 'uemol',
+        channelType: 'SUBJECT_AREA',
+        name: 'Comisión Técnico-Pedagógica de Matemática',
+        description: 'Alineación curricular, banco de ítems de evaluación y proyectos interdisciplinares STEM.',
+        relatedEntityId: 'subj1',
+        relatedEntityName: 'Matemática',
+        participantIds: ['teacher1', 'vice1', 'admin1'],
+        createdAt: new Date(Date.now() - 86400000 * 20).toISOString(),
+        isArchived: false,
+        lastMessage: {
+            content: 'Comparto la rúbrica unificada para el proyecto integrador del trimestre.',
+            senderId: 'vice1',
+            senderName: 'Dra. Carmen Salazar',
+            sentAt: new Date(Date.now() - 86400000).toISOString()
+        }
+    },
+    {
+        id: 'chan-3',
+        institutionId: 'uemol',
+        channelType: 'CASE_THREAD',
+        name: 'Caso Interdisciplinar: Carlos Andrade',
+        description: 'Canal restringido entre Docente Tutor y DECE para seguimiento de adaptación psicopedagógica.',
+        relatedEntityId: 'student1',
+        relatedEntityName: 'Carlos Andrade',
+        participantIds: ['teacher1', 'dece1'],
+        createdAt: new Date(Date.now() - 86400000 * 5).toISOString(),
+        isArchived: false,
+        caseCitation: {
+            studentId: 'student1',
+            studentName: 'Carlos Andrade',
+            category: 'DECE_REFERRAL',
+            summary: 'Seguimiento por atención dispersa y adaptación curricular grado 2.'
+        },
+        lastMessage: {
+            content: 'Se realizó la entrevista preliminar con la representante. Coordinamos refuerzo con pausas activas.',
+            senderId: 'dece1',
+            senderName: 'Psic. Ana Rivadeneira',
+            sentAt: new Date(Date.now() - 3600000 * 4).toISOString()
+        }
+    },
+    {
+        id: 'chan-4',
+        institutionId: 'uemol',
+        channelType: 'DIRECT',
+        name: 'Prof. Juan Pérez & Abg. Luis Morales',
+        description: 'Mensajes directos de coordinación institucional.',
+        participantIds: ['teacher1', 'insp1'],
+        createdAt: new Date(Date.now() - 86400000 * 2).toISOString(),
+        isArchived: false,
+        lastMessage: {
+            content: 'Abogado, le remití el reporte de asistencia del viernes para el trámite de justificación.',
+            senderId: 'teacher1',
+            senderName: 'Prof. Juan Pérez',
+            sentAt: new Date(Date.now() - 3600000 * 6).toISOString()
+        }
+    }
+];
+
+export const MOCK_CHAT_MESSAGES: ChatMessage[] = [
+    {
+        id: 'msg-1',
+        channelId: 'chan-1',
+        senderId: 'teacher1',
+        senderName: 'Prof. Juan Pérez',
+        senderRole: Role.Teacher,
+        content: 'Buenos días colegas. Damos inicio a la coordinación semanal del curso 10mo A.',
+        sentAt: new Date(Date.now() - 86400000 * 2).toISOString()
+    },
+    {
+        id: 'msg-2',
+        channelId: 'chan-1',
+        senderId: 'dece1',
+        senderName: 'Psic. Ana Rivadeneira',
+        senderRole: Role.JefeDECE,
+        content: 'Buen día equipo. Desde DECE estaremos aplicando el taller de habilidades socioemocionales este jueves.',
+        sentAt: new Date(Date.now() - 86400000).toISOString()
+    },
+    {
+        id: 'msg-3',
+        channelId: 'chan-1',
+        senderId: 'teacher1',
+        senderName: 'Prof. Juan Pérez',
+        senderRole: Role.Teacher,
+        content: 'Estimados compañeros, favor revisar el informe de refuerzo pedagógico para la junta parcial.',
+        attachmentMetadata: [
+            { name: 'Informe_Refuerzo_Pedagogico_10moA.pdf', url: '#', size: '1.2 MB', type: 'pdf' }
+        ],
+        sentAt: new Date(Date.now() - 3600000 * 2).toISOString()
+    },
+    {
+        id: 'msg-4',
+        channelId: 'chan-3',
+        senderId: 'teacher1',
+        senderName: 'Prof. Juan Pérez',
+        senderRole: Role.Teacher,
+        content: 'Estimada psicóloga, Carlos ha mostrado mejoría en su concentración en los primeros bloques de clase.',
+        caseCitationId: 'student1',
+        sentAt: new Date(Date.now() - 3600000 * 8).toISOString()
+    },
+    {
+        id: 'msg-5',
+        channelId: 'chan-3',
+        senderId: 'dece1',
+        senderName: 'Psic. Ana Rivadeneira',
+        senderRole: Role.JefeDECE,
+        content: 'Se realizó la entrevista preliminar con la representante. Coordinamos refuerzo con pausas activas.',
+        sentAt: new Date(Date.now() - 3600000 * 4).toISOString()
+    }
+];
 export const MOCK_ACADEMIC_CALENDAR_EVENTS: AcademicCalendarEvent[] = [];
 export const MOCK_LECCIONARIO_ENTRIES: LeccionarioEntry[] = [];
 export const MOCK_MICRO_PLANS: MicroPlan[] = [];

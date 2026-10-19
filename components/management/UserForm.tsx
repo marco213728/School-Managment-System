@@ -26,11 +26,15 @@ const UserForm: React.FC<UserFormProps> = ({ isOpen, onClose, onSave, userToEdit
     phone: '',
     address: '',
     maxMonthlyHours: undefined,
-    workSchedule: {}
+    workSchedule: {},
+    tipoFuncionario: 'OTROS',
+    allowedLunchMinutes: 30,
+    grupoOcupacional: ''
   });
 
   useEffect(() => {
     if (userToEdit) {
+      const isFD = userToEdit.tipoFuncionario === 'FD' || userToEdit.role === Role.Rector || userToEdit.role === Role.Vicerrector || userToEdit.role === Role.InspectorGeneral;
       setFormData({
         id: userToEdit.id,
         name: userToEdit.name,
@@ -45,6 +49,9 @@ const UserForm: React.FC<UserFormProps> = ({ isOpen, onClose, onSave, userToEdit
         workSchedule: userToEdit.workSchedule || {},
         esPeriodoLactancia: userToEdit.esPeriodoLactancia || false,
         tieneLimitacionMovilidad: userToEdit.tieneLimitacionMovilidad || false,
+        tipoFuncionario: isFD ? 'FD' : (userToEdit.tipoFuncionario || 'OTROS'),
+        allowedLunchMinutes: userToEdit.allowedLunchMinutes ?? 30,
+        grupoOcupacional: userToEdit.grupoOcupacional || (userToEdit.role.includes('Profesor') ? 'DOCENTE CATEGORIA E' : '')
       });
     } else {
       setFormData({
@@ -58,7 +65,10 @@ const UserForm: React.FC<UserFormProps> = ({ isOpen, onClose, onSave, userToEdit
         phone: '',
         address: '',
         maxMonthlyHours: undefined,
-        workSchedule: {}
+        workSchedule: {},
+        tipoFuncionario: 'OTROS',
+        allowedLunchMinutes: 30,
+        grupoOcupacional: ''
       });
     }
   }, [userToEdit, isOpen]);
@@ -205,6 +215,54 @@ const UserForm: React.FC<UserFormProps> = ({ isOpen, onClose, onSave, userToEdit
                     <input type="number" name="maxMonthlyHours" value={formData.maxMonthlyHours || ''} onChange={handleChange} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500" placeholder="Ej: 80" />
                 </div>
             </>
+          )}
+
+          {formData.role !== Role.Student && formData.role !== Role.Parent && (
+            <div className="mt-4 border-t pt-4 bg-slate-50 p-4 rounded-xl border border-slate-200">
+                <h3 className="text-sm font-bold text-slate-800 mb-2 border-l-4 border-indigo-500 pl-2">
+                    Régimen de Asistencia y Almuerzo (Talento Humano)
+                </h3>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div>
+                        <label className="block text-xs font-medium text-slate-700">Tipo de Funcionario</label>
+                        <select 
+                            name="tipoFuncionario" 
+                            value={formData.tipoFuncionario || 'OTROS'} 
+                            onChange={handleChange}
+                            className="mt-1 block w-full px-3 py-1.5 border border-gray-300 bg-white rounded-md text-xs focus:ring-primary-500 focus:border-primary-500"
+                        >
+                            <option value="OTROS">OTROS (Docente / Administrativo)</option>
+                            <option value="FD">FD (Funcionario Directivo)</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label className="block text-xs font-medium text-slate-700">Almuerzo Autorizado (min)</label>
+                        <input 
+                            type="number" 
+                            name="allowedLunchMinutes" 
+                            min={0}
+                            max={120}
+                            value={formData.allowedLunchMinutes ?? 30} 
+                            onChange={handleChange}
+                            className="mt-1 block w-full px-3 py-1.5 border border-gray-300 rounded-md text-xs font-mono font-bold"
+                            placeholder="30"
+                        />
+                    </div>
+
+                    <div>
+                        <label className="block text-xs font-medium text-slate-700">Grupo Ocupacional</label>
+                        <input 
+                            type="text" 
+                            name="grupoOcupacional" 
+                            value={formData.grupoOcupacional || ''} 
+                            onChange={handleChange}
+                            className="mt-1 block w-full px-3 py-1.5 border border-gray-300 rounded-md text-xs font-semibold uppercase"
+                            placeholder="DOCENTE CATEGORIA E"
+                        />
+                    </div>
+                </div>
+            </div>
           )}
 
           {formData.role === Role.Student && (

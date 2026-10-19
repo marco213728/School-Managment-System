@@ -1,28 +1,58 @@
 import React, { useState, useMemo, useContext } from 'react';
-import { Citacion, User, Student, Role, Notification, CitacionStatus } from '../types';
+import { 
+    Citacion, 
+    User, 
+    Student, 
+    Role, 
+    Notification, 
+    CitacionStatus, 
+    Appointment, 
+    Class, 
+    ScheduleEntry, 
+    TimeSlot 
+} from '../types';
 import { UserContext } from '../contexts/UserContext';
-import { PlusIcon, PrinterIcon, CitacionIcon } from '../components/icons/Icons';
+import { PlusIcon, PrinterIcon, CitacionIcon, CalendarIcon, ShieldCheckIcon } from '../components/icons/Icons';
 import CitacionForm from '../components/citaciones/CitacionForm';
 import PrintableCitacion from '../components/citaciones/PrintableCitacion';
+import MultiDeptAppointmentEngine from '../components/appointments/MultiDeptAppointmentEngine';
 
-interface CitacionesPageProps {
+export interface CitacionesPageProps {
     users: User[];
     students: Student[];
+    classes?: Class[];
+    schedule?: ScheduleEntry[];
+    timeSlots?: TimeSlot[];
     citaciones: Citacion[];
     onUpdateCitaciones: (citaciones: Citacion[]) => void;
+    appointments?: Appointment[];
+    onUpdateAppointments?: (appointments: Appointment[]) => void;
     notifications: Notification[];
     onUpdateNotifications: (notifications: Notification[]) => void;
 }
 
-const CitacionesPage: React.FC<CitacionesPageProps> = ({ users, students, citaciones, onUpdateCitaciones, notifications, onUpdateNotifications }) => {
+const CitacionesPage: React.FC<CitacionesPageProps> = ({ 
+    users, 
+    students, 
+    classes = [],
+    schedule = [],
+    timeSlots = [],
+    citaciones, 
+    onUpdateCitaciones, 
+    appointments = [],
+    onUpdateAppointments = () => {},
+    notifications, 
+    onUpdateNotifications 
+}) => {
     const { user: currentUser } = useContext(UserContext);
+    const [subTab, setSubTab] = useState<'appointments' | 'printed_citaciones'>('appointments');
     const [isFormOpen, setIsFormOpen] = useState(false);
     const [printingCitacion, setPrintingCitacion] = useState<Citacion | null>(null);
 
     const userMap = useMemo(() => new Map(users.map(u => [u.id, u.name])), [users]);
     const studentMap = useMemo(() => new Map(students.map(s => [s.id, s.name])), [students]);
 
-    const isStaff = currentUser && [Role.Teacher, Role.JefeDECE, Role.PsicologoEducativo, Role.TrabajadorSocial, Role.InspectorGeneral, Role.Vicerrector, Role.InstitutionAdmin].includes(currentUser.role);
+    const isStaff = currentUser && [Role.Teacher, Role.JefeDECE, Role.PsicologoEducativo, Role.TrabajadorSocial, Role.InspectorGeneral, Role.Vicerrector, Role.InstitutionAdmin, Role.HealthProfessional].includes(currentUser.role);
 
     const relevantCitaciones = useMemo(() => {
         if (!currentUser) return [];
@@ -69,102 +99,130 @@ const CitacionesPage: React.FC<CitacionesPageProps> = ({ users, students, citaci
 
     const sortedCitaciones = [...relevantCitaciones].sort((a,b) => new Date(b.creationDate).getTime() - new Date(a.date).getTime());
 
-    const ListView: React.FC = () => (
-        <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-            <div className="overflow-x-auto">
-                {sortedCitaciones.length > 0 ? (
-                    <table className="min-w-full divide-y divide-gray-200">
-                        <thead className="bg-slate-50">
-                            <tr>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">{isStaff ? 'Estudiante' : 'Enviado por'}</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Fecha de la Cita</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Motivo</th>
-                                <th className="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase">Acciones</th>
-                            </tr>
-                        </thead>
-                        <tbody className="bg-white divide-y divide-gray-200">
-                            {sortedCitaciones.map(citacion => (
-                                <tr key={citacion.id}>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900">
-                                        {isStaff ? studentMap.get(citacion.studentId) : userMap.get(citacion.staffId)}
-                                    </td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">{new Date(citacion.date).toLocaleString('es-ES')}</td>
-                                    <td className="px-6 py-4 text-sm text-slate-600 max-w-sm truncate" title={citacion.reason}>{citacion.reason}</td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                        <button onClick={() => setPrintingCitacion(citacion)} className="p-2 text-slate-500 hover:text-primary-600 rounded-full hover:bg-primary-100" title="Imprimir Citación">
-                                            <PrinterIcon className="h-5 w-5" />
-                                        </button>
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                ) : (
-                    <div className="text-center py-16 border-2 border-dashed border-slate-200 rounded-lg">
-                        <CitacionIcon className="mx-auto h-12 w-12 text-slate-400" />
-                        <h3 className="mt-2 text-lg font-semibold text-slate-800">No hay citaciones</h3>
-                        <p className="mt-1 text-sm text-slate-500">
-                            {isStaff ? 'Actualmente no tiene citaciones enviadas.' : 'No ha recibido ninguna citación.'}
-                        </p>
+    return (
+        <div className="space-y-6">
+            {/* Top Sub-Navigation */}
+            <div className="border-b border-slate-200">
+                <nav className="-mb-px flex space-x-6" aria-label="Tabs">
+                    <button
+                        onClick={() => setSubTab('appointments')}
+                        className={`whitespace-nowrap py-3.5 px-1 border-b-2 font-bold text-xs flex items-center gap-2 transition ${
+                            subTab === 'appointments' 
+                                ? 'border-indigo-600 text-indigo-700' 
+                                : 'border-transparent text-slate-500 hover:text-slate-800'
+                        }`}
+                    >
+                        <CalendarIcon className="h-4 w-4" />
+                        <span>Citas y Agendamiento Multidepartamental (Docentes, DECE, Médico, Inspección)</span>
+                    </button>
+
+                    <button
+                        onClick={() => setSubTab('printed_citaciones')}
+                        className={`whitespace-nowrap py-3.5 px-1 border-b-2 font-bold text-xs flex items-center gap-2 transition ${
+                            subTab === 'printed_citaciones' 
+                                ? 'border-indigo-600 text-indigo-700' 
+                                : 'border-transparent text-slate-500 hover:text-slate-800'
+                        }`}
+                    >
+                        <CitacionIcon className="h-4 w-4" />
+                        <span>Citaciones Escritas para Impresión</span>
+                    </button>
+                </nav>
+            </div>
+
+            {subTab === 'appointments' && (
+                <MultiDeptAppointmentEngine
+                    appointments={appointments}
+                    onUpdateAppointments={onUpdateAppointments}
+                    users={users}
+                    students={students}
+                    classes={classes}
+                    schedule={schedule}
+                    timeSlots={timeSlots}
+                    notifications={notifications}
+                    onUpdateNotifications={onUpdateNotifications}
+                />
+            )}
+
+            {subTab === 'printed_citaciones' && (
+                <div className="space-y-4">
+                    <div className="flex justify-between items-center">
+                        <div>
+                            <h2 className="text-xl font-bold text-slate-800">Convocatorias y Citaciones Físicas</h2>
+                            <p className="text-xs text-slate-500">Documentos formales emitidos para entrega firmada o notificación escrita.</p>
+                        </div>
                         {isStaff && (
-                            <div className="mt-6">
-                                <button
-                                    onClick={() => setIsFormOpen(true)}
-                                    className="flex items-center gap-2 mx-auto px-4 py-2 bg-primary-600 text-white font-semibold rounded-md hover:bg-primary-700"
-                                >
-                                    <PlusIcon className="h-5 w-5" />
-                                    Crear Citación
-                                </button>
-                            </div>
+                            <button onClick={() => setIsFormOpen(true)} className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white font-bold text-xs rounded-xl hover:bg-indigo-700 transition">
+                                <PlusIcon className="h-4 w-4" />
+                                Nueva Citación Escrita
+                            </button>
                         )}
                     </div>
-                )}
-            </div>
-        </div>
-    );
 
-    return (
-        <div>
-            <div className="flex justify-between items-center mb-6">
-                <h2 className="text-2xl font-bold text-slate-800">Módulo de Citaciones</h2>
-                {isStaff && (
-                    <button onClick={() => setIsFormOpen(true)} className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white font-semibold rounded-md hover:bg-primary-700">
-                        <PlusIcon className="h-5 w-5" />
-                        Crear Citación
-                    </button>
-                )}
-            </div>
-            <ListView />
+                    <div className="bg-white p-6 rounded-2xl shadow-xs border border-slate-200">
+                        <div className="overflow-x-auto">
+                            {sortedCitaciones.length > 0 ? (
+                                <table className="min-w-full divide-y divide-gray-200 text-xs">
+                                    <thead className="bg-slate-50">
+                                        <tr>
+                                            <th className="px-5 py-3 text-left font-bold text-slate-500 uppercase">{isStaff ? 'Estudiante' : 'Enviado por'}</th>
+                                            <th className="px-5 py-3 text-left font-bold text-slate-500 uppercase">Fecha de la Cita</th>
+                                            <th className="px-5 py-3 text-left font-bold text-slate-500 uppercase">Motivo</th>
+                                            <th className="px-5 py-3 text-right font-bold text-slate-500 uppercase">Acciones</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="bg-white divide-y divide-gray-200">
+                                        {sortedCitaciones.map(citacion => (
+                                            <tr key={citacion.id} className="hover:bg-slate-50">
+                                                <td className="px-5 py-3.5 whitespace-nowrap font-bold text-slate-900">
+                                                    {isStaff ? studentMap.get(citacion.studentId) : userMap.get(citacion.staffId)}
+                                                </td>
+                                                <td className="px-5 py-3.5 whitespace-nowrap text-slate-500 font-mono">
+                                                    {new Date(citacion.date).toLocaleString('es-ES')}
+                                                </td>
+                                                <td className="px-5 py-3.5 text-slate-600 max-w-sm truncate" title={citacion.reason}>
+                                                    {citacion.reason}
+                                                </td>
+                                                <td className="px-5 py-3.5 whitespace-nowrap text-right font-medium">
+                                                    <button onClick={() => setPrintingCitacion(citacion)} className="p-2 text-slate-500 hover:text-indigo-600 rounded-full hover:bg-indigo-50 transition" title="Imprimir Citación">
+                                                        <PrinterIcon className="h-4 w-4" />
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            ) : (
+                                <div className="text-center py-12 border-2 border-dashed border-slate-200 rounded-xl">
+                                    <CitacionIcon className="mx-auto h-12 w-12 text-slate-300" />
+                                    <h3 className="mt-2 text-base font-bold text-slate-800">No hay citaciones impresas</h3>
+                                    <p className="mt-1 text-xs text-slate-500">
+                                        {isStaff ? 'Actualmente no tiene citaciones escritas emitidas.' : 'No ha recibido ninguna citación.'}
+                                    </p>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {isFormOpen && (
                 <CitacionForm 
                     isOpen={isFormOpen}
                     onClose={() => setIsFormOpen(false)}
                     onSave={handleSave}
-                    students={students.filter(s => s.institutionId === currentUser?.institutionId)}
+                    students={students}
                 />
             )}
+
             {printingCitacion && (
-                <div className="fixed inset-0 bg-black bg-opacity-60 z-50 flex justify-center items-center p-4">
-                    <div id="citacion-print-section" className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] flex flex-col">
-                         <header className="p-4 flex justify-between items-center bg-gray-50 border-b no-print sticky top-0 z-10">
-                            <h3 className="text-lg font-semibold text-gray-700">Vista Previa de Citación</h3>
-                            <div className="flex items-center gap-2">
-                                <button onClick={() => setPrintingCitacion(null)} className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 text-sm font-semibold">Cerrar</button>
-                                <button onClick={() => window.print()} className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white font-semibold rounded-md hover:bg-primary-700 text-sm">
-                                    <PrinterIcon className="h-5 w-5" /> Imprimir / PDF
-                                </button>
-                            </div>
-                        </header>
-                         <div className="overflow-y-auto">
-                           <PrintableCitacion
-                                citacion={printingCitacion}
-                                studentName={studentMap.get(printingCitacion.studentId) || ''}
-                                parentName={userMap.get(printingCitacion.parentId) || ''}
-                                staffName={userMap.get(printingCitacion.staffId) || ''}
-                           />
-                        </div>
-                    </div>
-                </div>
+                <PrintableCitacion 
+                    citacion={printingCitacion}
+                    student={students.find(s => s.id === printingCitacion.studentId)}
+                    staff={users.find(u => u.id === printingCitacion.staffId)}
+                    parent={users.find(u => u.id === printingCitacion.parentId)}
+                    onClose={() => setPrintingCitacion(null)}
+                />
             )}
         </div>
     );

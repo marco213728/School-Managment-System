@@ -7,7 +7,8 @@ import {
     KeypadIcon, 
     CheckCircleIcon, 
     AlertTriangleIcon,
-    SparklesIcon
+    SparklesIcon,
+    ClockIcon
 } from '../icons/Icons';
 
 interface BiometricEnrollmentModalProps {
@@ -23,7 +24,7 @@ const BiometricEnrollmentModal: React.FC<BiometricEnrollmentModalProps> = ({
     user, 
     onSaveUser 
 }) => {
-    const [activeTab, setActiveTab] = useState<'facial' | 'fingerprint' | 'pin'>('facial');
+    const [activeTab, setActiveTab] = useState<'facial' | 'fingerprint' | 'pin' | 'parameters'>('facial');
     
     // Facial State
     const [capturedPhoto, setCapturedPhoto] = useState<string | null>(user.facialPhotoUrl || user.photoUrl || null);
@@ -40,6 +41,13 @@ const BiometricEnrollmentModal: React.FC<BiometricEnrollmentModalProps> = ({
 
     // PIN State
     const [pin, setPin] = useState(user.accessPin || '');
+    
+    // Municipal Labor Parameters (Dirección de Talento Humano)
+    const isFDDefault = user.tipoFuncionario === 'FD' || user.role === 'Rector' || user.role === 'Vicerrector' || user.role === 'Inspector General';
+    const [tipoFuncionario, setTipoFuncionario] = useState<'FD' | 'OTROS'>(isFDDefault ? 'FD' : (user.tipoFuncionario || 'OTROS'));
+    const [allowedLunchMinutes, setAllowedLunchMinutes] = useState<number>(user.allowedLunchMinutes ?? 30);
+    const [grupoOcupacional, setGrupoOcupacional] = useState<string>(user.grupoOcupacional || (user.role.includes('Profesor') ? 'DOCENTE CATEGORIA E' : 'ADMINISTRATIVO'));
+
     const [successMessage, setSuccessMessage] = useState('');
 
     useEffect(() => {
@@ -47,6 +55,10 @@ const BiometricEnrollmentModal: React.FC<BiometricEnrollmentModalProps> = ({
             setCapturedPhoto(user.facialPhotoUrl || user.photoUrl || null);
             setFingerprintDone(!!user.biometricRegistered);
             setPin(user.accessPin || '');
+            const isFD = user.tipoFuncionario === 'FD' || user.role === 'Rector' || user.role === 'Vicerrector' || user.role === 'Inspector General';
+            setTipoFuncionario(isFD ? 'FD' : (user.tipoFuncionario || 'OTROS'));
+            setAllowedLunchMinutes(user.allowedLunchMinutes ?? 30);
+            setGrupoOcupacional(user.grupoOcupacional || (user.role.includes('Profesor') ? 'DOCENTE CATEGORIA E' : 'ADMINISTRATIVO'));
             setSuccessMessage('');
         }
     }, [isOpen, user]);
@@ -155,6 +167,17 @@ const BiometricEnrollmentModal: React.FC<BiometricEnrollmentModalProps> = ({
         setTimeout(() => setSuccessMessage(''), 3000);
     };
 
+    const handleSaveParameters = (e: React.FormEvent) => {
+        e.preventDefault();
+        onSaveUser({
+            tipoFuncionario,
+            allowedLunchMinutes: Number(allowedLunchMinutes),
+            grupoOcupacional: grupoOcupacional.trim()
+        });
+        setSuccessMessage('¡Parámetros de jornada y almuerzo guardados correctamente!');
+        setTimeout(() => setSuccessMessage(''), 3000);
+    };
+
     const generateRandomPin = () => {
         const rand = Math.floor(1000 + Math.random() * 9000).toString();
         setPin(rand);
@@ -164,7 +187,7 @@ const BiometricEnrollmentModal: React.FC<BiometricEnrollmentModalProps> = ({
 
     return (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-[120] flex justify-center items-center p-3 sm:p-4" onClick={onClose}>
-            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[92vh] flex flex-col border border-slate-200 overflow-hidden" onClick={e => e.stopPropagation()}>
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-xl max-h-[92vh] flex flex-col border border-slate-200 overflow-hidden" onClick={e => e.stopPropagation()}>
                 <canvas ref={canvasRef} className="hidden" />
 
                 {/* Header */}
@@ -181,7 +204,7 @@ const BiometricEnrollmentModal: React.FC<BiometricEnrollmentModalProps> = ({
                 </header>
 
                 {/* Status Badges Header */}
-                <div className="bg-slate-100/70 px-5 py-2.5 flex items-center justify-around border-b border-slate-200 text-xs">
+                <div className="bg-slate-100/70 px-4 py-2.5 flex items-center justify-around border-b border-slate-200 text-xs flex-wrap gap-2">
                     <div className="flex items-center gap-1.5">
                         <span className="font-semibold text-slate-600">Rostro:</span>
                         {user.facialRegistered || user.facialPhotoUrl ? (
@@ -201,47 +224,62 @@ const BiometricEnrollmentModal: React.FC<BiometricEnrollmentModalProps> = ({
                     <div className="flex items-center gap-1.5">
                         <span className="font-semibold text-slate-600">PIN:</span>
                         {user.accessPin ? (
-                            <span className="text-sky-700 bg-sky-100 font-bold px-2 py-0.5 rounded-full">Activo ({user.accessPin})</span>
+                            <span className="text-sky-700 bg-sky-100 font-bold px-2 py-0.5 rounded-full font-mono">{user.accessPin}</span>
                         ) : (
                             <span className="text-amber-700 bg-amber-100 px-2 py-0.5 rounded-full">Sin PIN</span>
                         )}
                     </div>
+                    <div className="flex items-center gap-1.5">
+                        <span className="font-semibold text-slate-600">Tipo:</span>
+                        <span className="text-indigo-700 bg-indigo-100 font-bold px-2 py-0.5 rounded-full">{tipoFuncionario}</span>
+                    </div>
                 </div>
 
                 {/* Tabs */}
-                <div className="flex border-b border-slate-200 bg-white">
+                <div className="flex border-b border-slate-200 bg-white flex-wrap">
                     <button
                         onClick={() => setActiveTab('facial')}
-                        className={`flex-1 py-3 text-xs font-bold border-b-2 flex items-center justify-center gap-2 transition-colors ${
+                        className={`flex-1 min-w-[110px] py-2.5 text-xs font-bold border-b-2 flex items-center justify-center gap-1.5 transition-colors ${
                             activeTab === 'facial' 
                                 ? 'border-sky-600 text-sky-600 bg-sky-50/40' 
                                 : 'border-transparent text-slate-500 hover:text-slate-800'
                         }`}
                     >
                         <CameraIcon className="h-4 w-4" />
-                        1. Registro Facial (Cámara)
+                        1. Rostro
                     </button>
                     <button
                         onClick={() => setActiveTab('fingerprint')}
-                        className={`flex-1 py-3 text-xs font-bold border-b-2 flex items-center justify-center gap-2 transition-colors ${
+                        className={`flex-1 min-w-[110px] py-2.5 text-xs font-bold border-b-2 flex items-center justify-center gap-1.5 transition-colors ${
                             activeTab === 'fingerprint' 
                                 ? 'border-purple-600 text-purple-600 bg-purple-50/40' 
                                 : 'border-transparent text-slate-500 hover:text-slate-800'
                         }`}
                     >
                         <FingerPrintIcon className="h-4 w-4" />
-                        2. Huella Dactilar
+                        2. Huella
                     </button>
                     <button
                         onClick={() => setActiveTab('pin')}
-                        className={`flex-1 py-3 text-xs font-bold border-b-2 flex items-center justify-center gap-2 transition-colors ${
+                        className={`flex-1 min-w-[90px] py-2.5 text-xs font-bold border-b-2 flex items-center justify-center gap-1.5 transition-colors ${
                             activeTab === 'pin' 
                                 ? 'border-slate-800 text-slate-800 bg-slate-50' 
                                 : 'border-transparent text-slate-500 hover:text-slate-800'
                         }`}
                     >
                         <KeypadIcon className="h-4 w-4" />
-                        3. Código PIN
+                        3. PIN
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('parameters')}
+                        className={`flex-1 min-w-[140px] py-2.5 text-xs font-bold border-b-2 flex items-center justify-center gap-1.5 transition-colors ${
+                            activeTab === 'parameters' 
+                                ? 'border-indigo-600 text-indigo-600 bg-indigo-50/40' 
+                                : 'border-transparent text-slate-500 hover:text-slate-800'
+                        }`}
+                    >
+                        <ClockIcon className="h-4 w-4" />
+                        4. Almuerzo & FD
                     </button>
                 </div>
 
@@ -438,6 +476,129 @@ const BiometricEnrollmentModal: React.FC<BiometricEnrollmentModalProps> = ({
                                 className="w-full py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl text-xs shadow-sm transition-colors"
                             >
                                 Guardar Código PIN
+                            </button>
+                        </form>
+                    )}
+
+                    {/* Municipal Labor & Lunch Parameters Tab */}
+                    {activeTab === 'parameters' && (
+                        <form onSubmit={handleSaveParameters} className="space-y-4">
+                            <div className="bg-indigo-50 border border-indigo-200 p-3.5 rounded-xl text-xs text-indigo-900">
+                                <p className="font-bold flex items-center gap-1.5 mb-1">
+                                    <ClockIcon className="h-4 w-4 text-indigo-700" />
+                                    Parámetros Oficiales - Dirección Metropolitana de Talento Humano
+                                </p>
+                                <p className="text-[11px] text-indigo-800">
+                                    Configure el régimen de control de asistencia para la determinación de novedades (FD vs. OTROS) y el tiempo autorizado de almuerzo.
+                                </p>
+                            </div>
+
+                            <div className="space-y-3">
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-700 mb-1">
+                                        Tipo de Funcionario (Control de Jornada):
+                                    </label>
+                                    <div className="grid grid-cols-2 gap-2">
+                                        <label className={`p-3 rounded-xl border cursor-pointer flex items-center gap-2.5 transition ${
+                                            tipoFuncionario === 'FD' 
+                                                ? 'bg-indigo-50/80 border-indigo-500 text-indigo-900 font-bold' 
+                                                : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+                                        }`}>
+                                            <input 
+                                                type="radio" 
+                                                name="tipoFuncionario" 
+                                                value="FD"
+                                                checked={tipoFuncionario === 'FD'} 
+                                                onChange={() => setTipoFuncionario('FD')}
+                                                className="text-indigo-600 focus:ring-indigo-500" 
+                                            />
+                                            <div>
+                                                <p className="text-xs">FD (Funcionario Directivo)</p>
+                                                <p className="text-[10px] text-slate-500 font-normal">Jornada 8.5h mínima flexible</p>
+                                            </div>
+                                        </label>
+
+                                        <label className={`p-3 rounded-xl border cursor-pointer flex items-center gap-2.5 transition ${
+                                            tipoFuncionario === 'OTROS' 
+                                                ? 'bg-indigo-50/80 border-indigo-500 text-indigo-900 font-bold' 
+                                                : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+                                        }`}>
+                                            <input 
+                                                type="radio" 
+                                                name="tipoFuncionario" 
+                                                value="OTROS"
+                                                checked={tipoFuncionario === 'OTROS'} 
+                                                onChange={() => setTipoFuncionario('OTROS')}
+                                                className="text-indigo-600 focus:ring-indigo-500" 
+                                            />
+                                            <div>
+                                                <p className="text-xs">OTROS (Docente / Administrativo)</p>
+                                                <p className="text-[10px] text-slate-500 font-normal">Entrada y salida por horario fijo</p>
+                                            </div>
+                                        </label>
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                    <div>
+                                        <label className="block text-xs font-bold text-slate-700 mb-1">
+                                            Tiempo de Almuerzo Autorizado (Minutos):
+                                        </label>
+                                        <div className="relative">
+                                            <input 
+                                                type="number" 
+                                                min={0}
+                                                max={120}
+                                                step={5}
+                                                value={allowedLunchMinutes}
+                                                onChange={e => setAllowedLunchMinutes(Math.max(0, parseInt(e.target.value) || 0))}
+                                                className="w-full p-2.5 border border-slate-300 rounded-xl text-xs bg-white font-mono font-bold focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                                            />
+                                            <span className="absolute right-3 top-2.5 text-xs text-slate-400 font-medium">
+                                                minutos
+                                            </span>
+                                        </div>
+                                        <div className="flex gap-1.5 mt-1.5">
+                                            {[20, 30, 45, 60].map(m => (
+                                                <button
+                                                    key={m}
+                                                    type="button"
+                                                    onClick={() => setAllowedLunchMinutes(m)}
+                                                    className={`px-2 py-0.5 rounded text-[10px] font-semibold border transition ${
+                                                        allowedLunchMinutes === m 
+                                                            ? 'bg-indigo-600 text-white border-indigo-600' 
+                                                            : 'bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-200'
+                                                    }`}
+                                                >
+                                                    {m} min
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-xs font-bold text-slate-700 mb-1">
+                                            Grupo Ocupacional:
+                                        </label>
+                                        <input 
+                                            type="text" 
+                                            value={grupoOcupacional}
+                                            onChange={e => setGrupoOcupacional(e.target.value)}
+                                            placeholder="DOCENTE CATEGORIA E"
+                                            className="w-full p-2.5 border border-slate-300 rounded-xl text-xs bg-white font-semibold uppercase focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                                        />
+                                        <p className="text-[10px] text-slate-400 mt-1">
+                                            Ej: DOCENTE CATEGORIA E, ADMINISTRATIVO, SERVICIOS
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <button 
+                                type="submit" 
+                                className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-xs shadow-sm transition-colors mt-2"
+                            >
+                                Guardar Parámetros de Jornada y Almuerzo
                             </button>
                         </form>
                     )}

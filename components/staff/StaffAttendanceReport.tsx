@@ -12,8 +12,15 @@ import {
     ClockIcon,
     DownloadIcon,
     PrinterIcon,
-    SparklesIcon
+    SparklesIcon,
+    UsersIcon
 } from '../icons/Icons';
+import { 
+    calculateDayAudit, 
+    DayAttendanceAudit, 
+    PunchInfo,
+    formatMinutesToHHMMSS 
+} from '../../lib/attendanceCalculations';
 
 interface StaffAttendanceReportProps {
     records: StaffAttendanceRecord[];
@@ -21,203 +28,312 @@ interface StaffAttendanceReportProps {
 }
 
 const StaffAttendanceReport: React.FC<StaffAttendanceReportProps> = ({ records, users }) => {
-    const [filterDate, setFilterDate] = useState('');
-    const [searchTerm, setSearchTerm] = useState('');
-    const [filterOnlyInconsistencies, setFilterOnlyInconsistencies] = useState(false);
-    const [selectedRecordForDetail, setSelectedRecordForDetail] = useState<{
-        record: StaffAttendanceRecord;
-        user?: User;
-    } | null>(null);
+    // View mode: 'official_matrix' (individual monthly audit like the Excel spreadsheet) or 'all_records' (consolidated)
+    const [viewMode, setViewMode] = useState<'official_matrix' | 'all_records'>('official_matrix');
+    
+    // Filters
+    const [selectedUserId, setSelectedUserId] = useState<string>('');
+    const [selectedMonth, setSelectedMonth] = useState<string>(() => {
+        const now = new Date();
+        const y = now.getFullYear();
+        const m = (now.getMonth() + 1).toString().padStart(2, '0');
+        return `${y}-${m}`;
+    });
+    const [filterDate, setFilterDate] = useState<string>('');
+    const [searchTerm, setSearchTerm] = useState<string>('');
+    const [filterOnlyNovedades, setFilterOnlyNovedades] = useState<boolean>(false);
+    const [filterOnlyInconsistencies, setFilterOnlyInconsistencies] = useState<boolean>(false);
+    
+    const [selectedAuditForModal, setSelectedAuditForModal] = useState<DayAttendanceAudit | null>(null);
 
-    // Safety check: ensure users is an array
-    const safeUsers = users || [];
-    const userMap = useMemo(() => new Map(safeUsers.map(u => [u.id, u])), [safeUsers]);
+    // Eligible staff users (not students or parents)
+    const staffUsers = useMemo(() => {
+        return (users || []).filter(u => u.role !== 'Familiar' && u.role !== 'Alumno');
+    }, [users]);
 
-    // Process raw attendance records
-    const processedRecords = useMemo(() => {
+    const userMap = useMemo(() => new Map(staffUsers.map(u => [u.id, u])), [staffUsers]);
+
+    // Active user for official matrix view
+    const activeStaffUser = useMemo(() => {
+        if (selectedUserId) return userMap.get(selectedUserId);
+        return staffUsers[0] || null;
+    }, [selectedUserId, staffUsers, userMap]);
+
+    // Helper: Map an existing StaffAttendanceRecord punch to PunchInfo
+    const mapPunchesToPunchInfo = (punches?: AttendancePunch[]): PunchInfo[] => {
+        if (!punches) return [];
+        return punches.map(p => ({
+            time: p.time,
+            type: p.type,
+            method: p.method,
+            origin: p.method === 'Facial' ? 'FACIAL' : 'WEB',
+            photoProof: p.photoProof,
+            facialConfidence: p.facialConfidence,
+            facialMatch: p.facialMatch,
+            flagReason: p.flagReason,
+            distanceFromInstitution: p.distanceFromInstitution
+        }));
+    };
+
+    // GENERATE MONTHLY AUDIT ROWS FOR OFFICIAL MATRIX (Formato Dirección Metropolitana de Talento Humano)
+    const monthlyMatrixAudits = useMemo(() => {
+        if (!activeStaffUser) return [];
+
+        const [yearStr, monthStr] = selectedMonth.split('-');
+        const year = parseInt(yearStr, 10);
+        const month = parseInt(monthStr, 10);
+
+        // Days in this month
+        const daysInMonth = new Date(year, month, 0).getDate();
+        const audits: DayAttendanceAudit[] = [];
+
+        for (let day = 1; day <= daysInMonth; day++) {
+            const dayFormatted = day.toString().padStart(2, '0');
+            const monthFormatted = month.toString().padStart(2, '0');
+            const isoDate = `${year}-${monthFormatted}-${dayFormatted}`;
+
+            // Check if user has an attendance record for this date
+            const record = records.find(r => r.userId === activeStaffUser.id && r.date === isoDate);
+            const punches = mapPunchesToPunchInfo(record?.punches);
+
+            const audit = calculateDayAudit({
+                date: isoDate,
+                punches,
+                user: {
+                    id: activeStaffUser.id,
+                    name: activeStaffUser.name,
+                    role: activeStaffUser.role,
+                    cedula: activeStaffUser.cedula,
+                    grupoOcupacional: activeStaffUser.grupoOcupacional,
+                    tipoFuncionario: activeStaffUser.tipoFuncionario,
+                    allowedLunchMinutes: activeStaffUser.allowedLunchMinutes,
+                    workSchedule: activeStaffUser.workSchedule
+                }
+            });
+
+            audits.push(audit);
+        }
+
+        return audits;
+    }, [activeStaffUser, selectedMonth, records]);
+
+    // GENERATE AUDITS FOR ALL ATTENDANCE RECORDS (Consolidated View)
+    const allRecordsAudits = useMemo(() => {
         if (!records || !Array.isArray(records)) return [];
 
         return records.map(record => {
-            const punches = record.punches || [];
-            const firstInPunch = punches.find(p => p.type === 'in');
-            const checkInTime = firstInPunch?.time || 'N/A';
-            
-            // Get user's specific work schedule for the day
             const user = userMap.get(record.userId);
-            const dayOfWeek = new Date(record.date).toLocaleDateString('es-ES', { weekday: 'long' });
-            const daySchedule = user?.workSchedule?.[dayOfWeek as keyof typeof user.workSchedule];
-            const expectedStart = daySchedule?.startTime || '08:00';
-            
-            const status = (firstInPunch && checkInTime > expectedStart) ? 'Late' : 'OnTime';
-            const method = firstInPunch?.method || 'N/A';
-            const location = firstInPunch?.location;
+            if (!user) return null;
 
-            // Check if any punch in this record has a flag, justification, facial mismatch or photo
-            const hasFlaggedPunch = punches.some(p => 
-                p.verificationStatus === 'Flagged' || 
-                p.facialMatch === false || 
-                !!p.justification || 
-                !!p.flagReason
-            );
-            const hasFacialMismatch = punches.some(p => p.facialMatch === false);
-            const hasPhotoProof = punches.some(p => !!p.photoProof);
-            const maxDistance = Math.max(0, ...punches.map(p => p.distanceFromInstitution || 0));
-
-            // Generate daily summary string
-            const punchSummary = punches.map(p => {
-                const typeMap: Record<string, string> = { 
-                    'in': 'Entrada', 
-                    'out_break': 'Receso (Ini)', 
-                    'in_break': 'Receso (Fin)', 
-                    'out': 'Salida' 
-                };
-                return `${typeMap[p.type] || p.type}: ${p.time}`;
-            }).join(' | ');
-
-            return {
-                ...record,
-                checkInTime,
-                status,
-                method,
-                punchSummary,
-                location,
-                hasFlaggedPunch,
-                hasFacialMismatch,
-                hasPhotoProof,
-                maxDistance
-            };
-        });
+            const punches = mapPunchesToPunchInfo(record.punches);
+            return calculateDayAudit({
+                date: record.date,
+                punches,
+                user: {
+                    id: user.id,
+                    name: user.name,
+                    role: user.role,
+                    cedula: user.cedula,
+                    grupoOcupacional: user.grupoOcupacional,
+                    tipoFuncionario: user.tipoFuncionario,
+                    allowedLunchMinutes: user.allowedLunchMinutes,
+                    workSchedule: user.workSchedule
+                }
+            });
+        }).filter((a): a is DayAttendanceAudit => a !== null);
     }, [records, userMap]);
 
-    const filteredRecords = useMemo(() => {
-        if (!processedRecords) return [];
+    // Apply filters based on viewMode
+    const displayedAudits = useMemo(() => {
+        let list = viewMode === 'official_matrix' ? monthlyMatrixAudits : allRecordsAudits;
 
-        const term = searchTerm.toLowerCase();
-        return processedRecords.filter(record => {
-            const user = userMap.get(record.userId);
-            const nameMatch = (user?.name || '').toLowerCase().includes(term);
-            const dateMatch = filterDate ? record.date === filterDate : true;
-            const inconsistencyMatch = filterOnlyInconsistencies ? record.hasFlaggedPunch : true;
-            return nameMatch && dateMatch && inconsistencyMatch;
-        }).sort((a, b) => {
-            const timeA = a.checkInTime === 'N/A' ? 0 : new Date(a.date + 'T' + a.checkInTime).getTime();
-            const timeB = b.checkInTime === 'N/A' ? 0 : new Date(b.date + 'T' + b.checkInTime).getTime();
-            return timeB - timeA;
-        });
-    }, [processedRecords, searchTerm, filterDate, filterOnlyInconsistencies, userMap]);
+        if (searchTerm.trim()) {
+            const q = searchTerm.toLowerCase();
+            list = list.filter(a => 
+                a.userName.toLowerCase().includes(q) || 
+                a.cedula.toLowerCase().includes(q) ||
+                a.grupoOcupacional.toLowerCase().includes(q)
+            );
+        }
 
+        if (filterDate) {
+            list = list.filter(a => a.fecha === filterDate);
+        }
+
+        if (filterOnlyNovedades) {
+            list = list.filter(a => a.novedadesDia === 'DIA CON NOVEDAD');
+        }
+
+        if (filterOnlyInconsistencies) {
+            list = list.filter(a => 
+                a.marcacionesConsistentes === 'INCONSISTENTES' || 
+                a.hasBiometricIssue || 
+                a.hasGeofenceIssue
+            );
+        }
+
+        return list;
+    }, [viewMode, monthlyMatrixAudits, allRecordsAudits, searchTerm, filterDate, filterOnlyNovedades, filterOnlyInconsistencies]);
+
+    // Statistics
     const stats = useMemo(() => {
-        const total = filteredRecords.length;
-        const late = filteredRecords.filter(r => r.status === 'Late').length;
-        const facial = filteredRecords.filter(r => r.punches.some(p => p.method === 'Facial')).length;
-        const flagged = filteredRecords.filter(r => r.hasFlaggedPunch).length;
-        const facialMismatches = filteredRecords.filter(r => r.hasFacialMismatch).length;
-        return { total, late, facial, flagged, facialMismatches };
-    }, [filteredRecords]);
+        const total = displayedAudits.length;
+        const laborables = displayedAudits.filter(a => a.esLaborable).length;
+        const sinNovedad = displayedAudits.filter(a => a.novedadesDia === 'DIA SIN NOVEDAD').length;
+        const conNovedad = displayedAudits.filter(a => a.novedadesDia === 'DIA CON NOVEDAD').length;
+        const atrasos = displayedAudits.filter(a => a.novedadesEntrada !== 'SIN NOVEDAD' && a.novedadesEntrada !== 'NO APLICA JORNADA LABORAL' && a.novedadesEntrada !== 'NO REGISTRA ENTRADA').length;
+        const excesosAlmuerzo = displayedAudits.filter(a => a.novedadesAlmuerzo !== 'DENTRO DE TIEMPO DE ALMUERZO' && a.novedadesAlmuerzo !== 'NO APLICA JORNADA LABORAL' && !a.novedadesAlmuerzo.includes('NO REGISTRA')).length;
+        const inconsistencias = displayedAudits.filter(a => a.marcacionesConsistentes === 'INCONSISTENTES' || a.hasBiometricIssue).length;
 
-    const typeLabels: Record<string, string> = {
-        'in': 'Entrada Principal',
-        'out_break': 'Salida a Receso / Almuerzo',
-        'in_break': 'Retorno de Receso',
-        'out': 'Salida Fin de Jornada'
-    };
+        return { total, laborables, sinNovedad, conNovedad, atrasos, excesosAlmuerzo, inconsistencias };
+    }, [displayedAudits]);
 
-    const handleExportCsv = () => {
-        if (filteredRecords.length === 0) {
-            alert('No hay registros de asistencia para exportar.');
+    // OFFICIAL CSV / EXCEL EXPORT (matching Dirección Metropolitana de Talento Humano formulas & columns)
+    const handleExportOfficialCsv = () => {
+        if (displayedAudits.length === 0) {
+            alert('No hay registros para exportar con los filtros seleccionados.');
             return;
         }
-        const headers = [
-            'Fecha',
-            'Colaborador',
-            'Rol / Cargo',
-            'Cédula',
-            'Hora Entrada',
-            'Puntualidad',
-            'Ciclo de Marcajes',
-            'Geocerca / Distancia (m)',
-            'Inconsistencia Facial',
-            'Confianza Facial (%)',
-            'Justificación Motivo',
-            'Justificación Detalle'
+
+        const titleRows = [
+            '"ARCHIVO FORMULADO PARA DETERMINACIÓN DE NOVEDADES EN CONTROL DE ASISTENCIA"',
+            '"DEPENDENCIA: DIRECCIÓN METROPOLITANA DE TALENTO HUMANO"',
+            `"COLABORADOR: ${activeStaffUser?.name || 'CONSOLIDADO INSTITUCIONAL'} - PERÍODO: ${selectedMonth}"`,
+            '""'
         ];
 
-        const rows = filteredRecords.map(r => {
-            const u = userMap.get(r.userId);
-            const flaggedPunch = r.punches.find(p => p.justification || p.facialMatch === false);
+        const headers = [
+            'Fecha',
+            'Marcación 1',
+            'Origen 1',
+            'Marcación 2',
+            'Origen 2',
+            'Marcación 3',
+            'Origen 3',
+            'Marcación 4',
+            'Origen 4',
+            'GRUPO OCUPACIONAL',
+            'FUNCIONARIO DIRECTIVO U OTROS',
+            'Día de la semana',
+            'Laborables',
+            'HORA ENTRADA DEFINIDA',
+            'HORA SALIDA DEFINIDA',
+            'Tiempo de almuerzo tomado',
+            'Tiempo de almuerzo autorizado',
+            'NOVEDADES ENTRADA JORNADA LABORAL',
+            'Novedades Almuerzo',
+            'Novedades Salida',
+            'Tiempo fuera de la jornada',
+            'Marcaciones Consistentes',
+            'Novedades Día',
+            'Colaborador',
+            'Cédula'
+        ];
+
+        const dataRows = displayedAudits.map(a => {
+            // Format date as DD/MM/YYYY
+            const [y, m, d] = a.fecha.split('-');
+            const dateFormatted = `${d}/${m}/${y}`;
+
             return [
-                `"${r.date}"`,
-                `"${u?.name || 'Desconocido'}"`,
-                `"${u?.role || ''}"`,
-                `"${u?.cedula || ''}"`,
-                `"${r.checkInTime}"`,
-                `"${r.status === 'OnTime' ? 'Puntual' : 'Atraso'}"`,
-                `"${r.punchSummary}"`,
-                `"${r.maxDistance} m"`,
-                `"${flaggedPunch?.facialMatch === false ? 'SI (Discrepancia)' : 'NO'}"`,
-                `"${flaggedPunch?.facialConfidence ?? 'N/A'}"`,
-                `"${flaggedPunch?.justification?.reason || flaggedPunch?.flagReason || 'N/A'}"`,
-                `"${flaggedPunch?.justification?.note || ''}"`
+                `"${dateFormatted}"`,
+                `"${a.marcacion1 || '0'}"`,
+                `"${a.origen1 || 'WEB'}"`,
+                `"${a.marcacion2 || '0'}"`,
+                `"${a.origen2 || 'WEB'}"`,
+                `"${a.marcacion3 || '0'}"`,
+                `"${a.origen3 || 'WEB'}"`,
+                `"${a.marcacion4 || '0'}"`,
+                `"${a.origen4 || 'WEB'}"`,
+                `"${a.grupoOcupacional}"`,
+                `"${a.tipoFuncionario}"`,
+                `"${a.diaSemana}"`,
+                `"${a.laborableLabel}"`,
+                `"${a.horaEntradaDefinida}"`,
+                `"${a.horaSalidaDefinida}"`,
+                `"${a.tiempoAlmuerzoTomado}"`,
+                `"${a.tiempoAlmuerzoAutorizado}"`,
+                `"${a.novedadesEntrada}"`,
+                `"${a.novedadesAlmuerzo}"`,
+                `"${a.novedadesSalida}"`,
+                `"${a.tiempoFueraJornada}"`,
+                `"${a.marcacionesConsistentes}"`,
+                `"${a.novedadesDia}"`,
+                `"${a.userName}"`,
+                `"${a.cedula}"`
             ].join(',');
         });
 
-        const csvContent = 'data:text/csv;charset=utf-8,\uFEFF' + [headers.join(','), ...rows].join('\n');
+        const csvContent = 'data:text/csv;charset=utf-8,\uFEFF' + [...titleRows, headers.join(','), ...dataRows].join('\n');
         const encodedUri = encodeURI(csvContent);
         const link = document.createElement('a');
         link.setAttribute('href', encodedUri);
-        link.setAttribute('download', `reporte_asistencia_personal_${new Date().toISOString().split('T')[0]}.csv`);
+        link.setAttribute('download', `DMTH_Control_Asistencia_${activeStaffUser?.name.replace(/\s+/g, '_') || 'General'}_${selectedMonth}.csv`);
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
     };
 
-    const handlePrint = () => {
-        window.print();
-    };
-
     return (
         <div className="space-y-6">
-            {/* Header / Summary Cards */}
-            <div className="bg-white p-6 rounded-2xl shadow-xs border border-slate-200">
-                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+            {/* Header Banner */}
+            <div className="bg-slate-900 text-white p-6 rounded-2xl shadow-xl border border-slate-800">
+                <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
                     <div>
-                        <h2 className="text-xl font-black text-slate-800 flex items-center gap-2">
-                            <ClipboardListIcon className="h-6 w-6 text-primary-600" />
-                            Reporte General de Asistencia del Personal
-                        </h2>
-                        <p className="text-xs text-slate-500 mt-1">
-                            Auditoría de puntualidad, georreferenciación y contrastación biométrica facial de docentes y administrativos.
+                        <div className="inline-flex items-center gap-2 px-3 py-1 bg-sky-500/20 border border-sky-500/30 rounded-full text-sky-300 text-xs font-mono font-bold mb-2">
+                            <span>DIRECCIÓN METROPOLITANA DE TALENTO HUMANO</span>
+                        </div>
+                        <h1 className="text-xl sm:text-2xl font-black tracking-tight text-white">
+                            Archivo Formulado para Determinación de Novedades en Control de Asistencia
+                        </h1>
+                        <p className="text-xs text-slate-400 mt-1">
+                            Auditoría oficial de 4 timbradas, tiempos de almuerzo, novedades de jornada y detección de inconsistencias.
                         </p>
                     </div>
 
                     <div className="flex items-center gap-2 flex-wrap">
+                        {/* View Mode Toggle */}
+                        <div className="bg-slate-800 p-1 rounded-xl border border-slate-700 flex items-center">
+                            <button
+                                type="button"
+                                onClick={() => setViewMode('official_matrix')}
+                                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 ${
+                                    viewMode === 'official_matrix' 
+                                        ? 'bg-indigo-600 text-white shadow-sm' 
+                                        : 'text-slate-400 hover:text-white'
+                                }`}
+                            >
+                                <UsersIcon className="h-4 w-4" />
+                                Ficha Mensual por Funcionario (DMTH)
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setViewMode('all_records')}
+                                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 ${
+                                    viewMode === 'all_records' 
+                                        ? 'bg-indigo-600 text-white shadow-sm' 
+                                        : 'text-slate-400 hover:text-white'
+                                }`}
+                            >
+                                <ClipboardListIcon className="h-4 w-4" />
+                                Consolidado General
+                            </button>
+                        </div>
+
                         <button
                             type="button"
-                            onClick={() => setFilterOnlyInconsistencies(prev => !prev)}
-                            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all border ${
-                                filterOnlyInconsistencies 
-                                    ? 'bg-rose-600 text-white border-rose-700 shadow-xs' 
-                                    : 'bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-100'
-                            }`}
+                            onClick={handleExportOfficialCsv}
+                            className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold shadow-md transition"
+                            title="Descargar archivo CSV estructurado exactamente como la hoja oficial DMTH"
                         >
-                            <AlertTriangleIcon className="h-4 w-4" />
-                            {filterOnlyInconsistencies ? 'Mostrando Solo Inconsistencias' : 'Filtrar Solo Inconsistencias'}
+                            <DownloadIcon className="h-4 w-4" />
+                            Exportar Excel / CSV Oficial
                         </button>
 
                         <button
                             type="button"
-                            onClick={handleExportCsv}
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold shadow-xs transition-colors"
-                            title="Exportar registros a archivo CSV"
-                        >
-                            <DownloadIcon className="h-4 w-4" />
-                            Exportar CSV
-                        </button>
-                        <button
-                            type="button"
-                            onClick={handlePrint}
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-900 text-white rounded-lg text-xs font-bold shadow-xs transition-colors"
-                            title="Imprimir informe oficial"
+                            onClick={() => window.print()}
+                            className="inline-flex items-center gap-1.5 px-3 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-xs font-bold border border-slate-700 transition"
                         >
                             <PrinterIcon className="h-4 w-4" />
                             Imprimir
@@ -225,177 +341,398 @@ const StaffAttendanceReport: React.FC<StaffAttendanceReportProps> = ({ records, 
                     </div>
                 </div>
 
-                {/* Metric Summary Cards */}
-                <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-                    <div className="p-3.5 bg-slate-50 rounded-xl text-center border border-slate-200">
-                        <p className="text-2xl font-bold text-slate-800">{stats.total}</p>
-                        <p className="text-[11px] text-slate-500 uppercase font-semibold mt-1">Registros</p>
+                {/* Sub-bar for Staff Selector & Month in official_matrix mode */}
+                {viewMode === 'official_matrix' && (
+                    <div className="mt-5 pt-4 border-t border-slate-800 grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <div>
+                            <label className="block text-[11px] font-bold text-slate-400 mb-1">
+                                Seleccionar Funcionario / Colaborador:
+                            </label>
+                            <select
+                                value={activeStaffUser?.id || ''}
+                                onChange={e => setSelectedUserId(e.target.value)}
+                                className="w-full bg-slate-800 border border-slate-700 text-white rounded-xl p-2.5 text-xs font-bold focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                            >
+                                {staffUsers.map(u => (
+                                    <option key={u.id} value={u.id}>
+                                        {u.name} ({u.tipoFuncionario || (u.role.includes('Profesor') ? 'OTROS' : 'FD')}) · {u.role}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+
+                        <div>
+                            <label className="block text-[11px] font-bold text-slate-400 mb-1">
+                                Mes a Auditar (Período Laboral):
+                            </label>
+                            <input
+                                type="month"
+                                value={selectedMonth}
+                                onChange={e => setSelectedMonth(e.target.value)}
+                                className="w-full bg-slate-800 border border-slate-700 text-white rounded-xl p-2.5 text-xs font-bold font-mono focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                            />
+                        </div>
+
+                        <div className="bg-slate-800/60 p-2.5 rounded-xl border border-slate-700/60 flex items-center justify-between">
+                            <div>
+                                <p className="text-[10px] text-slate-400 uppercase font-bold">Régimen Asignado</p>
+                                <p className="text-xs font-bold text-indigo-300">
+                                    {activeStaffUser?.grupoOcupacional || 'DOCENTE CATEGORIA E'} · {activeStaffUser?.tipoFuncionario || 'OTROS'}
+                                </p>
+                            </div>
+                            <div className="text-right">
+                                <p className="text-[10px] text-slate-400 uppercase font-bold">Almuerzo Aut.</p>
+                                <p className="text-xs font-mono font-bold text-emerald-400">
+                                    {formatMinutesToHHMMSS(activeStaffUser?.allowedLunchMinutes ?? 30)} ({activeStaffUser?.allowedLunchMinutes ?? 30} min)
+                                </p>
+                            </div>
+                        </div>
                     </div>
-                    <div className="p-3.5 bg-amber-50 rounded-xl text-center border border-amber-200">
-                        <p className="text-2xl font-bold text-amber-700">{stats.late}</p>
-                        <p className="text-[11px] text-amber-700 uppercase font-semibold mt-1">Atrasos</p>
-                    </div>
-                    <div className="p-3.5 bg-sky-50 rounded-xl text-center border border-sky-200">
-                        <p className="text-2xl font-bold text-sky-700">{stats.facial}</p>
-                        <p className="text-[11px] text-sky-700 uppercase font-semibold mt-1">Con Rostro</p>
-                    </div>
-                    <div 
-                        onClick={() => setFilterOnlyInconsistencies(prev => !prev)}
-                        className="p-3.5 bg-orange-50 hover:bg-orange-100 cursor-pointer rounded-xl text-center border border-orange-200 transition"
-                    >
-                        <p className="text-2xl font-bold text-orange-700">{stats.flagged}</p>
-                        <p className="text-[11px] text-orange-700 uppercase font-semibold mt-1">Fuera de Rango</p>
-                    </div>
-                    <div 
-                        onClick={() => setFilterOnlyInconsistencies(prev => !prev)}
-                        className="p-3.5 bg-rose-50 hover:bg-rose-100 cursor-pointer rounded-xl text-center border border-rose-200 transition"
-                    >
-                        <p className="text-2xl font-bold text-rose-700">{stats.facialMismatches}</p>
-                        <p className="text-[11px] text-rose-700 uppercase font-semibold mt-1">Inconsistencias Faciales</p>
-                    </div>
+                )}
+            </div>
+
+            {/* KPI Metrics Cards */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+                <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs text-center">
+                    <p className="text-2xl font-black text-slate-900">{stats.total}</p>
+                    <p className="text-[11px] font-bold text-slate-500 uppercase mt-1">Días del Período</p>
+                </div>
+
+                <div 
+                    onClick={() => { setFilterOnlyNovedades(false); setFilterOnlyInconsistencies(false); }}
+                    className="bg-emerald-50/60 p-4 rounded-xl border border-emerald-200 shadow-xs text-center cursor-pointer hover:bg-emerald-100/60 transition"
+                >
+                    <p className="text-2xl font-black text-emerald-700">{stats.sinNovedad}</p>
+                    <p className="text-[11px] font-bold text-emerald-700 uppercase mt-1">Días Sin Novedad</p>
+                </div>
+
+                <div 
+                    onClick={() => setFilterOnlyNovedades(prev => !prev)}
+                    className={`p-4 rounded-xl border shadow-xs text-center cursor-pointer transition ${
+                        filterOnlyNovedades 
+                            ? 'bg-amber-600 text-white border-amber-700' 
+                            : 'bg-amber-50/80 border-amber-200 hover:bg-amber-100 text-amber-800'
+                    }`}
+                >
+                    <p className={`text-2xl font-black ${filterOnlyNovedades ? 'text-white' : 'text-amber-800'}`}>
+                        {stats.conNovedad}
+                    </p>
+                    <p className={`text-[11px] font-bold uppercase mt-1 ${filterOnlyNovedades ? 'text-amber-100' : 'text-amber-700'}`}>
+                        Días Con Novedad
+                    </p>
+                </div>
+
+                <div className="bg-rose-50/60 p-4 rounded-xl border border-rose-200 shadow-xs text-center">
+                    <p className="text-2xl font-black text-rose-700">{stats.atrasos}</p>
+                    <p className="text-[11px] font-bold text-rose-700 uppercase mt-1">Atrasos Entrada</p>
+                </div>
+
+                <div className="bg-sky-50/60 p-4 rounded-xl border border-sky-200 shadow-xs text-center">
+                    <p className="text-2xl font-black text-sky-700">{stats.excesosAlmuerzo}</p>
+                    <p className="text-[11px] font-bold text-sky-700 uppercase mt-1">Excesos Almuerzo</p>
+                </div>
+
+                <div 
+                    onClick={() => setFilterOnlyInconsistencies(prev => !prev)}
+                    className={`p-4 rounded-xl border shadow-xs text-center cursor-pointer transition ${
+                        filterOnlyInconsistencies 
+                            ? 'bg-purple-600 text-white border-purple-700' 
+                            : 'bg-purple-50/80 border-purple-200 hover:bg-purple-100 text-purple-800'
+                    }`}
+                >
+                    <p className={`text-2xl font-black ${filterOnlyInconsistencies ? 'text-white' : 'text-purple-800'}`}>
+                        {stats.inconsistencias}
+                    </p>
+                    <p className={`text-[11px] font-bold uppercase mt-1 ${filterOnlyInconsistencies ? 'text-purple-100' : 'text-purple-700'}`}>
+                        Inconsistencias
+                    </p>
                 </div>
             </div>
 
-            {/* Table and Filters */}
-            <div className="bg-white p-6 rounded-2xl shadow-xs border border-slate-200">
-                <div className="flex flex-col md:flex-row justify-between items-center mb-5 gap-4">
+            {/* Main Official Spreadsheet Table */}
+            <div className="bg-white rounded-2xl shadow-xs border border-slate-200 overflow-hidden">
+                {/* Search & Fast Filter Bar */}
+                <div className="p-4 bg-slate-50 border-b border-slate-200 flex flex-col md:flex-row justify-between items-center gap-3">
                     <div className="relative w-full md:w-80">
-                        <input 
-                            type="text" 
-                            placeholder="Buscar por nombre de colaborador..." 
+                        <input
+                            type="text"
+                            placeholder="Buscar por colaborador, cédula o grupo..."
                             value={searchTerm}
                             onChange={e => setSearchTerm(e.target.value)}
-                            className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-sky-500 focus:outline-none"
+                            className="w-full pl-9 pr-4 py-2 border border-slate-300 rounded-xl text-xs bg-white focus:ring-2 focus:ring-indigo-500 focus:outline-none"
                         />
                         <SearchIcon className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
                     </div>
-                    <div className="flex items-center gap-2 w-full md:w-auto">
-                        <span className="text-xs font-semibold text-slate-500 whitespace-nowrap">Filtrar Fecha:</span>
-                        <input 
-                            type="date" 
+
+                    <div className="flex items-center gap-2 flex-wrap w-full md:w-auto justify-end">
+                        <span className="text-xs font-semibold text-slate-500">Filtrar Día:</span>
+                        <input
+                            type="date"
                             value={filterDate}
                             onChange={e => setFilterDate(e.target.value)}
-                            className="p-2 border border-slate-300 rounded-lg text-sm bg-white"
+                            className="p-1.5 border border-slate-300 rounded-lg text-xs bg-white"
                         />
                         {filterDate && (
                             <button
                                 onClick={() => setFilterDate('')}
-                                className="text-xs text-slate-500 hover:text-slate-800 underline ml-1"
+                                className="text-xs text-slate-500 hover:text-slate-800 underline"
                             >
                                 Limpiar
                             </button>
                         )}
+
+                        <button
+                            type="button"
+                            onClick={() => setFilterOnlyNovedades(p => !p)}
+                            className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition ${
+                                filterOnlyNovedades 
+                                    ? 'bg-amber-600 text-white border-amber-700' 
+                                    : 'bg-white border-slate-300 text-slate-700 hover:bg-slate-100'
+                            }`}
+                        >
+                            {filterOnlyNovedades ? '✓ Solo Con Novedad' : 'Filtrar Con Novedad'}
+                        </button>
+
+                        <button
+                            type="button"
+                            onClick={() => setFilterOnlyInconsistencies(p => !p)}
+                            className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition ${
+                                filterOnlyInconsistencies 
+                                    ? 'bg-purple-600 text-white border-purple-700' 
+                                    : 'bg-white border-slate-300 text-slate-700 hover:bg-slate-100'
+                            }`}
+                        >
+                            {filterOnlyInconsistencies ? '✓ Solo Inconsistencias' : 'Filtrar Inconsistencias'}
+                        </button>
                     </div>
                 </div>
 
-                <div className="overflow-x-auto">
-                    <table className="min-w-full divide-y divide-slate-200">
-                        <thead className="bg-slate-50">
+                {/* HIGH-DENSITY AUDIT SPREADSHEET TABLE */}
+                <div className="overflow-x-auto max-h-[650px]">
+                    <table className="min-w-full divide-y divide-slate-200 border-collapse text-[11px]">
+                        <thead className="bg-slate-800 text-white sticky top-0 z-10 font-bold uppercase tracking-wider text-center select-none">
                             <tr>
-                                <th className="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase">Fecha</th>
-                                <th className="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase">Personal</th>
-                                <th className="px-4 py-3 text-center text-xs font-bold text-slate-600 uppercase">Hora Entrada</th>
-                                <th className="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase">Ciclo de Marcajes</th>
-                                <th className="px-4 py-3 text-center text-xs font-bold text-slate-600 uppercase">Validación Biométrica</th>
-                                <th className="px-4 py-3 text-center text-xs font-bold text-slate-600 uppercase">Geocerca</th>
-                                <th className="px-4 py-3 text-center text-xs font-bold text-slate-600 uppercase">Puntualidad</th>
-                                <th className="px-4 py-3 text-center text-xs font-bold text-slate-600 uppercase">Auditoría</th>
+                                <th className="px-3 py-3 border-r border-slate-700 whitespace-nowrap">Fecha</th>
+                                <th className="px-3 py-3 border-r border-slate-700 whitespace-nowrap">Marcación 1 (Entrada)</th>
+                                <th className="px-2 py-3 border-r border-slate-700 whitespace-nowrap">Origen 1</th>
+                                <th className="px-3 py-3 border-r border-slate-700 whitespace-nowrap">Marcación 2 (Sal. Almuerzo)</th>
+                                <th className="px-2 py-3 border-r border-slate-700 whitespace-nowrap">Origen 2</th>
+                                <th className="px-3 py-3 border-r border-slate-700 whitespace-nowrap">Marcación 3 (Ent. Almuerzo)</th>
+                                <th className="px-2 py-3 border-r border-slate-700 whitespace-nowrap">Origen 3</th>
+                                <th className="px-3 py-3 border-r border-slate-700 whitespace-nowrap">Marcación 4 (Salida)</th>
+                                <th className="px-2 py-3 border-r border-slate-700 whitespace-nowrap">Origen 4</th>
+                                <th className="px-3 py-3 border-r border-slate-700 whitespace-nowrap">Grupo Ocupacional</th>
+                                <th className="px-2 py-3 border-r border-slate-700 whitespace-nowrap">Funcionario Directivo</th>
+                                <th className="px-3 py-3 border-r border-slate-700 whitespace-nowrap">Día Semana</th>
+                                <th className="px-2 py-3 border-r border-slate-700 whitespace-nowrap">Laborable</th>
+                                <th className="px-2 py-3 border-r border-slate-700 whitespace-nowrap">H. Entrada</th>
+                                <th className="px-2 py-3 border-r border-slate-700 whitespace-nowrap">H. Salida</th>
+                                <th className="px-3 py-3 border-r border-slate-700 whitespace-nowrap bg-indigo-900/80">Tiempo Almuerzo Tomado</th>
+                                <th className="px-2 py-3 border-r border-slate-700 whitespace-nowrap">Almuerzo Aut.</th>
+                                <th className="px-3 py-3 border-r border-slate-700 whitespace-nowrap bg-rose-950/80">Novedades Entrada</th>
+                                <th className="px-3 py-3 border-r border-slate-700 whitespace-nowrap bg-amber-950/80">Novedades Almuerzo</th>
+                                <th className="px-3 py-3 border-r border-slate-700 whitespace-nowrap bg-slate-900">Novedades Salida</th>
+                                <th className="px-3 py-3 border-r border-slate-700 whitespace-nowrap">Tiempo Fuera Jornada</th>
+                                <th className="px-3 py-3 border-r border-slate-700 whitespace-nowrap">Consistencia</th>
+                                <th className="px-3 py-3 whitespace-nowrap bg-slate-950">Novedades Día</th>
+                                <th className="px-2 py-3 whitespace-nowrap">Auditar</th>
                             </tr>
                         </thead>
-                        <tbody className="bg-white divide-y divide-slate-200 text-sm">
-                            {filteredRecords.map(record => {
-                                const user = userMap.get(record.userId);
-                                const flaggedPunch = record.punches.find(p => p.verificationStatus === 'Flagged' || p.facialMatch === false);
+
+                        <tbody className="bg-white divide-y divide-slate-200">
+                            {displayedAudits.map((audit, idx) => {
+                                const isNoLaborable = !audit.esLaborable;
+                                const isSinNovedad = audit.novedadesDia === 'DIA SIN NOVEDAD';
+                                const hasLate = audit.novedadesEntrada !== 'SIN NOVEDAD' && audit.novedadesEntrada !== 'NO APLICA JORNADA LABORAL' && audit.novedadesEntrada !== 'NO REGISTRA ENTRADA';
+                                const hasLunchExcess = audit.novedadesAlmuerzo !== 'DENTRO DE TIEMPO DE ALMUERZO' && audit.novedadesAlmuerzo !== 'NO APLICA JORNADA LABORAL' && !audit.novedadesAlmuerzo.includes('NO REGISTRA');
+                                const isInconsistent = audit.marcacionesConsistentes === 'INCONSISTENTES';
+
+                                // Format date as DD/MM/YYYY
+                                const [y, m, d] = audit.fecha.split('-');
+                                const dateFormatted = `${d}/${m}/${y}`;
 
                                 return (
-                                    <tr key={record.id} className="hover:bg-slate-50/80 transition-colors">
-                                        <td className="px-4 py-3.5 whitespace-nowrap text-slate-600 font-mono text-xs">
-                                            {record.date}
-                                        </td>
-                                        <td className="px-4 py-3.5 whitespace-nowrap">
-                                            <div className="font-semibold text-slate-900">{user?.name || 'Desconocido'}</div>
-                                            <div className="text-xs text-slate-500">{user?.role || ''} · {user?.cedula || ''}</div>
-                                        </td>
-                                        <td className="px-4 py-3.5 whitespace-nowrap text-center font-mono font-bold text-slate-700">
-                                            {record.checkInTime}
-                                        </td>
-                                        <td className="px-4 py-3.5">
-                                            <div className="flex flex-wrap gap-1.5 max-w-sm">
-                                                {record.punches.map((p, idx) => (
-                                                    <span 
-                                                        key={idx} 
-                                                        className={`text-[11px] px-2 py-0.5 rounded-md font-mono border ${
-                                                            p.type === 'in' ? 'bg-sky-50 border-sky-200 text-sky-800' :
-                                                            p.type === 'out' ? 'bg-slate-100 border-slate-300 text-slate-800' :
-                                                            'bg-amber-50 border-amber-200 text-amber-800'
-                                                        }`}
-                                                        title={`${p.type}: ${p.time} (${p.method})`}
-                                                    >
-                                                        {p.time}
-                                                    </span>
-                                                ))}
-                                            </div>
+                                    <tr 
+                                        key={`${audit.userId}-${audit.fecha}-${idx}`}
+                                        className={`transition-colors hover:bg-slate-100/80 font-mono ${
+                                            isNoLaborable 
+                                                ? 'bg-slate-50/70 text-slate-400' 
+                                                : isSinNovedad 
+                                                    ? 'bg-emerald-50/30' 
+                                                    : 'bg-white'
+                                        }`}
+                                    >
+                                        {/* Fecha */}
+                                        <td className="px-3 py-2 border-r border-slate-200 font-bold whitespace-nowrap text-slate-800">
+                                            {dateFormatted}
                                         </td>
 
-                                        {/* Biometric validation column */}
-                                        <td className="px-4 py-3.5 whitespace-nowrap text-center">
-                                            {record.hasFacialMismatch ? (
-                                                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-rose-100 text-rose-800 border border-rose-300 animate-pulse">
-                                                    <AlertTriangleIcon className="h-3.5 w-3.5 text-rose-600" />
-                                                    Inconsistencia Facial
-                                                </span>
-                                            ) : record.punches.some(p => p.method === 'Facial' && p.facialMatch === true) ? (
-                                                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800">
-                                                    <CheckCircleIcon className="h-3.5 w-3.5 text-emerald-600" />
-                                                    Rostro Verificado
-                                                </span>
-                                            ) : (
-                                                <span className="text-xs text-slate-500 font-mono">
-                                                    {record.method}
-                                                </span>
-                                            )}
+                                        {/* Marcación 1 & Origen */}
+                                        <td className="px-3 py-2 border-r border-slate-200 text-center whitespace-nowrap font-bold text-slate-800">
+                                            {audit.marcacion1 || (isNoLaborable ? '-' : <span className="text-slate-400 font-normal">0</span>)}
+                                        </td>
+                                        <td className="px-2 py-2 border-r border-slate-200 text-center whitespace-nowrap text-[10px] text-slate-500">
+                                            {audit.marcacion1 ? audit.origen1 : '-'}
                                         </td>
 
-                                        {/* Geofence Column */}
-                                        <td className="px-4 py-3.5 whitespace-nowrap text-center">
-                                            {record.maxDistance > 100 ? (
-                                                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-100 text-amber-800">
-                                                    <LocationMarkerIcon className="h-3.5 w-3.5 text-amber-600" />
-                                                    +{record.maxDistance}m
-                                                </span>
-                                            ) : (
-                                                <span className="text-xs text-emerald-700 font-semibold">
-                                                    En Sede
-                                                </span>
-                                            )}
+                                        {/* Marcación 2 & Origen */}
+                                        <td className="px-3 py-2 border-r border-slate-200 text-center whitespace-nowrap font-bold text-slate-800">
+                                            {audit.marcacion2 || (isNoLaborable ? '-' : <span className="text-slate-400 font-normal">0</span>)}
+                                        </td>
+                                        <td className="px-2 py-2 border-r border-slate-200 text-center whitespace-nowrap text-[10px] text-slate-500">
+                                            {audit.marcacion2 ? audit.origen2 : '-'}
                                         </td>
 
-                                        <td className="px-4 py-3.5 whitespace-nowrap text-center">
-                                            <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${
-                                                record.status === 'OnTime' 
-                                                    ? 'bg-emerald-100 text-emerald-800' 
-                                                    : 'bg-amber-100 text-amber-800'
+                                        {/* Marcación 3 & Origen */}
+                                        <td className="px-3 py-2 border-r border-slate-200 text-center whitespace-nowrap font-bold text-slate-800">
+                                            {audit.marcacion3 || (isNoLaborable ? '-' : <span className="text-slate-400 font-normal">0</span>)}
+                                        </td>
+                                        <td className="px-2 py-2 border-r border-slate-200 text-center whitespace-nowrap text-[10px] text-slate-500">
+                                            {audit.marcacion3 ? audit.origen3 : '-'}
+                                        </td>
+
+                                        {/* Marcación 4 & Origen */}
+                                        <td className="px-3 py-2 border-r border-slate-200 text-center whitespace-nowrap font-bold text-slate-800">
+                                            {audit.marcacion4 || (isNoLaborable ? '-' : <span className="text-slate-400 font-normal">0</span>)}
+                                        </td>
+                                        <td className="px-2 py-2 border-r border-slate-200 text-center whitespace-nowrap text-[10px] text-slate-500">
+                                            {audit.marcacion4 ? audit.origen4 : '-'}
+                                        </td>
+
+                                        {/* Grupo Ocupacional */}
+                                        <td className="px-3 py-2 border-r border-slate-200 whitespace-nowrap text-slate-700 font-sans font-semibold text-[10px]">
+                                            {audit.grupoOcupacional}
+                                        </td>
+
+                                        {/* Tipo Funcionario (FD / OTROS) */}
+                                        <td className="px-2 py-2 border-r border-slate-200 text-center whitespace-nowrap font-bold">
+                                            <span className={`px-2 py-0.5 rounded-full text-[10px] ${
+                                                audit.tipoFuncionario === 'FD' 
+                                                    ? 'bg-indigo-100 text-indigo-800' 
+                                                    : 'bg-slate-100 text-slate-700'
                                             }`}>
-                                                {record.status === 'OnTime' ? 'Puntual' : 'Atraso'}
+                                                {audit.tipoFuncionario}
                                             </span>
                                         </td>
 
-                                        <td className="px-4 py-3.5 whitespace-nowrap text-center">
+                                        {/* Día Semana */}
+                                        <td className="px-3 py-2 border-r border-slate-200 whitespace-nowrap font-sans text-slate-600">
+                                            {audit.diaSemana}
+                                        </td>
+
+                                        {/* Laborable */}
+                                        <td className="px-2 py-2 border-r border-slate-200 text-center whitespace-nowrap font-sans">
+                                            <span className={`text-[10px] font-semibold ${
+                                                audit.esLaborable ? 'text-slate-800' : 'text-slate-400 italic'
+                                            }`}>
+                                                {audit.laborableLabel}
+                                            </span>
+                                        </td>
+
+                                        {/* Horario Definido */}
+                                        <td className="px-2 py-2 border-r border-slate-200 text-center whitespace-nowrap text-slate-600">
+                                            {audit.horaEntradaDefinida}
+                                        </td>
+                                        <td className="px-2 py-2 border-r border-slate-200 text-center whitespace-nowrap text-slate-600">
+                                            {audit.horaSalidaDefinida}
+                                        </td>
+
+                                        {/* Tiempo Almuerzo Tomado (U9) */}
+                                        <td className="px-3 py-2 border-r border-slate-200 text-center whitespace-nowrap font-bold">
+                                            {audit.tiempoAlmuerzoTomado.includes('NO REGISTRA') ? (
+                                                <span className="text-slate-500 font-normal text-[10px] font-sans">
+                                                    {audit.tiempoAlmuerzoTomado}
+                                                </span>
+                                            ) : audit.tiempoAlmuerzoTomado === 'MAL TIMBRADO' ? (
+                                                <span className="text-rose-700 bg-rose-100 px-1.5 py-0.5 rounded text-[10px]">
+                                                    MAL TIMBRADO
+                                                </span>
+                                            ) : (
+                                                <span className="text-indigo-900 font-mono">
+                                                    {audit.tiempoAlmuerzoTomado}
+                                                </span>
+                                            )}
+                                        </td>
+
+                                        {/* Tiempo Almuerzo Autorizado (V9) */}
+                                        <td className="px-2 py-2 border-r border-slate-200 text-center whitespace-nowrap text-slate-600">
+                                            {audit.tiempoAlmuerzoAutorizado}
+                                        </td>
+
+                                        {/* Novedades Entrada (W9) */}
+                                        <td className={`px-3 py-2 border-r border-slate-200 whitespace-nowrap text-center font-bold ${
+                                            hasLate ? 'bg-yellow-200 text-yellow-900' :
+                                            audit.novedadesEntrada === 'SIN NOVEDAD' ? 'text-emerald-700' :
+                                            'text-slate-500 font-normal font-sans text-[10px]'
+                                        }`}>
+                                            {audit.novedadesEntrada}
+                                        </td>
+
+                                        {/* Novedades Almuerzo (X9) */}
+                                        <td className={`px-3 py-2 border-r border-slate-200 whitespace-nowrap text-center font-bold ${
+                                            hasLunchExcess ? 'bg-amber-100 text-amber-900' :
+                                            audit.novedadesAlmuerzo === 'DENTRO DE TIEMPO DE ALMUERZO' ? 'text-emerald-700' :
+                                            'text-slate-500 font-normal font-sans text-[10px]'
+                                        }`}>
+                                            {audit.novedadesAlmuerzo}
+                                        </td>
+
+                                        {/* Novedades Salida */}
+                                        <td className={`px-3 py-2 border-r border-slate-200 whitespace-nowrap text-center font-bold ${
+                                            audit.novedadesSalida === 'SIN NOVEDAD' ? 'text-emerald-700' :
+                                            audit.novedadesSalida === 'NO APLICA JORNADA LABORAL' ? 'text-slate-400 font-normal font-sans text-[10px]' :
+                                            'text-rose-700'
+                                        }`}>
+                                            {audit.novedadesSalida}
+                                        </td>
+
+                                        {/* Tiempo Fuera Jornada */}
+                                        <td className="px-3 py-2 border-r border-slate-200 whitespace-nowrap text-center text-slate-600 text-[10px] font-sans">
+                                            {audit.tiempoFueraJornada}
+                                        </td>
+
+                                        {/* Marcaciones Consistentes */}
+                                        <td className="px-3 py-2 border-r border-slate-200 whitespace-nowrap text-center font-bold font-sans">
+                                            <span className={`px-2 py-0.5 rounded-full text-[10px] ${
+                                                isInconsistent 
+                                                    ? 'bg-rose-100 text-rose-800 border border-rose-300' 
+                                                    : 'text-slate-600'
+                                            }`}>
+                                                {audit.marcacionesConsistentes}
+                                            </span>
+                                        </td>
+
+                                        {/* Novedades Día */}
+                                        <td className="px-3 py-2 whitespace-nowrap text-center font-bold font-sans">
+                                            <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold ${
+                                                audit.novedadesDia === 'DIA SIN NOVEDAD' 
+                                                    ? 'bg-emerald-100 text-emerald-800 border border-emerald-300' 
+                                                    : audit.novedadesDia === 'DIA CON NOVEDAD' 
+                                                        ? 'bg-rose-100 text-rose-800 border border-rose-300'
+                                                        : 'text-slate-400 font-normal italic'
+                                            }`}>
+                                                {audit.novedadesDia}
+                                            </span>
+                                        </td>
+
+                                        {/* Action Button */}
+                                        <td className="px-2 py-2 whitespace-nowrap text-center font-sans">
                                             <button
                                                 type="button"
-                                                onClick={() => setSelectedRecordForDetail({ record, user })}
-                                                className="text-xs font-bold text-sky-700 bg-sky-50 hover:bg-sky-100 border border-sky-200 px-3 py-1 rounded-lg transition"
+                                                onClick={() => setSelectedAuditForModal(audit)}
+                                                className="px-2.5 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold rounded-lg border border-indigo-200 text-[10px] transition"
                                             >
-                                                Auditar
+                                                Ver
                                             </button>
                                         </td>
                                     </tr>
                                 );
                             })}
-                            {filteredRecords.length === 0 && (
+
+                            {displayedAudits.length === 0 && (
                                 <tr>
-                                    <td colSpan={8} className="px-6 py-10 text-center text-slate-500 text-sm">
-                                        No se encontraron registros de asistencia para los criterios seleccionados.
+                                    <td colSpan={24} className="py-12 text-center text-slate-500 font-sans text-xs">
+                                        No se encontraron registros de auditoría para los criterios seleccionados.
                                     </td>
                                 </tr>
                             )}
@@ -404,194 +741,177 @@ const StaffAttendanceReport: React.FC<StaffAttendanceReportProps> = ({ records, 
                 </div>
             </div>
 
-            {/* Record Inspection Modal */}
-            {selectedRecordForDetail && (
+            {/* AUDIT DETAILS & BIOMETRIC EVIDENCE MODAL */}
+            {selectedAuditForModal && (
                 <div 
                     className="fixed inset-0 bg-black/60 backdrop-blur-xs z-[120] flex justify-center items-center p-3 sm:p-4"
-                    onClick={() => setSelectedRecordForDetail(null)}
+                    onClick={() => setSelectedAuditForModal(null)}
                 >
                     <div 
-                        className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col border border-slate-200 overflow-hidden"
+                        className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col border border-slate-200 overflow-hidden font-sans"
                         onClick={e => e.stopPropagation()}
                     >
-                        <header className="px-5 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+                        <header className="px-5 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-900 text-white">
                             <div>
-                                <h3 className="font-bold text-slate-900 text-base">Auditoría Biométrica de Asistencia</h3>
-                                <p className="text-xs text-slate-500">
-                                    {selectedRecordForDetail.user?.name} ({selectedRecordForDetail.user?.role}) · Fecha: {selectedRecordForDetail.record.date}
+                                <span className="text-[10px] font-mono uppercase bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 px-2 py-0.5 rounded-full font-bold">
+                                    Auditoría de Jornada Oficial
+                                </span>
+                                <h3 className="font-bold text-base mt-1 text-white">
+                                    {selectedAuditForModal.userName} · {selectedAuditForModal.fecha} ({selectedAuditForModal.diaSemana})
+                                </h3>
+                                <p className="text-xs text-slate-400">
+                                    {selectedAuditForModal.grupoOcupacional} · Tipo: {selectedAuditForModal.tipoFuncionario} · Cédula: {selectedAuditForModal.cedula}
                                 </p>
                             </div>
                             <button 
-                                onClick={() => setSelectedRecordForDetail(null)}
-                                className="p-1.5 text-slate-400 hover:text-slate-700 rounded-lg hover:bg-slate-200"
+                                onClick={() => setSelectedAuditForModal(null)}
+                                className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800"
                             >
                                 <CloseIcon className="h-5 w-5" />
                             </button>
                         </header>
 
-                        <div className="p-5 overflow-y-auto space-y-4">
-                            {/* Staff Official Master Enrollment */}
-                            <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between">
-                                <div className="flex items-center gap-3">
-                                    <div className="h-12 w-12 rounded-full overflow-hidden border-2 border-slate-300 bg-slate-200 flex-shrink-0">
-                                        {selectedRecordForDetail.user?.facialPhotoUrl || selectedRecordForDetail.user?.photoUrl ? (
-                                            <img 
-                                                src={selectedRecordForDetail.user?.facialPhotoUrl || selectedRecordForDetail.user?.photoUrl} 
-                                                alt="Foto oficial" 
-                                                className="h-full w-full object-cover" 
-                                            />
-                                        ) : (
-                                            <div className="h-full w-full flex items-center justify-center font-bold text-slate-500 text-xs">
-                                                Sin Foto
-                                            </div>
-                                        )}
-                                    </div>
+                        <div className="p-5 overflow-y-auto space-y-4 text-xs text-slate-700">
+                            {/* Novedades Summary Banner */}
+                            <div className={`p-4 rounded-xl border flex items-center justify-between ${
+                                selectedAuditForModal.novedadesDia === 'DIA SIN NOVEDAD' 
+                                    ? 'bg-emerald-50 border-emerald-200 text-emerald-900' 
+                                    : 'bg-rose-50 border-rose-200 text-rose-900'
+                            }`}>
+                                <div className="flex items-center gap-2.5">
+                                    {selectedAuditForModal.novedadesDia === 'DIA SIN NOVEDAD' ? (
+                                        <CheckCircleIcon className="h-6 w-6 text-emerald-600 flex-shrink-0" />
+                                    ) : (
+                                        <AlertTriangleIcon className="h-6 w-6 text-rose-600 flex-shrink-0" />
+                                    )}
                                     <div>
-                                        <p className="font-bold text-slate-800 text-sm">Fotografía Facial de Referencia (Ficha)</p>
-                                        <p className="text-xs text-slate-500">
-                                            {selectedRecordForDetail.user?.facialPhotoUrl 
-                                                ? '✓ Enrolamiento oficial completado' 
-                                                : '✕ Colaborador sin foto oficial enrolada'}
+                                        <p className="font-bold text-sm">{selectedAuditForModal.novedadesDia}</p>
+                                        <p className="text-[11px] opacity-80">
+                                            {selectedAuditForModal.novedadesDia === 'DIA SIN NOVEDAD' 
+                                                ? 'Cumplió entrada puntual, tiempo de almuerzo autorizado y salida completa.' 
+                                                : 'Se han detectado una o más novedades durante las marcaciones de la jornada.'}
                                         </p>
                                     </div>
                                 </div>
-                                <div className="text-right">
-                                    <span className="text-xs font-mono font-bold bg-slate-200 px-2 py-0.5 rounded text-slate-700">
-                                        PIN: {selectedRecordForDetail.user?.accessPin || 'Sin PIN'}
-                                    </span>
+                                <span className="font-mono font-bold text-xs bg-white/80 px-2.5 py-1 rounded-lg border border-current">
+                                    {selectedAuditForModal.laborableLabel}
+                                </span>
+                            </div>
+
+                            {/* Detailed Calculations Grid */}
+                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                                <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl">
+                                    <p className="text-[10px] text-slate-500 uppercase font-bold">1. Entrada</p>
+                                    <p className="text-sm font-mono font-bold text-slate-900 mt-1">
+                                        {selectedAuditForModal.marcacion1 || '0'}
+                                    </p>
+                                    <p className="text-[10px] text-slate-600 mt-1">
+                                        Novedad: <strong className="text-slate-900">{selectedAuditForModal.novedadesEntrada}</strong>
+                                    </p>
+                                </div>
+
+                                <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl">
+                                    <p className="text-[10px] text-slate-500 uppercase font-bold">2. Almuerzo Tomado</p>
+                                    <p className="text-sm font-mono font-bold text-slate-900 mt-1">
+                                        {selectedAuditForModal.tiempoAlmuerzoTomado}
+                                    </p>
+                                    <p className="text-[10px] text-slate-600 mt-1">
+                                        Aut: <strong>{selectedAuditForModal.tiempoAlmuerzoAutorizado}</strong>
+                                    </p>
+                                </div>
+
+                                <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl">
+                                    <p className="text-[10px] text-slate-500 uppercase font-bold">3. Salida</p>
+                                    <p className="text-sm font-mono font-bold text-slate-900 mt-1">
+                                        {selectedAuditForModal.marcacion4 || '0'}
+                                    </p>
+                                    <p className="text-[10px] text-slate-600 mt-1">
+                                        Novedad: <strong className="text-slate-900">{selectedAuditForModal.novedadesSalida}</strong>
+                                    </p>
+                                </div>
+
+                                <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl">
+                                    <p className="text-[10px] text-slate-500 uppercase font-bold">4. Secuencia</p>
+                                    <p className={`text-sm font-bold mt-1 ${
+                                        selectedAuditForModal.marcacionesConsistentes === 'CONSISTENTES' ? 'text-emerald-700' : 'text-rose-700'
+                                    }`}>
+                                        {selectedAuditForModal.marcacionesConsistentes}
+                                    </p>
+                                    <p className="text-[10px] text-slate-600 mt-1">
+                                        Fuera Jornada: <strong>{selectedAuditForModal.tiempoFueraJornada}</strong>
+                                    </p>
                                 </div>
                             </div>
 
-                            {/* Chronological Punches */}
-                            <div className="space-y-3">
-                                <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider">
-                                    Marcajes Registrados en la Jornada ({selectedRecordForDetail.record.punches.length}/4)
+                            {/* Biometric & Facial Evidence Section */}
+                            <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3">
+                                <h4 className="font-bold text-slate-800 text-xs uppercase flex items-center gap-1.5">
+                                    <CameraIcon className="h-4 w-4 text-sky-600" />
+                                    Auditoría Biométrica Facial y Georreferenciación
                                 </h4>
-                                {selectedRecordForDetail.record.punches.map((punch, idx) => (
-                                    <div 
-                                        key={idx} 
-                                        className={`p-3.5 rounded-xl border space-y-2 text-xs ${
-                                            punch.facialMatch === false 
-                                                ? 'bg-rose-50/70 border-rose-300' 
-                                                : punch.verificationStatus === 'Flagged'
-                                                    ? 'bg-amber-50/70 border-amber-300'
-                                                    : 'bg-slate-50/50 border-slate-200'
-                                        }`}
-                                    >
-                                        <div className="flex items-center justify-between">
-                                            <div className="flex items-center gap-2">
-                                                <span className="font-bold text-slate-800 text-sm">
-                                                    {typeLabels[punch.type] || punch.type}
-                                                </span>
-                                                <span className="font-mono text-xs font-bold px-2 py-0.5 bg-white border rounded text-slate-700">
-                                                    {punch.time}
-                                                </span>
-                                            </div>
-                                            <span className="font-semibold text-slate-600 bg-white border border-slate-200 px-2 py-0.5 rounded text-[11px]">
-                                                Vía {punch.method}
-                                            </span>
-                                        </div>
 
-                                        {/* Facial Recognition Evidence & Match Score */}
-                                        {punch.method === 'Facial' && (
-                                            <div className="mt-2 p-3 bg-white rounded-xl border border-slate-200 space-y-2">
-                                                <div className="flex items-center justify-between">
-                                                    <span className="font-bold text-slate-800 flex items-center gap-1.5">
-                                                        <CameraIcon className="h-4 w-4 text-sky-600" />
-                                                        Contrastación Facial en Tiempo Real
-                                                    </span>
-                                                    {punch.facialConfidence !== undefined && (
-                                                        <span className={`px-2 py-0.5 rounded-full font-bold text-[11px] ${
-                                                            punch.facialMatch === false 
+                                {selectedAuditForModal.punches.length === 0 ? (
+                                    <p className="text-slate-500 italic text-xs">
+                                        No hay marcajes registrados en el sistema para esta fecha.
+                                    </p>
+                                ) : (
+                                    <div className="space-y-2">
+                                        {selectedAuditForModal.punches.map((p, pIdx) => (
+                                            <div key={pIdx} className="bg-white p-3 rounded-lg border border-slate-200 flex items-center justify-between gap-3">
+                                                <div className="flex items-center gap-3">
+                                                    {p.photoProof ? (
+                                                        <img 
+                                                            src={p.photoProof} 
+                                                            alt="Foto marcaje" 
+                                                            className="h-12 w-12 rounded-lg object-cover border border-slate-300"
+                                                        />
+                                                    ) : (
+                                                        <div className="h-12 w-12 rounded-lg bg-slate-100 flex items-center justify-center text-slate-400 text-xs">
+                                                            Sin Foto
+                                                        </div>
+                                                    )}
+                                                    <div>
+                                                        <p className="font-bold text-slate-800">
+                                                            {p.type === 'in' ? 'Entrada' : p.type === 'out_break' ? 'Salida Almuerzo' : p.type === 'in_break' ? 'Entrada Almuerzo' : 'Salida'} · {p.time}
+                                                        </p>
+                                                        <p className="text-[10px] text-slate-500">
+                                                            Vía {p.method || 'WEB'} · Origen {p.origin || 'WEB'}
+                                                        </p>
+                                                    </div>
+                                                </div>
+
+                                                <div className="text-right">
+                                                    {p.facialConfidence !== undefined && (
+                                                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                                                            p.facialMatch === false 
                                                                 ? 'bg-rose-100 text-rose-800 border border-rose-300' 
                                                                 : 'bg-emerald-100 text-emerald-800'
                                                         }`}>
-                                                            {punch.facialMatch === false 
-                                                                ? `🚨 Discrepancia (${punch.facialConfidence}% Similitud)` 
-                                                                : `✓ Coincidencia ${punch.facialConfidence}%`}
+                                                            {p.facialMatch === false ? `🚨 Discrepancia (${p.facialConfidence}%)` : `✓ Rostro ${p.facialConfidence}%`}
                                                         </span>
                                                     )}
+                                                    {p.distanceFromInstitution !== undefined && p.distanceFromInstitution > 0 && (
+                                                        <p className="text-[10px] text-slate-500 mt-1">
+                                                            Distancia: {p.distanceFromInstitution} m
+                                                        </p>
+                                                    )}
                                                 </div>
-
-                                                {/* Side-by-Side: Reference Photo vs Punch Photo Evidence */}
-                                                <div className="grid grid-cols-2 gap-3 pt-1">
-                                                    <div className="flex flex-col items-center p-2 bg-slate-50 rounded-lg border border-slate-200">
-                                                        <div className="h-20 w-20 rounded-lg overflow-hidden border border-slate-300 bg-white mb-1">
-                                                            {selectedRecordForDetail.user?.facialPhotoUrl || selectedRecordForDetail.user?.photoUrl ? (
-                                                                <img 
-                                                                    src={selectedRecordForDetail.user?.facialPhotoUrl || selectedRecordForDetail.user?.photoUrl} 
-                                                                    alt="Foto oficial" 
-                                                                    className="h-full w-full object-cover" 
-                                                                />
-                                                            ) : (
-                                                                <div className="h-full w-full flex items-center justify-center text-[10px] text-slate-400">
-                                                                    Sin foto oficial
-                                                                </div>
-                                                            )}
-                                                        </div>
-                                                        <span className="text-[10px] font-bold text-slate-700">Foto Oficial (Ficha)</span>
-                                                    </div>
-
-                                                    <div className="flex flex-col items-center p-2 bg-slate-50 rounded-lg border border-slate-200">
-                                                        <div className="h-20 w-20 rounded-lg overflow-hidden border border-slate-300 bg-white mb-1">
-                                                            {punch.photoProof ? (
-                                                                <img 
-                                                                    src={punch.photoProof} 
-                                                                    alt="Foto capturada en marcaje" 
-                                                                    className="h-full w-full object-cover" 
-                                                                />
-                                                            ) : (
-                                                                <div className="h-full w-full flex items-center justify-center text-[10px] text-slate-400">
-                                                                    Sin foto capturada
-                                                                </div>
-                                                            )}
-                                                        </div>
-                                                        <span className="text-[10px] font-bold text-slate-700">Rostro Capturado en Marcaje</span>
-                                                    </div>
-                                                </div>
-
-                                                {punch.flagReason && (
-                                                    <div className="text-[11px] text-rose-700 font-semibold bg-rose-50 p-2 rounded border border-rose-200">
-                                                        Motivo de Advertencia: {punch.flagReason}
-                                                    </div>
-                                                )}
                                             </div>
-                                        )}
-
-                                        {/* Geofence info */}
-                                        {punch.distanceFromInstitution > 0 && (
-                                            <div className="flex items-center gap-2 text-slate-600 pt-1">
-                                                <LocationMarkerIcon className="h-3.5 w-3.5 text-slate-400" />
-                                                <span>Distancia detectada a la sede: <strong>{punch.distanceFromInstitution} m</strong></span>
-                                                {punch.location && (
-                                                    <a 
-                                                        href={`https://www.google.com/maps?q=${punch.location.latitude},${punch.location.longitude}`} 
-                                                        target="_blank" 
-                                                        rel="noopener noreferrer"
-                                                        className="text-sky-600 hover:underline font-semibold ml-auto"
-                                                    >
-                                                        Abrir Mapa ↗
-                                                    </a>
-                                                )}
-                                            </div>
-                                        )}
-
-                                        {/* Justification Box if present */}
-                                        {punch.justification && (
-                                            <div className="mt-2 p-2.5 rounded-lg bg-amber-50 border border-amber-200 text-amber-900">
-                                                <div className="flex items-center gap-1.5 font-bold mb-1">
-                                                    <AlertTriangleIcon className="h-3.5 w-3.5 text-amber-600" />
-                                                    <span>Justificación Fuera de Rango: {punch.justification.reason}</span>
-                                                </div>
-                                                <p className="text-slate-700 italic bg-white p-2 rounded border border-amber-100">
-                                                    "{punch.justification.note}"
-                                                </p>
-                                            </div>
-                                        )}
+                                        ))}
                                     </div>
-                                ))}
+                                )}
                             </div>
                         </div>
+
+                        <footer className="p-4 bg-slate-50 border-t border-slate-100 flex justify-end">
+                            <button
+                                type="button"
+                                onClick={() => setSelectedAuditForModal(null)}
+                                className="px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white font-bold rounded-xl text-xs transition"
+                            >
+                                Cerrar Auditoría
+                            </button>
+                        </footer>
                     </div>
                 </div>
             )}

@@ -176,6 +176,11 @@ export interface User {
   disposicionCoPlanificacion?: boolean;
   comisionesAdicionales?: boolean;
   withitnessScore?: number;
+  
+  // Attendance & Municipal Labor Parameters (Dirección de Talento Humano)
+  tipoFuncionario?: 'FD' | 'OTROS';
+  allowedLunchMinutes?: number;
+  grupoOcupacional?: string;
 }
 
 export interface PeiFodaEntry {
@@ -373,6 +378,7 @@ export interface ScheduleEntry {
     classId: string; 
     subjectId: string; 
     roomId: string; 
+    teacherId?: string;
 }
 
 export interface Notification { 
@@ -501,6 +507,117 @@ export interface Citacion {
     reason: string; 
     status: CitacionStatus; 
     creationDate: string; 
+}
+
+// ============================================================================
+// UNIFIED SCHOOL COMMUNICATIONS & MULTI-DEPARTMENT APPOINTMENTS (SDD MODULE)
+// ============================================================================
+
+export type DepartmentCode = 'DOCENTE' | 'DECE' | 'MEDICO' | 'INSPECCION';
+
+export type AppointmentStatus = 'PENDING' | 'CONFIRMED' | 'CANCELLED' | 'COMPLETED' | 'NO_SHOW';
+
+export interface AppointmentCommitment {
+    id: string;
+    description: string;
+    responsible: 'PADRE' | 'DOCENTE' | 'ESTUDIANTE' | 'DECE' | 'INSPECCION' | 'MEDICO';
+    responsibleName?: string;
+    dueDate?: string;
+    status: 'PENDIENTE' | 'CUMPLIDO';
+}
+
+export interface Appointment {
+    id: string;
+    institutionId: string;
+    studentId: string;
+    studentName?: string;
+    studentGrade?: string;
+    parentId: string;
+    parentName?: string;
+    parentPhone?: string;
+    parentEmail?: string;
+    staffId: string;
+    staffName?: string;
+    staffRole?: string;
+    departmentCode: DepartmentCode;
+    startTime: string; // ISO string
+    endTime: string;   // ISO string
+    status: AppointmentStatus;
+    parentReasonCategory: string;
+    parentNotes: string;
+    internalResolutionNotes?: string;
+    commitmentsAcuerdos?: AppointmentCommitment[];
+    isConfidentialDece?: boolean;
+    clinicalNotes?: string; // Stored with Principle of Reserve (only DECE / Medical)
+    disciplinaryRecordNotes?: string; // Preloaded attendance/incident summary for Inspección
+    attendedAt?: string;
+    digitalSignature?: {
+        signedByStaffId: string;
+        signedByStaffName: string;
+        staffRole: string;
+        timestamp: string;
+    };
+    cancellationReason?: string;
+    createdAt: string;
+    updatedAt?: string;
+}
+
+export type ChatChannelType = 'DIRECT' | 'GRADE_LEVEL' | 'SUBJECT_AREA' | 'CASE_THREAD';
+
+export interface ChatChannel {
+    id: string;
+    institutionId: string;
+    channelType: ChatChannelType;
+    name: string;
+    description?: string;
+    relatedEntityId?: string; // course_id, subject_id, or case_id
+    relatedEntityName?: string;
+    participantIds: string[];
+    createdAt: string;
+    isArchived: boolean;
+    caseCitation?: {
+        studentId: string;
+        studentName: string;
+        category: 'ACADEMIC_ALERT' | 'ATTENDANCE_BREACH' | 'DECE_REFERRAL' | 'HEALTH_OBSERVATION';
+        summary: string;
+    };
+    lastMessage?: {
+        content: string;
+        senderId: string;
+        senderName: string;
+        sentAt: string;
+    };
+}
+
+export interface ChatParticipant {
+    id: string;
+    channelId: string;
+    userId: string;
+    roleInChannel: 'MEMBER' | 'MODERATOR';
+    lastReadAt: string;
+    isMuted?: boolean;
+}
+
+export interface ChatMessageAttachment {
+    name: string;
+    url: string;
+    size?: string;
+    type: 'pdf' | 'doc' | 'image' | 'other';
+}
+
+export interface ChatMessage {
+    id: string;
+    channelId: string;
+    senderId: string;
+    senderName: string;
+    senderRole: Role;
+    senderAvatar?: string;
+    content: string;
+    attachmentMetadata?: ChatMessageAttachment[];
+    caseCitationId?: string;
+    sentAt: string;
+    isEdited?: boolean;
+    readBy?: string[];
 }
 
 export interface AcademicCalendarEvent { 
