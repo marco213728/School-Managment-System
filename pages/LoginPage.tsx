@@ -13,13 +13,20 @@ interface LoginPageProps {
   onLogin: (email: string, password: string) => boolean;
   onGoogleLogin?: () => Promise<void>;
   isLoading?: boolean;
+  initialError?: string | null;
 }
 
-const LoginPage: React.FC<LoginPageProps> = ({ onLogin, onGoogleLogin, isLoading = false }) => {
+const LoginPage: React.FC<LoginPageProps> = ({ onLogin, onGoogleLogin, isLoading = false, initialError = null }) => {
   const { institution } = useContext(InstitutionContext);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(initialError || null);
+
+  React.useEffect(() => {
+    if (initialError) {
+      setError(initialError);
+    }
+  }, [initialError]);
   const [unauthorizedDomain, setUnauthorizedDomain] = useState<{ domain: string; consoleUrl: string } | null>(null);
   const [resetMessage, setResetMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -168,6 +175,9 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin, onGoogleLogin, isLoading
               </svg>
               <span>{googleLoading ? 'Iniciando sesión con Google...' : 'Continuar con Google'}</span>
             </button>
+            <p className="mt-1.5 text-[11px] text-center text-slate-500 font-medium">
+              Acceso exclusivo para miembros registrados en su colegio (Docentes, Estudiantes, Padres y Personal).
+            </p>
 
             <div className="relative my-4">
               <div className="absolute inset-0 flex items-center">

@@ -77,6 +77,7 @@ export default function App() {
   const [chatChannels, setChatChannels] = useState<ChatChannel[]>(MOCK_CHAT_CHANNELS || []);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>(MOCK_CHAT_MESSAGES || []);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+  const [loginError, setLoginError] = useState<string | null>(null);
 
   // Helper to match authenticated Firebase/Google user with their registered profile in Firestore or state
   const resolveAndSetAuthenticatedUser = async (fbUser: { uid: string; email: string | null; displayName: string | null; photoURL?: string | null }) => {
@@ -106,57 +107,63 @@ export default function App() {
       }
     }
 
-    if (matchedUser) {
-      // Existing user registered with this Gmail account (e.g. registered by admin or previously logged in)
-      const updatedMatchedUser: User = {
-        ...matchedUser,
-        authUid: fbUser.uid,
-        photoUrl: fbUser.photoURL || matchedUser.photoUrl,
-      };
-
-      // Persist linked authUid & photoUrl in Firestore
-      saveDocument('users', updatedMatchedUser.id, updatedMatchedUser).catch(e => console.warn("Error guardando vinculación de usuario:", e));
-
-      setUsers(prev => prev.map(u => u.id === updatedMatchedUser.id ? updatedMatchedUser : u));
-      setCurrentUser(updatedMatchedUser);
-
-      const targetInst = (updatedMatchedUser.institutionId && institutions.find(i => i.id === updatedMatchedUser.institutionId)) 
-        || institutions[0] 
-        || MOCK_INSTITUTIONS[0];
-      setCurrentInstitution(targetInst);
-    } else {
-      // First-time Google user who wasn't pre-registered in the system
-      const isSuperAdminEmail = cleanEmail.includes('admin') || cleanEmail === 'marco213728@gmail.com';
-      const defaultRole = isSuperAdminEmail ? Role.SuperAdmin : Role.SuperAdmin;
-
-      const newUser: User = {
-        id: fbUser.uid,
-        name: fbUser.displayName || fbUser.email.split('@')[0],
-        email: fbUser.email,
-        password: '',
-        role: defaultRole,
-        authUid: fbUser.uid,
-        photoUrl: fbUser.photoURL || '',
-        institutionId: institutions[0]?.id || MOCK_INSTITUTIONS[0].id,
-      };
-
-      // Persist to Firestore
-      saveDocument('users', newUser.id, newUser).catch(e => console.warn("Error guardando nuevo usuario Google:", e));
-
-      setUsers(prev => {
-        if (prev.some(u => u.id === newUser.id)) return prev;
-        return [newUser, ...prev];
-      });
-      setCurrentUser(newUser);
-      setCurrentInstitution(institutions[0] || MOCK_INSTITUTIONS[0]);
+    // CHECK 1: The Google login button must NEVER point to the super user / super admin profile
+    if (matchedUser && (matchedUser.role === Role.SuperAdmin || (matchedUser.role as any) === 'Super Administrador')) {
+      await fbSignOut(auth);
+      setCurrentUser(null);
+      setCurrentInstitution(null);
+      const superAdminError = "Acceso denegado: El inicio de sesión con Google no está disponible para perfiles de Superusuario / Administrador Global. Debe acceder mediante el formulario de credenciales (correo y contraseña).";
+      setLoginError(superAdminError);
+      throw new Error(superAdminError);
     }
+
+    // CHECK 2: User profile must already exist AND be created in one of the colleges
+    const isCollegeProfile = matchedUser && 
+      matchedUser.institutionId && 
+      matchedUser.institutionId !== 'platform' && 
+      matchedUser.institutionId !== 'none' &&
+      matchedUser.role !== Role.SuperAdmin &&
+      (matchedUser.role as any) !== 'Super Administrador';
+
+    if (!isCollegeProfile) {
+      // Reject login immediately if not pre-created in one of the colleges
+      await fbSignOut(auth);
+      setCurrentUser(null);
+      setCurrentInstitution(null);
+      const notRegisteredError = `Acceso denegado: La cuenta (${fbUser.email}) no está registrada en ningún colegio o institución educativa. Para acceder al sistema, solicite previamente a la administración de su colegio que cree su perfil.`;
+      setLoginError(notRegisteredError);
+      throw new Error(notRegisteredError);
+    }
+
+    // Authorized college profile - Link credentials & log in
+    const updatedMatchedUser: User = {
+      ...matchedUser!,
+      authUid: fbUser.uid,
+      photoUrl: fbUser.photoURL || matchedUser!.photoUrl,
+    };
+
+    // Persist linked authUid & photoUrl in Firestore
+    saveDocument('users', updatedMatchedUser.id, updatedMatchedUser).catch(e => console.warn("Error guardando vinculación de usuario:", e));
+
+    setUsers(prev => prev.map(u => u.id === updatedMatchedUser.id ? updatedMatchedUser : u));
+    setCurrentUser(updatedMatchedUser);
+    setLoginError(null);
+
+    const targetInst = (updatedMatchedUser.institutionId && institutions.find(i => i.id === updatedMatchedUser.institutionId)) 
+      || institutions[0] 
+      || MOCK_INSTITUTIONS[0];
+    setCurrentInstitution(targetInst);
   };
 
   // Listen to Firebase Auth state
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (fbUser) => {
       if (fbUser && fbUser.email) {
-        await resolveAndSetAuthenticatedUser(fbUser);
+        try {
+          await resolveAndSetAuthenticatedUser(fbUser);
+        } catch (err: any) {
+          console.warn("Autenticación con Google rechazada en onAuthStateChanged:", err?.message);
+        }
       }
     });
 
@@ -164,6 +171,7 @@ export default function App() {
   }, [users, institutions]);
 
   const handleLogin = (email: string, password: string): boolean => {
+    setLoginError(null);
     const user = users.find(u => (u.email || '').toLowerCase() === (email || '').toLowerCase());
     if (!user) return false;
 
@@ -187,6 +195,7 @@ export default function App() {
   };
 
   const handleGoogleLogin = async () => {
+    setLoginError(null);
     try {
       const cred = await signInWithPopup(auth, googleProvider);
       if (cred.user) {
@@ -206,6 +215,7 @@ export default function App() {
     }
     setCurrentUser(null);
     setCurrentInstitution(null);
+    setLoginError(null);
   };
 
   // Listen to Firestore Real-time Collections
@@ -798,7 +808,7 @@ export default function App() {
 
     return (
       <InstitutionContext.Provider value={loginInstitutionContext}>
-        <LoginPage onLogin={handleLogin} onGoogleLogin={handleGoogleLogin} />
+        <LoginPage onLogin={handleLogin} onGoogleLogin={handleGoogleLogin} initialError={loginError} />
       </InstitutionContext.Provider>
     );
   }
