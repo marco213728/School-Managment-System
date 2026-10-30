@@ -10,8 +10,7 @@ import ManagePage from '../../pages/ManagePage';
 import HRISDashboard from '../management/HRISDashboard';
 import DecePage from '../../pages/DecePage';
 import HealthPage from '../../pages/HealthPage';
-// FIX: Added Role to imports to resolve "Cannot find name 'Role'" error
-import { Role, User, Class, Student, ScheduleEntry, Notification, SupportContact, HealthRecord, MedicalVisit, Subject, TimeSlot, Room, Timetable, ViccIntervention, Intervention, AttendanceRecord, ExitPass, Citacion, AcademicCalendarEvent, LeccionarioEntry, MicroPlan, Dcd, EvaluationCriterion, EvaluationIndicator, Gradebook, Activity, ReinforcementPlan, StaffAttendanceRecord, AttendanceJustification, FormalRequest, TrainingPlan, InstitutionalDocument, MeetingRecord, Rubric, ConflictMediation, CronogramaEvent, Appointment, ChatChannel, ChatMessage } from '../../types';
+import { Role, User, Class, Student, ScheduleEntry, Notification, SupportContact, HealthRecord, MedicalVisit, Subject, TimeSlot, Room, Timetable, ViccIntervention, Intervention, AttendanceRecord, ExitPass, Citacion, AcademicCalendarEvent, LeccionarioEntry, MicroPlan, Dcd, EvaluationCriterion, EvaluationIndicator, Gradebook, Activity, ReinforcementPlan, StaffAttendanceRecord, AttendanceJustification, FormalRequest, TrainingPlan, InstitutionalDocument, MeetingRecord, Rubric, ConflictMediation, CronogramaEvent, Appointment, ChatChannel, ChatMessage, EnrollmentRecord, MogacTicket, StudentTransferPass, Institution, BibliographicItem, PhysicalCopy, LibraryLoan, LibraryHold, TextbookAssignment } from '../../types';
 import StudentManagementPage from '../../pages/StudentManagementPage';
 import CommunicationsPage from '../../pages/CommunicationsPage';
 import SchedulePage from '../../pages/SchedulePage';
@@ -27,10 +26,12 @@ import StaffAttendanceModal from '../staff/StaffAttendanceModal';
 import TeacherTrainingPage from '../../pages/TeacherTrainingPage'; 
 import ResourceRepositoryPage from '../../pages/ResourceRepositoryPage';
 import JuntaManager from '../vicerrectorado/JuntaManager'; 
+import MatriculasPage from '../matriculas/MatriculasPage';
+import LibraryPage from '../library/LibraryPage';
 import { UserContext, InstitutionContext } from '../../contexts/UserContext';
 import { MOCK_RUBRICS } from '../../constants'; 
 
-type Page = 'dashboard' | 'attendance' | 'activities' | 'reports' | 'manage' | 'dece' | 'health' | 'students' | 'communications' | 'schedule' | 'inspection' | 'citaciones' | 'leccionario' | 'curricular_planning' | 'curriculum_repository' | 'gradebook' | 'vicerrector_dashboard' | 'reinforcement' | 'teacher_training' | 'resource_bank' | 'juntas' | 'hris' | 'appointments' | 'teacher_chat'; 
+type Page = 'dashboard' | 'attendance' | 'activities' | 'reports' | 'manage' | 'dece' | 'health' | 'students' | 'communications' | 'schedule' | 'inspection' | 'citaciones' | 'leccionario' | 'curricular_planning' | 'curriculum_repository' | 'gradebook' | 'vicerrector_dashboard' | 'reinforcement' | 'teacher_training' | 'resource_bank' | 'juntas' | 'hris' | 'appointments' | 'teacher_chat' | 'matriculas' | 'library'; 
 
 interface DashboardLayoutProps {
   absenceRequests: any[];
@@ -116,6 +117,23 @@ interface DashboardLayoutProps {
   onUpdateChatChannels?: (channels: ChatChannel[]) => void;
   chatMessages?: ChatMessage[];
   onSendMessage?: (msg: ChatMessage) => void;
+  enrollments?: EnrollmentRecord[];
+  onUpdateEnrollments?: (records: EnrollmentRecord[]) => void;
+  mogacTickets?: MogacTicket[];
+  onUpdateMogacTickets?: (tickets: MogacTicket[]) => void;
+  institutions?: Institution[];
+  transferPasses?: StudentTransferPass[];
+  onUpdateTransferPasses?: (passes: StudentTransferPass[]) => void;
+  bibliographicItems?: BibliographicItem[];
+  onUpdateBibliographicItems?: (items: BibliographicItem[]) => void;
+  physicalCopies?: PhysicalCopy[];
+  onUpdatePhysicalCopies?: (copies: PhysicalCopy[]) => void;
+  loans?: LibraryLoan[];
+  onUpdateLoans?: (loans: LibraryLoan[]) => void;
+  holds?: LibraryHold[];
+  onUpdateHolds?: (holds: LibraryHold[]) => void;
+  textbookAssignments?: TextbookAssignment[];
+  onUpdateTextbookAssignments?: (assignments: TextbookAssignment[]) => void;
 }
 
 const DashboardLayout: React.FC<DashboardLayoutProps> = (props) => {
@@ -353,6 +371,41 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = (props) => {
                 schedule={schedule}
                 timeSlots={institutionTimeSlots}
                 initialTab="chat"
+            />;
+        case 'matriculas':
+            return <MatriculasPage
+                enrollments={props.enrollments || []}
+                onUpdateEnrollments={props.onUpdateEnrollments || (() => {})}
+                mogacTickets={props.mogacTickets || []}
+                onUpdateMogacTickets={props.onUpdateMogacTickets || (() => {})}
+                transferPasses={props.transferPasses || []}
+                onUpdateTransferPasses={props.onUpdateTransferPasses}
+                institutions={props.institutions || []}
+                students={institutionStudents}
+                onUpdateStudents={restProps.onUpdateStudents}
+                classes={institutionClasses}
+                users={users}
+                onUpdateUsers={restProps.onUpdateUsers}
+                notifications={props.notifications}
+                onUpdateNotifications={props.onUpdateNotifications}
+            />;
+        case 'library':
+            return <LibraryPage
+                users={users}
+                classes={institutionClasses}
+                students={institutionStudents}
+                subjects={subjects}
+                institutionId={effectiveInstitutionId}
+                bibliographicItems={props.bibliographicItems}
+                onUpdateBibliographicItems={props.onUpdateBibliographicItems}
+                physicalCopies={props.physicalCopies}
+                onUpdatePhysicalCopies={props.onUpdatePhysicalCopies}
+                loans={props.loans}
+                onUpdateLoans={props.onUpdateLoans}
+                holds={props.holds}
+                onUpdateHolds={props.onUpdateHolds}
+                textbookAssignments={props.textbookAssignments}
+                onUpdateTextbookAssignments={props.onUpdateTextbookAssignments}
             />;
         case 'resource_bank':
             return <ResourceRepositoryPage 

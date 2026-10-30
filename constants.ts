@@ -14,7 +14,9 @@ import {
   StandardCompliance, SubjectLevel, TrainingCourse, InterventionType, PeiProfile, 
   PeiStatus, ViccInterventionType, OcrSubmissionStatus, DisciplinarySeverity, OvpAxis,
   EvaluationCategory,
-  Appointment, ChatChannel, ChatMessage, DepartmentCode
+  Appointment, ChatChannel, ChatMessage, DepartmentCode,
+  EnrollmentRecord, MogacTicket, StudentTransferPass, TransferPassStatus, InstitutionFundingType,
+  BibliographicItem, PhysicalCopy, LibraryLoan, LibraryHold, TextbookAssignment
 } from './types';
 
 export * from './types';
@@ -148,17 +150,80 @@ export const MOCK_INSTITUTIONS: Institution[] = [
         id: 'uemol', 
         name: 'U.E. Municipal "Osvaldo Lombeida"', 
         logoUrl: 'https://placehold.co/150x150/003366/white?text=UEMOL', 
-        contact: { phone: '02-123-4567', email: 'info@uemol.edu.ec', address: 'Quito, Sector Sur' }, 
+        contact: { phone: '02-123-4567', email: 'info@uemol.edu.ec', address: 'Quito, Sector Sur - Guamaní' }, 
         codeAMIE: '17H00001',
+        fundingType: 'Municipal',
+        rectorName: 'Dra. Patricia Alvear',
+        operatingPermit: {
+          permitNumber: 'AUT-DMQ-EDUC-045',
+          validUntil: '2028-12-31',
+          issuingDistrict: '17D06 Eloy Alfaro'
+        },
+        costResolution: {
+          resolutionNumber: 'RES-MUN-DMQ-2025-012',
+          approvalDate: '2025-06-15',
+          maxTuitionFee: 0,
+          maxEnrollmentFee: 0,
+          validAcademicPeriod: '2025-2026',
+          authoritySignature: 'Dirección Metropolitana de Educación Quito'
+        },
+        scholarshipPolicies: {
+          mandatoryPercentage: 10,
+          municipalOrdinanceNumber: 'OM-DMQ-2024-089',
+          availableCategories: ['Beca Municipal al Mérito', 'Ayuda Social Distrital', 'Beca Vulnerabilidad Socioeconómica']
+        },
         communicationChannels: DEFAULT_COMMUNICATION_CHANNELS,
         automatedNotifications: DEFAULT_AUTOMATED_NOTIFICATIONS
     },
     { 
         id: 'ctee', 
-        name: 'Colegio Técnico "Eugenio Espejo"', 
+        name: 'Colegio Técnico Fiscal "Eugenio Espejo"', 
         logoUrl: 'https://placehold.co/150x150/800000/white?text=CTEE', 
-        contact: { phone: '02-765-4321', email: 'rectorado@espejo.edu.ec', address: 'Quito, Sector Centro' }, 
+        contact: { phone: '02-765-4321', email: 'rectorado@espejo.edu.ec', address: 'Quito, Sector Centro Histórico' }, 
         codeAMIE: '17H00002',
+        fundingType: 'Fiscal',
+        rectorName: 'Mgs. Hernán Delgado',
+        operatingPermit: {
+          permitNumber: 'MINEDUC-CZ9-17D04-019',
+          validUntil: '2029-08-31',
+          issuingDistrict: '17D04 Centro'
+        },
+        costResolution: {
+          resolutionNumber: 'MINEDUC-GRATUIDAD-LOEI-001',
+          approvalDate: '2025-01-01',
+          maxTuitionFee: 0,
+          maxEnrollmentFee: 0,
+          validAcademicPeriod: '2025-2026',
+          authoritySignature: 'Ministerio de Educación del Ecuador'
+        },
+        communicationChannels: DEFAULT_COMMUNICATION_CHANNELS,
+        automatedNotifications: DEFAULT_AUTOMATED_NOTIFICATIONS
+    },
+    { 
+        id: 'inst-part-amazonia', 
+        name: 'Unidad Educativa Particular "Bilingüe Amazonas"', 
+        logoUrl: 'https://placehold.co/150x150/1e3a8a/white?text=UEPA', 
+        contact: { phone: '02-255-8899', email: 'admisiones@bilingueamazonas.edu.ec', address: 'Quito, Av. América y República' }, 
+        codeAMIE: '17H00999',
+        fundingType: 'Particular',
+        rectorName: 'PhD. Fernando Montalvo',
+        operatingPermit: {
+          permitNumber: 'AUT-MINEDUC-DP-17D05-341',
+          validUntil: '2027-10-15',
+          issuingDistrict: '17D05 Norte'
+        },
+        costResolution: {
+          resolutionNumber: 'JD-PICH-0174-2025',
+          approvalDate: '2025-05-20',
+          maxTuitionFee: 195.00,
+          maxEnrollmentFee: 146.25, // 75% reglamentario
+          validAcademicPeriod: '2025-2026',
+          authoritySignature: 'Junta Distrital de Regulación de Pensiones y Matrículas 17D05'
+        },
+        scholarshipPolicies: {
+          mandatoryPercentage: 5,
+          availableCategories: ['Beca Mérito Académico (100%)', 'Beca Hermanos (15%)', 'Beca Deportiva / Talento (50%)']
+        },
         communicationChannels: DEFAULT_COMMUNICATION_CHANNELS,
         automatedNotifications: DEFAULT_AUTOMATED_NOTIFICATIONS
     }
@@ -561,3 +626,726 @@ export const MOCK_ABSENCE_REQUESTS: any[] = [];
 export const MOCK_PERFORMANCE_EVALUATIONS: PerformanceEvaluation[] = [
     { id: 'pe1', institutionId: 'uemol', userId: 'teacher1', evaluatorId: 'vicerrector1', year: '2025-2026', functionalScore: 65, behavioralScore: 28, totalScore: 93, evidenceLinks: ['Portafolio_Juan_Perez.pdf'], commitments: ['Implementar ABP en Ciencias Naturales en el primer quimestre.'], status: 'Acknowledged', createdAt: new Date().toISOString() }
 ];
+
+export const MOCK_ENROLLMENT_RECORDS: EnrollmentRecord[] = [
+  {
+    id: 'mat-2026-001',
+    institutionId: 'uemol',
+    studentId: 'student1',
+    studentName: 'Carlos Andrade',
+    studentNationalId: '1728394051',
+    studentBirthDate: '2012-05-14',
+    studentGender: 'MASCULINO',
+    parentId: 'parent1',
+    parentName: 'Maria Gomez',
+    parentNationalId: '1712345678',
+    parentEmail: 'maria@gmail.com',
+    parentPhone: '0991234567',
+    parentAddress: 'Av. Maldonado S14-89 y Moraspungo, Sector Sur',
+    planillaContrato: '1004829104',
+    zone: 'Zona 9 - Distrito Metropolitano de Quito',
+    district: '17D06 Eloy Alfaro',
+    circuit: '17D06C04_Solanda',
+    academicYear: '2026-2027',
+    targetClassId: 'class1',
+    targetGrade: '10mo EGB A',
+    enrollmentType: 'REMATRICULA_AUTOMATICA',
+    status: 'APROBADO',
+    documents: {
+      cedulaRepresentante: {
+        id: 'doc-1',
+        name: 'Cedula_Representante_MariaGomez.pdf',
+        fileUrl: 'https://images.unsplash.com/photo-1544717305-2782549b5136?w=600&auto=format&fit=crop&q=80',
+        fileType: 'image',
+        uploadedAt: new Date(Date.now() - 86400000 * 10).toISOString(),
+        status: 'VALIDADO',
+        documentType: 'CEDULA_REPRESENTANTE'
+      },
+      cedulaEstudiante: {
+        id: 'doc-2',
+        name: 'Cedula_Estudiante_CarlosAndrade.pdf',
+        fileUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=600&auto=format&fit=crop&q=80',
+        fileType: 'image',
+        uploadedAt: new Date(Date.now() - 86400000 * 10).toISOString(),
+        status: 'VALIDADO',
+        documentType: 'CEDULA_ESTUDIANTE'
+      },
+      planillaElectrica: {
+        id: 'doc-3',
+        name: 'Planilla_EEQ_Contrato1004829104.pdf',
+        fileUrl: 'https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?w=600&auto=format&fit=crop&q=80',
+        fileType: 'image',
+        uploadedAt: new Date(Date.now() - 86400000 * 10).toISOString(),
+        status: 'VALIDADO',
+        documentType: 'PLANILLA_ELECTRICA'
+      },
+      certificadosPromocion: {
+        id: 'doc-4',
+        name: 'Certificado_Promocion_9noEGB.pdf',
+        fileUrl: 'https://images.unsplash.com/photo-1450133064473-71024230f91b?w=600&auto=format&fit=crop&q=80',
+        fileType: 'image',
+        uploadedAt: new Date(Date.now() - 86400000 * 10).toISOString(),
+        status: 'VALIDADO',
+        documentType: 'CERTIFICADO_PROMOCION'
+      },
+      fichaDece: {
+        id: 'doc-5',
+        name: 'Ficha_Socioemocional_DECE.pdf',
+        fileUrl: 'https://images.unsplash.com/photo-1434030216411-0b793f4b4173?w=600&auto=format&fit=crop&q=80',
+        fileType: 'image',
+        uploadedAt: new Date(Date.now() - 86400000 * 10).toISOString(),
+        status: 'VALIDADO',
+        documentType: 'FICHA_DECE'
+      }
+    },
+    juntosReceipt: {
+      receiptNumber: 'JUNTOS-2026-9D06-0418',
+      assignmentDate: new Date(Date.now() - 86400000 * 12).toISOString(),
+      distanceKm: 0.85,
+      capacityAvailable: 14,
+      priorityAssigned: 'Prioridad 1 - Georreferenciación y Continuidad'
+    },
+    enrollmentCertificateCode: 'CERT-2026-UEMOL-10A-0418',
+    enrolledAt: new Date(Date.now() - 86400000 * 9).toISOString(),
+    reviewedBy: 'admin1',
+    reviewedByName: 'Lic. Mariana Cruz (Secretaría General)',
+    createdAt: new Date(Date.now() - 86400000 * 12).toISOString(),
+    updatedAt: new Date(Date.now() - 86400000 * 9).toISOString(),
+  },
+  {
+    id: 'mat-2026-002',
+    institutionId: 'uemol',
+    studentName: 'Mateo Sebastián Morales',
+    studentNationalId: '1752981042',
+    studentBirthDate: '2014-08-21',
+    studentGender: 'MASCULINO',
+    parentId: 'parent-demo-2',
+    parentName: 'Gloria Estefanía Ramos',
+    parentNationalId: '1719283746',
+    parentEmail: 'gloria.ramos@gmail.com',
+    parentPhone: '0984561234',
+    parentAddress: 'La Floresta, Calle Guipúzcoa N24-110',
+    planillaContrato: '1009384712',
+    zone: 'Zona 9 - Distrito Metropolitano de Quito',
+    district: '17D06 Eloy Alfaro',
+    circuit: '17D06C04_Solanda',
+    academicYear: '2026-2027',
+    targetClassId: 'class1',
+    targetGrade: '8vo EGB B',
+    enrollmentType: 'NUEVA_ASIGNACION',
+    status: 'OBSERVADO',
+    reviewNotes: 'La planilla eléctrica adjunta no muestra con claridad la dirección residencial ni el sello de pago del último mes. Por favor volver a subir una imagen legible.',
+    documents: {
+      cedulaRepresentante: {
+        id: 'doc-21',
+        name: 'Cedula_Gloria_Ramos.pdf',
+        fileUrl: 'https://images.unsplash.com/photo-1544717305-2782549b5136?w=600&auto=format&fit=crop&q=80',
+        fileType: 'image',
+        uploadedAt: new Date(Date.now() - 86400000 * 3).toISOString(),
+        status: 'VALIDADO',
+        documentType: 'CEDULA_REPRESENTANTE'
+      },
+      planillaElectrica: {
+        id: 'doc-22',
+        name: 'Planilla_Ilegible.jpg',
+        fileUrl: 'https://images.unsplash.com/photo-1586281380349-632531db7ed4?w=600&auto=format&fit=crop&q=80',
+        fileType: 'image',
+        uploadedAt: new Date(Date.now() - 86400000 * 3).toISOString(),
+        status: 'OBSERVADO',
+        reviewComment: 'Imagen borrosa, no se distingue el Código Único Eléctrico Nacional (CUEN)',
+        documentType: 'PLANILLA_ELECTRICA'
+      },
+      certificadosPromocion: {
+        id: 'doc-23',
+        name: 'Certificado_7moEGB.pdf',
+        fileUrl: 'https://images.unsplash.com/photo-1450133064473-71024230f91b?w=600&auto=format&fit=crop&q=80',
+        fileType: 'image',
+        uploadedAt: new Date(Date.now() - 86400000 * 3).toISOString(),
+        status: 'VALIDADO',
+        documentType: 'CERTIFICADO_PROMOCION'
+      }
+    },
+    juntosReceipt: {
+      receiptNumber: 'JUNTOS-2026-9D06-0921',
+      assignmentDate: new Date(Date.now() - 86400000 * 4).toISOString(),
+      distanceKm: 1.2,
+      capacityAvailable: 8,
+      priorityAssigned: 'Prioridad 2 - Asignación Ordinaria por Sede'
+    },
+    createdAt: new Date(Date.now() - 86400000 * 4).toISOString(),
+    updatedAt: new Date(Date.now() - 86400000).toISOString(),
+  },
+  {
+    id: 'mat-2026-003',
+    institutionId: 'uemol',
+    studentName: 'Valeria Nicole Cárdenas',
+    studentNationalId: '1759402819',
+    studentBirthDate: '2013-02-19',
+    studentGender: 'FEMENINO',
+    parentId: 'parent1',
+    parentName: 'Maria Gomez',
+    parentNationalId: '1712345678',
+    parentEmail: 'maria@gmail.com',
+    parentPhone: '0991234567',
+    parentAddress: 'Av. Maldonado S14-89 y Moraspungo, Sector Sur',
+    planillaContrato: '1004829104',
+    zone: 'Zona 9 - Distrito Metropolitano de Quito',
+    district: '17D06 Eloy Alfaro',
+    circuit: '17D06C04_Solanda',
+    academicYear: '2026-2027',
+    targetClassId: 'class1',
+    targetGrade: '9no EGB C',
+    enrollmentType: 'NUEVA_ASIGNACION',
+    status: 'EN_REVISION',
+    documents: {
+      cedulaRepresentante: {
+        id: 'doc-31',
+        name: 'Cedula_MariaGomez.pdf',
+        fileUrl: 'https://images.unsplash.com/photo-1544717305-2782549b5136?w=600&auto=format&fit=crop&q=80',
+        fileType: 'image',
+        uploadedAt: new Date(Date.now() - 86400000).toISOString(),
+        status: 'PENDIENTE',
+        documentType: 'CEDULA_REPRESENTANTE'
+      },
+      planillaElectrica: {
+        id: 'doc-32',
+        name: 'Planilla_Electrica_Marzo2026.pdf',
+        fileUrl: 'https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?w=600&auto=format&fit=crop&q=80',
+        fileType: 'image',
+        uploadedAt: new Date(Date.now() - 86400000).toISOString(),
+        status: 'PENDIENTE',
+        documentType: 'PLANILLA_ELECTRICA'
+      },
+      certificadosPromocion: {
+        id: 'doc-33',
+        name: 'Certificado_Promocion_8vo.pdf',
+        fileUrl: 'https://images.unsplash.com/photo-1450133064473-71024230f91b?w=600&auto=format&fit=crop&q=80',
+        fileType: 'image',
+        uploadedAt: new Date(Date.now() - 86400000).toISOString(),
+        status: 'PENDIENTE',
+        documentType: 'CERTIFICADO_PROMOCION'
+      }
+    },
+    juntosReceipt: {
+      receiptNumber: 'JUNTOS-2026-9D06-1102',
+      assignmentDate: new Date(Date.now() - 86400000).toISOString(),
+      distanceKm: 0.85,
+      capacityAvailable: 11,
+      priorityAssigned: 'Prioridad 1 - Georreferenciación'
+    },
+    createdAt: new Date(Date.now() - 86400000).toISOString(),
+    updatedAt: new Date(Date.now() - 86400000).toISOString(),
+  }
+];
+
+export const MOCK_MOGAC_TICKETS: MogacTicket[] = [
+  {
+    id: 'mogac-tk-001',
+    ticketNumber: 'MOGAC-2026-0042',
+    institutionId: 'uemol',
+    requesterId: 'parent1',
+    requesterName: 'Maria Gomez',
+    requesterRole: 'PADRE',
+    targetEntityType: 'STUDENT',
+    targetEntityId: 'student1',
+    targetEntityName: 'Carlos Andrade',
+    category: 'APELLIDOS_NOMBRES',
+    currentValue: 'Carlos Andrade',
+    requestedValue: 'Carlos David Andrade Gómez',
+    justification: 'Inclusión del segundo nombre y segundo apellido conforme constan en la Partida de Nacimiento y Cédula de Identidad actualizada.',
+    supportingDocumentUrl: 'https://images.unsplash.com/photo-1589829545856-d10d557cf95f?w=600&auto=format&fit=crop&q=80',
+    supportingDocumentName: 'Partida_Nacimiento_RegistroCivil.pdf',
+    status: 'EN_TRAMITE',
+    legalSlaDays: 15,
+    deadlineDate: new Date(Date.now() + 86400000 * 8).toISOString(), // 8 días restantes
+    createdAt: new Date(Date.now() - 86400000 * 7).toISOString(),
+  },
+  {
+    id: 'mogac-tk-002',
+    ticketNumber: 'MOGAC-2026-0038',
+    institutionId: 'uemol',
+    requesterId: 'parent1',
+    requesterName: 'Maria Gomez',
+    requesterRole: 'PADRE',
+    targetEntityType: 'PARENT',
+    targetEntityId: 'parent1',
+    targetEntityName: 'Maria Gomez',
+    category: 'CONTACTO_CORREO_TELEFONO',
+    currentValue: 'Tel: 0991234567 | Email: maria_antiguo@gmail.com',
+    requestedValue: 'Tel: 0995551234 | Email: maria@gmail.com',
+    justification: 'Actualización urgente de número de contacto telefónico para notificaciones de leccionario y citaciones docentes.',
+    supportingDocumentUrl: 'https://images.unsplash.com/photo-1544717305-2782549b5136?w=600&auto=format&fit=crop&q=80',
+    supportingDocumentName: 'Cedula_Actualizada.pdf',
+    status: 'RESUELTO_APROBADO',
+    legalSlaDays: 15,
+    deadlineDate: new Date(Date.now() - 86400000 * 2).toISOString(),
+    resolutionNotes: 'Se verificó la titularidad de la representante y se procedió a la actualización de su expediente de contacto en el sistema central.',
+    resolvedBy: 'admin1',
+    resolvedByName: 'Lic. Mariana Cruz (Secretaría)',
+    resolvedAt: new Date(Date.now() - 86400000 * 3).toISOString(),
+    createdAt: new Date(Date.now() - 86400000 * 14).toISOString(),
+  },
+  {
+    id: 'mogac-tk-003',
+    ticketNumber: 'MOGAC-2026-0051',
+    institutionId: 'uemol',
+    requesterId: 'parent-demo-2',
+    requesterName: 'Gloria Estefanía Ramos',
+    requesterRole: 'PADRE',
+    targetEntityType: 'STUDENT',
+    targetEntityId: 'student-temp-2',
+    targetEntityName: 'Mateo Sebastián Morales',
+    category: 'DIRECCION_RESIDENCIA',
+    currentValue: 'La Floresta, Guipúzcoa N24-110',
+    requestedValue: 'Solanda, Sector 2, Manzana 14 Villa 8',
+    justification: 'Cambio de domicilio familiar por arrendamiento. Se adjunta nueva planilla de luz con cuenta contrato.',
+    supportingDocumentUrl: 'https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?w=600&auto=format&fit=crop&q=80',
+    supportingDocumentName: 'Nueva_Planilla_EEQ_Solanda.pdf',
+    status: 'INGRESADO',
+    legalSlaDays: 15,
+    deadlineDate: new Date(Date.now() + 86400000 * 13).toISOString(), // 13 días restantes
+    createdAt: new Date(Date.now() - 86400000 * 2).toISOString(),
+  }
+];
+
+export const MOCK_TRANSFER_PASSES: StudentTransferPass[] = [
+  {
+    id: 'trf-pass-001',
+    transferCode: 'TRF-2026-0041',
+    studentId: 'student1',
+    studentName: 'Carlos Andrade',
+    studentIdentification: '1723456789',
+    parentId: 'parent1',
+    parentName: 'Maria Gomez',
+    parentEmail: 'maria@gmail.com',
+    parentPhone: '0995551234',
+    originInstitutionId: 'uemol',
+    originInstitutionName: 'U.E. Municipal "Osvaldo Lombeida"',
+    originFundingType: 'Municipal',
+    destinationInstitutionId: 'ctee',
+    destinationInstitutionName: 'Colegio Técnico Fiscal "Eugenio Espejo"',
+    destinationFundingType: 'Fiscal',
+    requestedGrade: '10mo EGB',
+    academicPeriod: '2025-2026',
+    transferReason: 'Cambio de Domicilio',
+    reasonDetails: 'La familia se mudó al Centro Histórico por cercanía laboral y asignación de circuito fiscal 17D04.',
+    requestDate: new Date(Date.now() - 86400000 * 5).toISOString(),
+    status: 'APROBADO_ORIGEN',
+    originApprovalDate: new Date(Date.now() - 86400000 * 2).toISOString(),
+    originApprovedByName: 'Dra. Patricia Alvear (Rectorado UEMOL)',
+    originNotes: 'Expediente académico completo y liberado. Sin adeudos ni compromisos pendientes.',
+    academicPortfolio: {
+      gradeRecords: [
+        { grade: '8vo EGB', schoolYear: '2023-2024', averageScore: 9.25, passed: true },
+        { grade: '9no EGB', schoolYear: '2024-2025', averageScore: 9.10, passed: true }
+      ],
+      promotionCertificatesUploaded: true,
+      conductGrade: 'A'
+    },
+    deceTransferFile: {
+      hasNee: false,
+      psychosocialObservations: 'Estudiante con excelente desenvolvimiento social, sin antecedentes de vulnerabilidad.',
+      deceOfficerName: 'Psic. Ana Rivadeneira'
+    },
+    createdAt: new Date(Date.now() - 86400000 * 5).toISOString(),
+    updatedAt: new Date(Date.now() - 86400000 * 2).toISOString(),
+  },
+  {
+    id: 'trf-pass-002',
+    transferCode: 'TRF-2026-0029',
+    studentId: 'student-demo-part-1',
+    studentName: 'Sofía Valentina Morales',
+    studentIdentification: '1752349912',
+    parentId: 'parent-demo-part-1',
+    parentName: 'Ing. Javier Morales',
+    parentEmail: 'javier.morales@outlook.ec',
+    parentPhone: '0987654321',
+    originInstitutionId: 'inst-part-amazonia',
+    originInstitutionName: 'Unidad Educativa Particular "Bilingüe Amazonas"',
+    originFundingType: 'Particular',
+    destinationInstitutionId: 'uemol',
+    destinationInstitutionName: 'U.E. Municipal "Osvaldo Lombeida"',
+    destinationFundingType: 'Municipal',
+    requestedGrade: '1ro BGU',
+    academicPeriod: '2025-2026',
+    transferReason: 'Beca Municipal / Mérito',
+    reasonDetails: 'Adjudicación de Beca Municipal de Excelencia Académica otorgada por el Municipio del DMQ.',
+    requestDate: new Date(Date.now() - 86400000 * 18).toISOString(),
+    status: 'COMPLETADO',
+    originApprovalDate: new Date(Date.now() - 86400000 * 14).toISOString(),
+    originApprovedByName: 'PhD. Fernando Montalvo (Rector UEPA)',
+    originNotes: 'Se legaliza pase de salida de institución particular. Sin valores pendientes de pensiones.',
+    destinationApprovalDate: new Date(Date.now() - 86400000 * 10).toISOString(),
+    destinationApprovedByName: 'Secretaría General UEMOL',
+    destinationNotes: 'Estudiante matriculada con éxito en 1ro BGU paralelo A con asignación de Beca Municipal 100%.',
+    academicPortfolio: {
+      gradeRecords: [
+        { grade: '9no EGB', schoolYear: '2023-2024', averageScore: 9.85, passed: true },
+        { grade: '10mo EGB', schoolYear: '2024-2025', averageScore: 9.90, passed: true }
+      ],
+      promotionCertificatesUploaded: true,
+      conductGrade: 'A'
+    },
+    deceTransferFile: {
+      hasNee: false,
+      psychosocialObservations: 'Estudiante destacada en oratoria y olimpiadas de matemáticas.',
+      deceOfficerName: 'Lic. Andrés Paredes (DECE UEPA)'
+    },
+    createdAt: new Date(Date.now() - 86400000 * 18).toISOString(),
+    updatedAt: new Date(Date.now() - 86400000 * 10).toISOString(),
+  }
+];
+
+// ==========================================
+// MOCK DATA: BIBLIOTECA ESCOLAR (SLMS)
+// ==========================================
+
+export const MOCK_BIBLIOGRAPHIC_ITEMS: BibliographicItem[] = [
+  {
+    id: 'bib-001',
+    institutionId: 'inst-1790363544282-swirjer',
+    isbn: '978-9978809426',
+    title: 'Huasipungo',
+    subtitle: 'Edición crítica conmemorativa',
+    author: 'Jorge Icaza',
+    publisher: 'Editorial Libresa / Ministerio de Educación',
+    publicationYear: 2021,
+    edition: '12ª edición escolar',
+    deweyDecimal: '863.64', // Literatura ecuatoriana
+    physicalDescription: '224 p. ; 19 cm',
+    subjectHeadings: ['Literatura Ecuatoriana', 'Novela Indigenista', 'Historia Social', 'Clásicos Latinoamericanos'],
+    lexileLevel: '880L',
+    acceleratedReader: {
+      atosLevel: 6.2,
+      points: 8.0,
+      quizNumber: 'EC-0149'
+    },
+    materialType: 'GENERAL_BOOK',
+    coverUrl: 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&w=400&q=80',
+    summary: 'Obra cumbre de la literatura indigenista ecuatoriana que retrata las vivencias, la resistencia y la identidad de los pueblos ancestrales de la serranía.',
+    copiesCount: 8,
+    availableCopiesCount: 6,
+    createdAt: '2026-01-15T08:00:00.000Z',
+    updatedAt: '2026-02-01T10:00:00.000Z'
+  },
+  {
+    id: 'bib-002',
+    institutionId: 'inst-1790363544282-swirjer',
+    isbn: '978-9978772391',
+    title: 'Matemática Divertida y Desafiante 1ro BGU',
+    subtitle: 'Texto del Estudiante - Tronco Común',
+    author: 'Grupo Pedagógico SM & MinEduc',
+    publisher: 'Ediciones SM Ecuador',
+    publicationYear: 2025,
+    edition: 'Reforma Curricular Vigente',
+    deweyDecimal: '510.71',
+    physicalDescription: '288 p. ilustraciones a color ; 28 cm',
+    subjectHeadings: ['Matemáticas', 'Álgebra', 'Funciones Reales', 'Trigonometría', 'BGU'],
+    lexileLevel: '950L',
+    materialType: 'TEXTBOOK',
+    coverUrl: 'https://images.unsplash.com/photo-1509228468518-180dd4864904?auto=format&fit=crop&w=400&q=80',
+    summary: 'Texto curricular oficial para 1ro de Bachillerato General Unificado, con ejercicios de aplicación, modelado y resolución de problemas de la vida real.',
+    copiesCount: 35,
+    availableCopiesCount: 5,
+    createdAt: '2026-01-10T08:00:00.000Z',
+    updatedAt: '2026-02-10T14:30:00.000Z'
+  },
+  {
+    id: 'bib-003',
+    institutionId: 'inst-1790363544282-swirjer',
+    isbn: '978-9580479130',
+    title: 'Cien Años de Soledad',
+    subtitle: 'Edición conmemorativa RAE',
+    author: 'Gabriel García Márquez',
+    publisher: 'Penguin Random House / Alfaguara',
+    publicationYear: 2022,
+    edition: '5ª reimpresión',
+    deweyDecimal: '863.64',
+    physicalDescription: '496 p. ; 21 cm',
+    subjectHeadings: ['Realismo Mágico', 'Literatura Colombiana', 'Nobel de Literatura', 'Macondo'],
+    lexileLevel: '1040L',
+    acceleratedReader: {
+      atosLevel: 7.8,
+      points: 17.0,
+      quizNumber: 'ES-0021'
+    },
+    materialType: 'GENERAL_BOOK',
+    coverUrl: 'https://images.unsplash.com/photo-1512820790803-83ca734da794?auto=format&fit=crop&w=400&q=80',
+    summary: 'La saga de la familia Buendía a lo largo de siete generaciones en el pueblo mítico de Macondo. Monumento de la lengua española.',
+    copiesCount: 5,
+    availableCopiesCount: 2,
+    createdAt: '2026-01-12T09:00:00.000Z',
+    updatedAt: '2026-02-05T11:15:00.000Z'
+  },
+  {
+    id: 'bib-004',
+    institutionId: 'inst-1790363544282-swirjer',
+    isbn: '978-9942051288',
+    title: 'Biología y Ecosistemas del Ecuador: De Galápagos a la Amazonía',
+    subtitle: 'Atlas Científico Ilustrado',
+    author: 'Dra. María Eugenia Holguín',
+    publisher: 'Universidad Central del Ecuador / PUCE',
+    publicationYear: 2024,
+    edition: '1ª edición ilustrada',
+    deweyDecimal: '577.09866',
+    physicalDescription: '340 p. mapas y láminas fotográficas ; 30 cm',
+    subjectHeadings: ['Biología', 'Ecología', 'Ecuador Biodiverso', 'Ciencias Naturales', 'Conservación'],
+    lexileLevel: '1120L',
+    materialType: 'REFERENCE',
+    coverUrl: 'https://images.unsplash.com/photo-1532094349884-543bc11b234d?auto=format&fit=crop&w=400&q=80',
+    summary: 'Material de referencia de consulta en sala sobre los 4 mundos del Ecuador: Costa, Sierra, Amazonía y Región Insular.',
+    copiesCount: 2,
+    availableCopiesCount: 2,
+    createdAt: '2026-01-20T10:00:00.000Z',
+    updatedAt: '2026-01-20T10:00:00.000Z'
+  },
+  {
+    id: 'bib-005',
+    institutionId: 'inst-1790363544282-swirjer',
+    isbn: '978-0141439518',
+    title: 'Pride and Prejudice',
+    subtitle: 'English Readers Level B2',
+    author: 'Jane Austen',
+    publisher: 'Penguin Readers',
+    publicationYear: 2020,
+    edition: 'Graded Reader Series',
+    deweyDecimal: '823.7',
+    physicalDescription: '120 p. con glosario y audio digital ; 19 cm',
+    subjectHeadings: ['English Literature', 'Graded Readers', 'Foreign Language Study', 'B2 CEFR'],
+    lexileLevel: '680L',
+    acceleratedReader: {
+      atosLevel: 4.5,
+      points: 5.0,
+      quizNumber: 'EN-8841'
+    },
+    materialType: 'GENERAL_BOOK',
+    coverUrl: 'https://images.unsplash.com/photo-1543002588-bfa74002ed7e?auto=format&fit=crop&w=400&q=80',
+    summary: 'Adaptación pedagógica para el desarrollo de destrezas comunicativas en el idioma inglés nivel intermedio.',
+    copiesCount: 6,
+    availableCopiesCount: 4,
+    createdAt: '2026-02-01T08:30:00.000Z',
+    updatedAt: '2026-02-15T09:00:00.000Z'
+  }
+];
+
+export const MOCK_PHYSICAL_COPIES: PhysicalCopy[] = [
+  // Huasipungo (bib-001)
+  {
+    id: 'copy-001-1',
+    bibliographicItemId: 'bib-001',
+    institutionId: 'inst-1790363544282-swirjer',
+    accessionNumber: 'ACC-10491',
+    barcode: '786100104911',
+    nfcUid: '04:A2:3B:5C:8D',
+    shelfLocation: 'ESTANTE-LIT-01',
+    condition: 'GOOD',
+    status: 'BORROWED',
+    replacementCost: 12.50
+  },
+  {
+    id: 'copy-001-2',
+    bibliographicItemId: 'bib-001',
+    institutionId: 'inst-1790363544282-swirjer',
+    accessionNumber: 'ACC-10492',
+    barcode: '786100104928',
+    nfcUid: '04:B3:4C:6D:9E',
+    shelfLocation: 'ESTANTE-LIT-01',
+    condition: 'NEW',
+    status: 'AVAILABLE',
+    replacementCost: 12.50
+  },
+  {
+    id: 'copy-001-3',
+    bibliographicItemId: 'bib-001',
+    institutionId: 'inst-1790363544282-swirjer',
+    accessionNumber: 'ACC-10493',
+    barcode: '786100104935',
+    shelfLocation: 'ESTANTE-LIT-01',
+    condition: 'GOOD',
+    status: 'AVAILABLE',
+    replacementCost: 12.50
+  },
+  // Matemática 1ro BGU (bib-002)
+  {
+    id: 'copy-002-1',
+    bibliographicItemId: 'bib-002',
+    institutionId: 'inst-1790363544282-swirjer',
+    accessionNumber: 'ACC-20101',
+    barcode: '786200201012',
+    nfcUid: '04:C4:5D:7E:AF',
+    shelfLocation: 'BODEGA-TEXTOS-01',
+    condition: 'NEW',
+    status: 'BORROWED',
+    replacementCost: 18.00
+  },
+  {
+    id: 'copy-002-2',
+    bibliographicItemId: 'bib-002',
+    institutionId: 'inst-1790363544282-swirjer',
+    accessionNumber: 'ACC-20102',
+    barcode: '786200201029',
+    nfcUid: '04:D5:6E:8F:B0',
+    shelfLocation: 'BODEGA-TEXTOS-01',
+    condition: 'GOOD',
+    status: 'AVAILABLE',
+    replacementCost: 18.00
+  },
+  // Cien Años de Soledad (bib-003)
+  {
+    id: 'copy-003-1',
+    bibliographicItemId: 'bib-003',
+    institutionId: 'inst-1790363544282-swirjer',
+    accessionNumber: 'ACC-30411',
+    barcode: '786300304115',
+    nfcUid: '04:E6:7F:90:C1',
+    shelfLocation: 'ESTANTE-LIT-02',
+    condition: 'GOOD',
+    status: 'BORROWED',
+    replacementCost: 22.00
+  },
+  {
+    id: 'copy-003-2',
+    bibliographicItemId: 'bib-003',
+    institutionId: 'inst-1790363544282-swirjer',
+    accessionNumber: 'ACC-30412',
+    barcode: '786300304122',
+    shelfLocation: 'ESTANTE-LIT-02',
+    condition: 'FAIR',
+    status: 'AVAILABLE',
+    replacementCost: 22.00
+  },
+  // Biología de Referencia (bib-004)
+  {
+    id: 'copy-004-1',
+    bibliographicItemId: 'bib-004',
+    institutionId: 'inst-1790363544282-swirjer',
+    accessionNumber: 'ACC-40001',
+    barcode: '786400400018',
+    shelfLocation: 'SALA-REFERENCIA-R1',
+    condition: 'NEW',
+    status: 'AVAILABLE',
+    isReferenceOnly: true, // Solo consulta en sala
+    replacementCost: 45.00
+  }
+];
+
+export const MOCK_LIBRARY_LOANS: LibraryLoan[] = [
+  {
+    id: 'loan-101',
+    institutionId: 'inst-1790363544282-swirjer',
+    copyId: 'copy-001-1',
+    bibliographicItemId: 'bib-001',
+    accessionNumber: 'ACC-10491',
+    barcode: '786100104911',
+    bookTitle: 'Huasipungo',
+    studentId: 'student1',
+    studentName: 'Ana Belén Morales Viteri',
+    studentGrade: '1ro BGU "A"',
+    borrowDate: new Date(Date.now() - 86400000 * 18).toISOString(),
+    dueDate: new Date(Date.now() - 86400000 * 4).toISOString(), // Vencido hace 4 días (días hábiles = multa)
+    status: 'OVERDUE',
+    renewalCount: 0,
+    fineAmount: 2.00, // $0.50 por día hábil de retraso
+    finePaid: false,
+    handledByUserId: 'user-librarian-1',
+    handledByUserName: 'Lic. Martha Zambrano (Bibliotecaria)'
+  },
+  {
+    id: 'loan-102',
+    institutionId: 'inst-1790363544282-swirjer',
+    copyId: 'copy-003-1',
+    bibliographicItemId: 'bib-003',
+    accessionNumber: 'ACC-30411',
+    barcode: '786300304115',
+    bookTitle: 'Cien Años de Soledad',
+    studentId: 'student2',
+    studentName: 'Carlos Andrés Mendoza Solís',
+    studentGrade: '2do BGU "B"',
+    borrowDate: new Date(Date.now() - 86400000 * 5).toISOString(),
+    dueDate: new Date(Date.now() + 86400000 * 9).toISOString(), // En vigencia
+    status: 'ACTIVE',
+    renewalCount: 1,
+    fineAmount: 0.00,
+    finePaid: true,
+    handledByUserId: 'user-librarian-1',
+    handledByUserName: 'Lic. Martha Zambrano (Bibliotecaria)'
+  },
+  {
+    id: 'loan-103',
+    institutionId: 'inst-1790363544282-swirjer',
+    copyId: 'copy-001-2',
+    bibliographicItemId: 'bib-001',
+    accessionNumber: 'ACC-10492',
+    barcode: '786100104928',
+    bookTitle: 'Huasipungo',
+    studentId: 'student-demo-part-1',
+    studentName: 'Sofía Valentina Morales',
+    studentGrade: '1ro BGU "A"',
+    borrowDate: new Date(Date.now() - 86400000 * 25).toISOString(),
+    dueDate: new Date(Date.now() - 86400000 * 11).toISOString(),
+    returnDate: new Date(Date.now() - 86400000 * 10).toISOString(),
+    status: 'RETURNED',
+    renewalCount: 0,
+    fineAmount: 0.50,
+    finePaid: true,
+    returnedCondition: 'GOOD',
+    handledByUserId: 'user-librarian-1',
+    handledByUserName: 'Lic. Martha Zambrano (Bibliotecaria)'
+  }
+];
+
+export const MOCK_LIBRARY_HOLDS: LibraryHold[] = [
+  {
+    id: 'hold-201',
+    institutionId: 'inst-1790363544282-swirjer',
+    bibliographicItemId: 'bib-003',
+    bookTitle: 'Cien Años de Soledad',
+    studentId: 'student1',
+    studentName: 'Ana Belén Morales Viteri',
+    studentGrade: '1ro BGU "A"',
+    requestDate: new Date(Date.now() - 86400000 * 2).toISOString(),
+    status: 'WAITING',
+    queuePosition: 1,
+    notes: 'Lectura requerida para ensayo de Lengua y Literatura'
+  }
+];
+
+export const MOCK_TEXTBOOK_ASSIGNMENTS: TextbookAssignment[] = [
+  {
+    id: 'txt-assign-001',
+    institutionId: 'inst-1790363544282-swirjer',
+    classId: 'class1',
+    className: '1ro BGU "A"',
+    subjectId: 'sub1',
+    subjectName: 'Matemática',
+    studentId: 'student1',
+    studentName: 'Ana Belén Morales Viteri',
+    studentIdentification: '1723456789',
+    textbookTitle: 'Matemática Divertida y Desafiante 1ro BGU',
+    textbookBarcode: '786200201012',
+    textbookAccessionNumber: 'ACC-20101',
+    checkoutCondition: 'NEW',
+    assignedDate: '2026-01-05T08:00:00.000Z',
+    status: 'ASSIGNED',
+    notes: 'Libro entregado con forro protector oficial'
+  },
+  {
+    id: 'txt-assign-002',
+    institutionId: 'inst-1790363544282-swirjer',
+    classId: 'class1',
+    className: '1ro BGU "A"',
+    subjectId: 'sub1',
+    subjectName: 'Matemática',
+    studentId: 'student2',
+    studentName: 'Carlos Andrés Mendoza Solís',
+    studentIdentification: '1723456790',
+    textbookTitle: 'Matemática Divertida y Desafiante 1ro BGU',
+    textbookBarcode: '786200201013',
+    textbookAccessionNumber: 'ACC-20103',
+    checkoutCondition: 'GOOD',
+    assignedDate: '2026-01-05T08:00:00.000Z',
+    status: 'ASSIGNED',
+    notes: 'Detalles mínimos en esquinas posteriores'
+  }
+];
+

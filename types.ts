@@ -13,6 +13,7 @@ export enum Role {
   Vicerrector = 'Vicerrector',
   InspectorGeneral = 'Inspector General',
   Rector = 'Rector',
+  Librarian = 'Bibliotecario',
 }
 
 /**
@@ -301,6 +302,8 @@ export interface AttendanceRecord {
     observations?: number[]; 
 }
 
+export type InstitutionFundingType = 'Fiscal' | 'Particular' | 'Municipal' | 'Fiscomisional';
+
 export interface Institution { 
     id: string; 
     name: string; 
@@ -319,6 +322,26 @@ export interface Institution {
     province?: string;
     canton?: string;
     zone?: string;
+    fundingType?: InstitutionFundingType;
+    rectorName?: string;
+    costResolution?: { 
+      resolutionNumber: string; 
+      approvalDate: string; 
+      maxTuitionFee: number; 
+      maxEnrollmentFee: number; 
+      validAcademicPeriod: string; 
+      authoritySignature?: string; 
+    };
+    operatingPermit?: { 
+      permitNumber: string; 
+      validUntil: string; 
+      issuingDistrict: string; 
+    };
+    scholarshipPolicies?: { 
+      mandatoryPercentage: number; 
+      municipalOrdinanceNumber?: string; 
+      availableCategories: string[]; 
+    };
 }
 
 export interface Class { 
@@ -345,6 +368,7 @@ export interface Student {
     grade?: string; 
     listNumber?: number; 
     nationalId?: string; 
+    identification?: string;
     birthDate?: string; 
     gender?: 'FEMENINO' | 'MASCULINO' | 'OTRO'; 
     relatedContacts?: RelatedContact[]; 
@@ -1350,4 +1374,301 @@ export interface AbsenceRequest {
     leccionarioEntryId?: string;
     leccionarioDate?: string;
     reemplazoObservaciones?: string;
+}
+
+// --- MÓDULO MATRÍCULAS Y ACTUALIZACIÓN DE DATOS (JUNTOS EDUCACIÓN + MOGAC) ---
+
+export type EnrollmentType = 'NUEVA_ASIGNACION' | 'REMATRICULA_AUTOMATICA' | 'TRASLADO_FISCAL' | 'ORDINARIA_PARTICULAR' | 'MUNICIPAL';
+export type EnrollmentStatus = 'BORRADOR' | 'ENVIADO' | 'EN_REVISION' | 'OBSERVADO' | 'APROBADO' | 'RECHAZADO';
+export type DocumentVerificationStatus = 'PENDIENTE' | 'VALIDADO' | 'OBSERVADO' | 'RECHAZADO';
+
+export interface EnrollmentDocument {
+  id: string;
+  name: string;
+  fileUrl: string;
+  fileType: 'pdf' | 'image';
+  uploadedAt: string;
+  status: DocumentVerificationStatus;
+  reviewComment?: string;
+  documentType: 'CEDULA_REPRESENTANTE' | 'CEDULA_ESTUDIANTE' | 'PLANILLA_ELECTRICA' | 'CERTIFICADO_PROMOCION' | 'FICHA_DECE' | 'FOTO_ESTUDIANTE';
+}
+
+export interface EnrollmentRecord {
+  id: string;
+  institutionId: string;
+  institutionName?: string;
+  studentId?: string;
+  studentName: string;
+  studentNationalId: string;
+  studentBirthDate?: string;
+  studentGender?: 'FEMENINO' | 'MASCULINO' | 'OTRO';
+  parentId: string;
+  parentName: string;
+  parentNationalId: string;
+  parentEmail: string;
+  parentPhone: string;
+  parentAddress: string;
+  planillaContrato?: string; // Código de cuenta de suministro eléctrico
+  zone: string; // ej: Zona 9 - D.M.Q.
+  district: string; // ej: 17D06 Eloy Alfaro
+  circuit: string; // ej: 17D06C04
+  academicYear: string;
+  targetClassId: string;
+  targetGrade: string;
+  enrollmentType: EnrollmentType;
+  status: EnrollmentStatus;
+  documents: Record<string, EnrollmentDocument>;
+  juntosReceipt?: {
+    receiptNumber: string;
+    assignmentDate: string;
+    distanceKm: number;
+    capacityAvailable: number;
+    priorityAssigned: string;
+  };
+  rejectionReason?: string;
+  reviewNotes?: string;
+  enrollmentCertificateCode?: string;
+  enrolledAt?: string;
+  reviewedBy?: string;
+  reviewedByName?: string;
+  financialLedger?: {
+    enrollmentFee: number;
+    monthlyTuitionFee: number;
+    totalMonths: number;
+    scholarshipPercent?: number;
+    scholarshipReason?: string;
+    finalEnrollmentFee: number;
+    finalMonthlyFee: number;
+    paymentModality: 'Mensual' | 'Anual_Contado';
+    billingData?: {
+      name: string;
+      identification: string;
+      email: string;
+      phone?: string;
+      address?: string;
+    };
+  };
+  contractSignOff?: {
+    contractNumber: string;
+    signedAt: string;
+    signedByIp?: string;
+    signedByName: string;
+    signedByIdentification: string;
+    status: 'FIRMADO' | 'PENDIENTE' | 'RECHAZADO';
+  };
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type MogacFieldCategory = 
+  | 'APELLIDOS_NOMBRES'
+  | 'CEDULA_IDENTIDAD'
+  | 'FECHA_NACIMIENTO'
+  | 'DIRECCION_RESIDENCIA'
+  | 'CONTACTO_CORREO_TELEFONO'
+  | 'CONDICION_DISCAPACIDAD'
+  | 'OTRO';
+
+export type MogacStatus = 'INGRESADO' | 'EN_TRAMITE' | 'RESUELTO_APROBADO' | 'NEGADO';
+
+export interface MogacTicket {
+  id: string;
+  ticketNumber: string; // ej: MOGAC-2026-0042
+  institutionId: string;
+  requesterId: string;
+  requesterName: string;
+  requesterRole: 'PADRE' | 'ESTUDIANTE';
+  targetEntityType: 'STUDENT' | 'PARENT';
+  targetEntityId: string;
+  targetEntityName: string;
+  category: MogacFieldCategory;
+  currentValue: string;
+  requestedValue: string;
+  justification: string;
+  supportingDocumentUrl?: string;
+  supportingDocumentName?: string;
+  status: MogacStatus;
+  legalSlaDays: number; // 15 días Art. 14 LOPDP
+  deadlineDate: string; // ISO Date 15 días posteriores
+  resolutionNotes?: string;
+  resolvedBy?: string;
+  resolvedByName?: string;
+  resolvedAt?: string;
+  createdAt: string;
+}
+
+export type TransferPassStatus = 
+  | 'SOLICITADO' 
+  | 'APROBADO_ORIGEN' 
+  | 'ACEPTADO_DESTINO' 
+  | 'COMPLETADO' 
+  | 'RECHAZADO';
+
+export interface StudentTransferPass {
+  id: string;
+  transferCode: string; // ej: TRF-2026-0812
+  studentId: string;
+  studentName: string;
+  studentIdentification: string;
+  parentId: string;
+  parentName: string;
+  parentEmail: string;
+  parentPhone?: string;
+  originInstitutionId: string;
+  originInstitutionName: string;
+  originFundingType: InstitutionFundingType;
+  destinationInstitutionId: string;
+  destinationInstitutionName: string;
+  destinationFundingType: InstitutionFundingType;
+  requestedGrade: string;
+  academicPeriod: string;
+  transferReason: 'Cambio de Domicilio' | 'Situación Económica' | 'Asignación Cupo Fiscal' | 'Salud / Bienestar' | 'Beca Municipal / Mérito' | 'Otro';
+  reasonDetails?: string;
+  requestDate: string;
+  status: TransferPassStatus;
+  originApprovalDate?: string;
+  originApprovedByName?: string;
+  originNotes?: string;
+  destinationApprovalDate?: string;
+  destinationApprovedByName?: string;
+  destinationNotes?: string;
+  academicPortfolio: {
+    gradeRecords: { grade: string; schoolYear: string; averageScore: number; passed: boolean }[];
+    promotionCertificatesUploaded: boolean;
+    conductGrade?: string;
+  };
+  deceTransferFile?: {
+    hasNee: boolean;
+    neeDetails?: string;
+    psychosocialObservations?: string;
+    confidentialFileUrl?: string;
+    deceOfficerName?: string;
+  };
+  createdAt: string;
+  updatedAt: string;
+}
+
+// ==========================================
+// BIBLIOTECA ESCOLAR (SLMS) DOMAIN TYPES
+// ==========================================
+
+export type LibraryMaterialType = 'GENERAL_BOOK' | 'TEXTBOOK' | 'REFERENCE' | 'PERIODICAL' | 'MULTIMEDIA';
+
+export type CopyCondition = 'NEW' | 'GOOD' | 'FAIR' | 'POOR' | 'DAMAGED';
+
+export type CopyStatus = 'AVAILABLE' | 'BORROWED' | 'RESERVED' | 'MAINTENANCE' | 'LOST';
+
+export interface PhysicalCopy {
+  id: string;
+  bibliographicItemId: string;
+  institutionId: string;
+  accessionNumber: string; // ej. "ACC-10492"
+  barcode: string; // Código de barras
+  nfcUid?: string; // UID de tarjeta/etiqueta NFC
+  shelfLocation: string; // Ubicación en estantería (ej. "ESTANTE-LIT-03")
+  condition: CopyCondition;
+  status: CopyStatus;
+  isReferenceOnly?: boolean;
+  notes?: string;
+  acquisitionDate?: string;
+  replacementCost?: number;
+}
+
+export interface AcceleratedReaderInfo {
+  atosLevel: number;
+  points: number;
+  quizNumber: string;
+}
+
+export interface BibliographicItem {
+  id: string;
+  institutionId: string;
+  isbn: string;
+  title: string;
+  subtitle?: string;
+  author: string;
+  publisher?: string;
+  publicationYear?: number;
+  edition?: string;
+  deweyDecimal: string; // Clasificación Dewey ej. "510", "863.64"
+  physicalDescription?: string; // Páginas, dimensiones
+  subjectHeadings: string[]; // Descriptores de materia
+  lexileLevel?: string; // ej. "750L"
+  acceleratedReader?: AcceleratedReaderInfo;
+  materialType: LibraryMaterialType;
+  coverUrl?: string;
+  summary?: string;
+  copiesCount: number;
+  availableCopiesCount: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type LoanStatus = 'ACTIVE' | 'RETURNED' | 'OVERDUE' | 'LOST';
+
+export interface LibraryLoan {
+  id: string;
+  institutionId: string;
+  copyId: string;
+  bibliographicItemId: string;
+  accessionNumber: string;
+  barcode: string;
+  bookTitle: string;
+  studentId: string;
+  studentName: string;
+  studentGrade: string;
+  borrowDate: string; // ISO date
+  dueDate: string; // ISO date
+  returnDate?: string; // ISO date
+  status: LoanStatus;
+  renewalCount: number;
+  fineAmount: number; // Multa acumulada en USD
+  finePaid: boolean;
+  notes?: string;
+  returnedCondition?: CopyCondition;
+  handledByUserId?: string;
+  handledByUserName?: string;
+}
+
+export type HoldStatus = 'WAITING' | 'READY_FOR_PICKUP' | 'FULFILLED' | 'CANCELLED';
+
+export interface LibraryHold {
+  id: string;
+  institutionId: string;
+  bibliographicItemId: string;
+  bookTitle: string;
+  studentId: string;
+  studentName: string;
+  studentGrade: string;
+  requestDate: string;
+  status: HoldStatus;
+  queuePosition: number;
+  pickupExpiresAt?: string;
+  notes?: string;
+}
+
+export type TextbookAssignmentStatus = 'ASSIGNED' | 'RETURNED' | 'DAMAGED' | 'LOST';
+
+export interface TextbookAssignment {
+  id: string;
+  institutionId: string;
+  classId: string;
+  className: string;
+  subjectId: string;
+  subjectName: string;
+  studentId: string;
+  studentName: string;
+  studentIdentification?: string;
+  textbookTitle: string;
+  textbookBarcode: string;
+  textbookAccessionNumber?: string;
+  checkoutCondition: CopyCondition;
+  returnCondition?: CopyCondition;
+  assignedDate: string;
+  returnDate?: string;
+  damageFee?: number;
+  damageFeePaid?: boolean;
+  status: TextbookAssignmentStatus;
+  notes?: string;
+  assignedByUserId?: string;
 }

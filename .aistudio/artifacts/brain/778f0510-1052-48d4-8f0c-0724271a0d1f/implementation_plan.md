@@ -1,125 +1,103 @@
-# Sistema de Marcaje y Asistencia Docente / Administrativo (Clock-In System)
+# Plan de Implementación: Sistema de Gestión de Biblioteca Escolar (SLMS)
 
-Mejora integral del sistema de marcaje de asistencia para personal docente y administrativo, incorporando reconocimiento facial mejorado con captura de foto-evidencia, seguimiento visual del ciclo secuencial de jornada (Entrada, Receso Inicio, Receso Fin, Salida), y validación de geolocalización con justificación obligatoria fuera de rango.
-
-## Decisiones Críticas y Preferencias Confirmadas
-
-> [!IMPORTANT]
-> Decisiones de producto y diseño acordadas a partir de las respuestas del usuario:
-
-- **Métodos de Identificación Confirmados**: Se mantienen los tres métodos existentes (Reconocimiento Facial, Huella Dactilar y Código PIN), potenciando el **Reconocimiento Facial** con retícula HUD en tiempo real, captura automática de foto-evidencia en el instante del marcaje y verificación visual del colaborador.
-- **Ciclo Secuencial de Marcaje Confirmado**: Se conserva el ciclo estricto de 4 pasos secuenciales:
-  1. `in`: Entrada de Jornada.
-  2. `out_break`: Salida a Receso / Almuerzo.
-  3. `in_break`: Retorno de Receso / Almuerzo.
-  4. `out`: Salida Final de Jornada.
-  Se añade un indicador visual interactivo de progreso (`1/4`, `2/4`, etc.) y una tarjeta de resumen de jornada una vez completados los 4 marcajes en lugar de alertas nativas del navegador.
-- **Política de Geofencing Confirmada**: Permitir el registro de asistencia cuando el usuario se encuentre fuera del radio geográfico permitido de la institución, **exigiendo obligatoriamente** la selección de un motivo de justificación y una nota explicativa detallada, registrando el estado con bandera de advertencia (`Flagged / Justificado`) y notificando a las autoridades institucionales.
+Módulo integral de biblioteca escolar multi-inquilino (multi-tenant) integrado en Amauta, administrado directamente por el personal bibliotecario y directivo desde la barra lateral (siguiendo el modelo de DECE e Inspección), con soporte móvil para cámara y Web NFC, catalogación MARC21, circulación, multas, y distribución masiva de textos escolares vinculada a cursos y materias existentes.
 
 ---
 
-## 1. Visión General y Concepto Central
+## 1. Alcance y Decisiones de Diseño
 
-- **Qué hace**: Proporciona un módulo de marcaje de asistencia robusto, rápido y transparente tanto en modo autoservicio individual (desde la sesión de cada docente/administrativo) como en modo kiosco compartido. Permite registrar cada momento de la jornada con verificación biométrica/facial, geolocalización asistida y justificaciones auditables cuando el registro ocurre fuera del plantel.
-- **Audiencia Objetivo**: Docentes, directivos, inspectores generales, personal administrativo y personal de apoyo de la institución educativa.
-- **Valor Principal**: Elimina ambigüedades en el registro laboral, previene bloqueos injustos en terreno mediante la justificación estructurada fuera de rango, y provee a la administración evidencia fotográfica y geográfica de cada marcaje.
-
----
-
-## 2. Experiencia de Usuario y Diseño Visual
-
-### Flujos Clave de Usuario
-
-1. **Flujo de Marcaje Facial Mejorado**:
-   - El colaborador abre el kiosco o modal de asistencia.
-   - La pantalla muestra el estado actual de su jornada (ej: *"Siguiente: Entrada de Jornada"* o *"Siguiente: Salida a Receso"*).
-   - Al seleccionar **Reconocimiento Facial**, se activa la cámara web mostrando una guía ovalada con retícula animada tipo HUD (*scanline*, indicadores de esquinas, detección activa).
-   - Al alinearse, el sistema realiza la captura fotográfica del rostro, calcula la ubicación GPS y emite confirmación auditiva/visual con el nombre, avatar y hora exacta.
-2. **Flujo de Justificación por Ubicación Fuera de Rango**:
-   - Si la distancia detectada supera el radio configurado (ej: >100m de la institución), se despliega una pantalla de advertencia clara: *"Marcaje fuera del perímetro institucional ({distancia} m detectados)"*.
-   - Se activa un formulario modal de justificación con selector de motivos (ej: *Trabajo de campo / Salida pedagógica*, *Problema de movilización*, *Comisión institucional externa*, *Teletrabajo / Planificación externa*, *Inconsistencia de señal GPS*) y campo de texto obligatorio.
-   - Tras confirmar, el marcaje se graba con advertencia y se genera una notificación de seguridad para el Rector e Inspector General.
-3. **Flujo de Seguimiento de Ciclo de Jornada (4 Marcajes)**:
-   - Visualización tipo línea de tiempo o *stepper* horizontal que muestra el estado de los 4 marcajes del día con hora, método y badge de estado.
-   - Al completar la salida final, la interfaz felicita al usuario, resume el total de horas cumplidas y desactiva el botón de marcaje para evitar duplicados accidentales.
-
-### Dirección Estética y Lenguaje Visual
-
-- **Paleta y Tonalidad**: Azul institucional (`#0284c7` / `#0369a1`) con toques de esmeralda para validación exitosa (`#059669`) y ámbar cálido para alertas de geocerca (`#d97706`). Fondos limpios en slate neutro (`#f8fafc` y `#ffffff`).
-- **Disciplina Anti-Slop**: Tipografía limpia con pesos definidos (`font-semibold` / `font-bold`), sin píldoras decorativas innecesarias, bordes nítidos (`border-slate-200`) y sombras de profundidad sutil (`shadow-sm`, `shadow-md`).
-- **Micro-interacciones y Feedback**: Animación de escaneo láser en la cámara, transición suave hacia la pantalla de éxito, y badges de geolocalización con enlace directo a coordenadas en Google Maps.
+Conforme a las instrucciones del usuario:
+1. **Acceso Exclusivo para el Bibliotecario/Directivos:** Acceso directo desde la barra lateral (`Biblioteca Escolar`), sin portales públicos OPAC ni kioscos desatendidos. Todos los préstamos, devoluciones, reservas y catalogaciones son operados por el Bibliotecario o Administrador.
+2. **Soporte Móvil Nativo para Escáner:** Integración de la cámara del dispositivo móvil para lectura óptica de códigos de barras (Code 128, Code 39, ISBN, QR) mediante la API estándar del navegador (`BarcodeDetector` / cámara web), y soporte táctil para lectura de chips NFC (`NDEFReader` de Web NFC) con emulador/entrada de teclado para ordenadores de escritorio.
+3. **Distribución Masiva de Libros de Texto Vinculada al Plantel:** Integración total con la estructura existente de cursos (`classes`), asignaturas (`subjects`) y nómina de alumnos (`students`), permitiendo asignaciones masivas por curso en segundos y registro de condición física (Escala 1 a 5: Nuevo, Bueno, Regular, Malo, Dañado).
 
 ---
 
-## 3. Decisiones de Producto y Consideraciones Técnicas
+## 2. Modelo de Datos y Entidades (`types.ts`)
 
-- **Captura Fotográfica en Canvas HTML5**:
-  - *Enfoque*: Capturar un fotograma del `<video>` en un `<canvas>` oculto en base64 (resolución optimizada 320x320) al confirmar el reconocimiento facial.
-  - *Por qué*: Proporciona evidencia fotográfica real de presencia sin requerir librerías pesadas externas ni almacenamiento costoso.
-- **Manejo del Ciclo Secuencial en Estado y Firestore**:
-  - *Enfoque*: Cada documento de `staff_attendance` almacena un arreglo de `punches` con `{ time, type, method, location, verificationStatus, distanceFromInstitution, justification, photoProof }`.
-  - *Por qué*: Mantiene el historial completo del día en un solo documento atómico por usuario/fecha, facilitando consultas de nómina y cálculos de puntualidad.
-- **Justificaciones Auditables**:
-  - *Enfoque*: Cuando `verificationStatus` es `'Flagged'`, se incluye el objeto `justification: { reason, note, timestamp }`. Los reportes institucionales muestran un botón interactivo para revisar el motivo y foto del registro.
+### 2.1 Catálogo Bibliográfico y Copias Físicas
+- `BibliographicItem`:
+  - `id`, `institutionId` (aislamiento multi-tenant)
+  - `isbn`: 10 o 13 dígitos
+  - `title`, `subtitle`, `author`, `publisher`, `publicationYear`
+  - `deweyDecimal`: Clasificación Decimal Dewey (ej. 510 para Matemáticas, 863 para Novela)
+  - `physicalDescription`: Páginas, dimensiones
+  - `subjectHeadings`: Materias / descriptores
+  - `lexileLevel`: ej. "750L"
+  - `acceleratedReader`: `{ atosLevel: number; points: number; quizNumber: string }`
+  - `materialType`: `'GENERAL_BOOK' | 'TEXTBOOK' | 'REFERENCE' | 'PERIODICAL' | 'MULTIMEDIA'`
+  - `coverUrl`: Imagen de portada
+  - `copiesCount`, `availableCopiesCount`
+- `PhysicalCopy`:
+  - `id`, `bibliographicItemId`, `institutionId`
+  - `accessionNumber`: Código secuencial de inventario (ej. `ACC-10492`)
+  - `barcode`: Código de barras adherido
+  - `nfcUid`: Identificador único de chip NFC/RFID
+  - `shelfLocation`: Ubicación física (ej. `ESTANTE-MAT-02`)
+  - `condition`: `'NEW' | 'GOOD' | 'FAIR' | 'POOR' | 'DAMAGED'`
+  - `status`: `'AVAILABLE' | 'BORROWED' | 'RESERVED' | 'MAINTENANCE' | 'LOST'`
+  - `isReferenceOnly`: boolean
+
+### 2.2 Circulación y Préstamos
+- `LibraryLoan`:
+  - `id`, `institutionId`, `copyId`, `accessionNumber`, `bookTitle`, `studentId`, `studentName`, `studentGrade`
+  - `borrowDate`: ISO Date
+  - `dueDate`: Fecha pactada de devolución
+  - `returnDate`: Fecha real de devolución (si ya retornó)
+  - `status`: `'ACTIVE' | 'RETURNED' | 'OVERDUE' | 'LOST'`
+  - `renewalCount`: Renovaciones aplicadas
+  - `fineAmount`: Multa acumulada calculada (excluyendo fines de semana)
+  - `finePaid`: boolean
+  - `returnedCondition`: Condición física registrada en la recepción
+
+### 2.3 Reservas y Cola FIFO
+- `LibraryHold`:
+  - `id`, `institutionId`, `bibliographicItemId`, `studentId`, `studentName`, `requestDate`, `status`: `'WAITING' | 'READY_FOR_PICKUP' | 'FULFILLED' | 'CANCELLED'`, `queuePosition`: number, `pickupExpiresAt`: string
+
+### 2.4 Asignación de Textos Escolares por Curso
+- `TextbookAssignment`:
+  - `id`, `institutionId`, `classId`, `className`, `subjectId`, `subjectName`, `studentId`, `studentName`
+  - `textbookBarcode`, `textbookTitle`, `checkoutCondition`, `returnCondition`, `damageFee`, `status`: `'ASSIGNED' | 'RETURNED' | 'DAMAGED' | 'LOST'`
 
 ---
 
-## 4. Arquitectura del Sistema y Estrategia de Datos
+## 3. Componentes Especializados a Desarrollar
 
-### Diagrama de Arquitectura de Asistencia
+1. **`components/library/LibraryPage.tsx`:**
+   - Página principal del módulo con pestañas de trabajo:
+     1. **Mesa de Circulación:** Préstamos y devoluciones rápidas con escaneo de código de barras / NFC.
+     2. **Catálogo & Inventario:** Búsqueda facetada, catalogación MARC21 rápida e importación por ISBN.
+     3. **Distribución de Textos Escolares:** Selector de curso (`class1`, `class2`), selección de asignatura y asignación masiva a la nómina de estudiantes con calificación del estado del libro.
+     4. **Reservas & Sanciones:** Cola FIFO de libros reservados y libro mayor de multas/daños.
+     5. **Analíticas de Lectura:** Métricas de lectura por grado, bandas Lexile y puntos AR.
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                      StaffAttendanceKiosk                       │
-│  ┌───────────────────────┐  ┌────────────────────────────────┐  │
-│  │   Camera Stream / HUD │  │    Punch Cycle Stepper (1-4)   │  │
-│  │   • Retícula de guía  │  │    • Entrada (in)              │  │
-│  │   • Scanner animation │  │    • Salida Receso (out_break) │  │
-│  │   • Canvas photo proof│  │    • Regreso Receso (in_break) │  │
-│  │   • Pin & Biometric   │  │    • Salida Final (out)        │  │
-│  └───────────┬───────────┘  └───────────────┬────────────────┘  │
-└──────────────┼──────────────────────────────┼───────────────────┘
-               │                              │
-               ▼                              ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                   Geofence & Location Checker                   │
-│  • Haversine distance vs institution.geofenceConfig             │
-│  • ¿Dentro de radio? ──> Registra inmediato ('Success')         │
-│  • ¿Fuera de radio?  ──> Modal Justificación Obligatoria        │
-│                          ('Flagged' + Motivo + Nota)            │
-└──────────────────────────────┬──────────────────────────────────┘
-                               │
-                               ▼
-┌─────────────────────────────────────────────────────────────────┐
-│              App.tsx (handleUpdateStaffAttendance)              │
-│  • Actualiza StaffAttendanceRecord en estado React              │
-│  • Persiste documento en Firestore ('staff_attendance')         │
-│  • Emite notificación a Admin/Inspector si hubo advertencia     │
-└──────────────────────────────┬──────────────────────────────────┘
-                               │
-                               ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                     StaffAttendanceReport                       │
-│  • Tabla de registros con badges de puntualidad y geocerca      │
-│  • Visualización de Justificación y Foto-evidencia en modal     │
-│  • Enlace directo a Google Maps con coordenadas del marcaje     │
-└─────────────────────────────────────────────────────────────────┘
-```
+2. **`components/library/MobileScannerModal.tsx`:**
+   - Modal con visor de cámara en tiempo real (`navigator.mediaDevices.getUserMedia` + detección de códigos de barras) y soporte para Web NFC (`NDEFReader.scan()`) cuando esté soportado en dispositivos móviles.
+   - Alternativa manual con detección automática de lectores de código de barras USB/Bluetooth en modo cuña de teclado.
 
-### Componentes y Archivos Clave a Actualizar
+3. **`components/library/TextbookBulkDistributor.tsx`:**
+   - Asistente de despacho rápido para inicio de período: selecciona grado/paralelo, muestra los alumnos y permite pistolazo secuencial de libros por estudiante en menos de 15 segundos.
 
-1. `types.ts`:
-   - Ampliar la interfaz `StaffAttendanceRecord.punches` con campos opcionales:
-     - `photoProof?: string;` (captura en base64)
-     - `justification?: { reason: string; note: string; timestamp: string; };`
-     - Estado de verificación: `'Success' | 'Failed' | 'Pending' | 'Flagged'`
-2. `components/staff/StaffAttendanceKiosk.tsx`:
-   - Nueva interfaz de cámara con retícula ovalada facial, guía de alineación y captura de foto vía canvas.
-   - Línea de tiempo interactiva del ciclo de 4 marcajes del día con el siguiente paso resaltado.
-   - Modal/paso integrado de justificación obligatoria cuando la geolocalización detecta que el usuario está fuera de rango.
-3. `components/staff/StaffAttendanceModal.tsx`:
-   - Pasar los registros del día del usuario actual al kiosco para reflejar el progreso del ciclo de 4 pasos.
-4. `App.tsx`:
-   - Actualizar `handleUpdateStaffAttendance` para aceptar `justification` y `photoProof`, persistir en Firestore y emitir alertas a las autoridades con el motivo de justificación.
-5. `components/staff/StaffAttendanceReport.tsx`:
-   - Columna/modal de detalles para visualizar la foto capturada en el marcaje y la nota de justificación cuando un registro fue realizado fuera de rango.
+4. **`components/library/CatalogEntryModal.tsx`:**
+   - Formulario de alta rápida de títulos con mapeo automático de campos MARC21 (020 ISBN, 100 Autor, 245 Título, 082 Dewey, 650 Materias, Lexile/AR) y generación de etiquetas de inventario.
+
+---
+
+## 4. Integración en Navegación y Roles
+
+- En `types.ts`: Añadir `Role.Librarian` (o compatibilidad con `InstitutionAdmin`, `Rector`, `Vicerrector`, `Teacher` e `InspectorGeneral`).
+- En `components/layout/Sidebar.tsx`:
+  - Añadir ícono de libro (`BookOpenIcon`) y enlace a `library` en el menú de roles administrativos (`InstitutionAdmin`, `Rector`, `Vicerrector` y `Teacher` asignado).
+- En `components/layout/DashboardLayout.tsx`:
+  - Añadir `case 'library': return <LibraryPage ... />;`
+- En `App.tsx`:
+  - Estado y sincronización en Firestore para `library_books`, `library_loans`, `library_textbooks`.
+
+---
+
+## 5. Verificación y Pruebas
+
+- Verificación de tipos y linting con `lint_applet` (0 errores).
+- Verificación de compilación del bundle con `compile_applet`.
+- Prueba del ciclo completo de préstamo y devolución con cálculo de multas.
+- Prueba de asignación masiva de textos escolares vinculada a los cursos existentes en el colegio.

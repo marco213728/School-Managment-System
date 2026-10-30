@@ -1,7 +1,7 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
-import { User, Institution, Role, Class, Student, ScheduleEntry, Notification, SupportContact, HealthRecord, MedicalVisit, Subject, TimeSlot, Room, Timetable, ViccIntervention, Intervention, AttendanceRecord, ExitPass, Citacion, AcademicCalendarEvent, LeccionarioEntry, MicroPlan, Dcd, EvaluationCriterion, EvaluationIndicator, Gradebook, Activity, ReinforcementPlan, StaffAttendanceRecord, PunchType, AttendancePunch, AttendanceJustification, FormalRequest, TrainingPlan, InstitutionalDocument, MeetingRecord, Rubric, ConflictMediation, CronogramaEvent, AbsenceRequest, Appointment, ChatChannel, ChatMessage } from './types';
-import { MOCK_USERS, MOCK_INSTITUTIONS, MOCK_CLASSES, MOCK_STUDENTS, MOCK_SCHEDULE_ENTRIES, MOCK_NOTIFICATIONS, MOCK_SUPPORT_CONTACTS, MOCK_HEALTH_RECORDS, MOCK_MEDICAL_VISITS, MOCK_INTERVENTIONS, MOCK_SUBJECTS, MOCK_TIME_SLOTS, MOCK_ROOMS, MOCK_TIMETABLES, MOCK_VICC_INTERVENTIONS, MOCK_ATTENDANCE, MOCK_EXIT_PASSES, MOCK_CITACIONES, MOCK_ACADEMIC_CALENDAR_EVENTS, MOCK_LECCIONARIO_ENTRIES, MOCK_MICRO_PLANS, MOCK_DCDS, MOCK_EVALUATION_CRITERIA, MOCK_EVALUATION_INDICATORS, MOCK_GRADEBOOKS, MOCK_ACTIVITIES, MOCK_REINFORCEMENT_PLANS, MOCK_STAFF_ATTENDANCE, MOCK_FORMAL_REQUESTS, MOCK_TRAINING_PLANS, MOCK_INSTITUTIONAL_DOCUMENTS, MOCK_MEETING_RECORDS, MOCK_RUBRICS, MOCK_CONFLICT_MEDIATIONS, MOCK_CRONOGRAMA_EVENTS, MOCK_APPOINTMENTS, MOCK_CHAT_CHANNELS, MOCK_CHAT_MESSAGES } from './constants';
+import { User, Institution, Role, Class, Student, ScheduleEntry, Notification, SupportContact, HealthRecord, MedicalVisit, Subject, TimeSlot, Room, Timetable, ViccIntervention, Intervention, AttendanceRecord, ExitPass, Citacion, AcademicCalendarEvent, LeccionarioEntry, MicroPlan, Dcd, EvaluationCriterion, EvaluationIndicator, Gradebook, Activity, ReinforcementPlan, StaffAttendanceRecord, PunchType, AttendancePunch, AttendanceJustification, FormalRequest, TrainingPlan, InstitutionalDocument, MeetingRecord, Rubric, ConflictMediation, CronogramaEvent, AbsenceRequest, Appointment, ChatChannel, ChatMessage, EnrollmentRecord, MogacTicket, StudentTransferPass, BibliographicItem, PhysicalCopy, LibraryLoan, LibraryHold, TextbookAssignment } from './types';
+import { MOCK_USERS, MOCK_INSTITUTIONS, MOCK_CLASSES, MOCK_STUDENTS, MOCK_SCHEDULE_ENTRIES, MOCK_NOTIFICATIONS, MOCK_SUPPORT_CONTACTS, MOCK_HEALTH_RECORDS, MOCK_MEDICAL_VISITS, MOCK_INTERVENTIONS, MOCK_SUBJECTS, MOCK_TIME_SLOTS, MOCK_ROOMS, MOCK_TIMETABLES, MOCK_VICC_INTERVENTIONS, MOCK_ATTENDANCE, MOCK_EXIT_PASSES, MOCK_CITACIONES, MOCK_ACADEMIC_CALENDAR_EVENTS, MOCK_LECCIONARIO_ENTRIES, MOCK_MICRO_PLANS, MOCK_DCDS, MOCK_EVALUATION_CRITERIA, MOCK_EVALUATION_INDICATORS, MOCK_GRADEBOOKS, MOCK_ACTIVITIES, MOCK_REINFORCEMENT_PLANS, MOCK_STAFF_ATTENDANCE, MOCK_FORMAL_REQUESTS, MOCK_TRAINING_PLANS, MOCK_INSTITUTIONAL_DOCUMENTS, MOCK_MEETING_RECORDS, MOCK_RUBRICS, MOCK_CONFLICT_MEDIATIONS, MOCK_CRONOGRAMA_EVENTS, MOCK_APPOINTMENTS, MOCK_CHAT_CHANNELS, MOCK_CHAT_MESSAGES, MOCK_ENROLLMENT_RECORDS, MOCK_MOGAC_TICKETS, MOCK_TRANSFER_PASSES, MOCK_BIBLIOGRAPHIC_ITEMS, MOCK_PHYSICAL_COPIES, MOCK_LIBRARY_LOANS, MOCK_LIBRARY_HOLDS, MOCK_TEXTBOOK_ASSIGNMENTS } from './constants';
 import LoginPage from './pages/LoginPage';
 import DashboardLayout from './components/layout/DashboardLayout';
 import { UserContext, InstitutionContext } from './contexts/UserContext';
@@ -76,6 +76,14 @@ export default function App() {
   const [appointments, setAppointments] = useState<Appointment[]>(MOCK_APPOINTMENTS || []);
   const [chatChannels, setChatChannels] = useState<ChatChannel[]>(MOCK_CHAT_CHANNELS || []);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>(MOCK_CHAT_MESSAGES || []);
+  const [enrollments, setEnrollments] = useState<EnrollmentRecord[]>(MOCK_ENROLLMENT_RECORDS || []);
+  const [mogacTickets, setMogacTickets] = useState<MogacTicket[]>(MOCK_MOGAC_TICKETS || []);
+  const [transferPasses, setTransferPasses] = useState<StudentTransferPass[]>(MOCK_TRANSFER_PASSES || []);
+  const [bibliographicItems, setBibliographicItems] = useState<BibliographicItem[]>(MOCK_BIBLIOGRAPHIC_ITEMS || []);
+  const [physicalCopies, setPhysicalCopies] = useState<PhysicalCopy[]>(MOCK_PHYSICAL_COPIES || []);
+  const [libraryLoans, setLibraryLoans] = useState<LibraryLoan[]>(MOCK_LIBRARY_LOANS || []);
+  const [libraryHolds, setLibraryHolds] = useState<LibraryHold[]>(MOCK_LIBRARY_HOLDS || []);
+  const [textbookAssignments, setTextbookAssignments] = useState<TextbookAssignment[]>(MOCK_TEXTBOOK_ASSIGNMENTS || []);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [loginError, setLoginError] = useState<string | null>(null);
 
@@ -282,6 +290,14 @@ export default function App() {
     const unsubAppointments = subscribeToCollection<Appointment>('appointments', items => items.length > 0 && setAppointments(items));
     const unsubChatChannels = subscribeToCollection<ChatChannel>('chat_channels', items => items.length > 0 && setChatChannels(items));
     const unsubChatMessages = subscribeToCollection<ChatMessage>('chat_messages', items => items.length > 0 && setChatMessages(items));
+    const unsubEnrollments = subscribeToCollection<EnrollmentRecord>('enrollments', items => items.length > 0 && setEnrollments(items));
+    const unsubMogac = subscribeToCollection<MogacTicket>('mogac_tickets', items => items.length > 0 && setMogacTickets(items));
+    const unsubTransferPasses = subscribeToCollection<StudentTransferPass>('transfer_passes', items => items.length > 0 && setTransferPasses(items));
+    const unsubLibraryBooks = subscribeToCollection<BibliographicItem>('library_books', items => items.length > 0 && setBibliographicItems(items));
+    const unsubLibraryCopies = subscribeToCollection<PhysicalCopy>('library_copies', items => items.length > 0 && setPhysicalCopies(items));
+    const unsubLibraryLoans = subscribeToCollection<LibraryLoan>('library_loans', items => items.length > 0 && setLibraryLoans(items));
+    const unsubLibraryHolds = subscribeToCollection<LibraryHold>('library_holds', items => items.length > 0 && setLibraryHolds(items));
+    const unsubLibraryTextbooks = subscribeToCollection<TextbookAssignment>('library_textbooks', items => items.length > 0 && setTextbookAssignments(items));
 
     return () => {
       unsubInstitutions();
@@ -323,6 +339,14 @@ export default function App() {
       unsubAppointments();
       unsubChatChannels();
       unsubChatMessages();
+      unsubEnrollments();
+      unsubMogac();
+      unsubTransferPasses();
+      unsubLibraryBooks();
+      unsubLibraryCopies();
+      unsubLibraryLoans();
+      unsubLibraryHolds();
+      unsubLibraryTextbooks();
     };
   }, []);
 
@@ -577,6 +601,46 @@ export default function App() {
   const handleSendMessage = (msg: ChatMessage) => {
     setChatMessages(prev => [...prev, msg]);
     saveDocument('chat_messages', msg.id, msg);
+  };
+
+  const handleUpdateEnrollments = (updatedEnrollments: EnrollmentRecord[]) => {
+    setEnrollments(updatedEnrollments);
+    updatedEnrollments.forEach(e => saveDocument('enrollments', e.id, e));
+  };
+
+  const handleUpdateMogacTickets = (updatedTickets: MogacTicket[]) => {
+    setMogacTickets(updatedTickets);
+    updatedTickets.forEach(t => saveDocument('mogac_tickets', t.id, t));
+  };
+
+  const handleUpdateTransferPasses = (updatedPasses: StudentTransferPass[]) => {
+    setTransferPasses(updatedPasses);
+    updatedPasses.forEach(p => saveDocument('transfer_passes', p.id, p));
+  };
+
+  const handleUpdateBibliographicItems = (items: BibliographicItem[]) => {
+    setBibliographicItems(items);
+    items.forEach(b => saveDocument('library_books', b.id, b));
+  };
+
+  const handleUpdatePhysicalCopies = (copies: PhysicalCopy[]) => {
+    setPhysicalCopies(copies);
+    copies.forEach(c => saveDocument('library_copies', c.id, c));
+  };
+
+  const handleUpdateLibraryLoans = (loans: LibraryLoan[]) => {
+    setLibraryLoans(loans);
+    loans.forEach(l => saveDocument('library_loans', l.id, l));
+  };
+
+  const handleUpdateLibraryHolds = (holds: LibraryHold[]) => {
+    setLibraryHolds(holds);
+    holds.forEach(h => saveDocument('library_holds', h.id, h));
+  };
+
+  const handleUpdateTextbookAssignments = (assignments: TextbookAssignment[]) => {
+    setTextbookAssignments(assignments);
+    assignments.forEach(a => saveDocument('library_textbooks', a.id, a));
   };
   
   const handleUpdateStaffAttendance = (
@@ -912,6 +976,23 @@ export default function App() {
             onUpdateChatChannels={handleUpdateChatChannels}
             chatMessages={chatMessages}
             onSendMessage={handleSendMessage}
+            enrollments={enrollments}
+            onUpdateEnrollments={handleUpdateEnrollments}
+            mogacTickets={mogacTickets}
+            onUpdateMogacTickets={handleUpdateMogacTickets}
+            institutions={institutions}
+            transferPasses={transferPasses}
+            onUpdateTransferPasses={handleUpdateTransferPasses}
+            bibliographicItems={bibliographicItems}
+            onUpdateBibliographicItems={handleUpdateBibliographicItems}
+            physicalCopies={physicalCopies}
+            onUpdatePhysicalCopies={handleUpdatePhysicalCopies}
+            loans={libraryLoans}
+            onUpdateLoans={handleUpdateLibraryLoans}
+            holds={libraryHolds}
+            onUpdateHolds={handleUpdateLibraryHolds}
+            textbookAssignments={textbookAssignments}
+            onUpdateTextbookAssignments={handleUpdateTextbookAssignments}
           />
         )}
         <UserProfileModal 

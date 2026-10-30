@@ -2,7 +2,7 @@
 import React, { useContext } from 'react';
 import { Role } from '../../types';
 import { UserContext, InstitutionContext } from '../../contexts/UserContext';
-import { DashboardIcon, AttendanceIcon, ActivityIcon, ReportIcon, ManageIcon, CloseIcon, DeceIcon, HealthIcon, UsersIcon, ChatBubbleIcon, CalendarIcon, VicerrectoradoIcon, InspectionIcon, CitacionIcon, LeccionarioIcon, ClipboardDocumentCheckIcon, ArchiveBoxIcon, ClipboardListIcon, GraduationCapIcon, FingerPrintIcon, SparklesIcon } from '../icons/Icons';
+import { DashboardIcon, AttendanceIcon, ActivityIcon, ReportIcon, ManageIcon, CloseIcon, DeceIcon, HealthIcon, UsersIcon, ChatBubbleIcon, CalendarIcon, VicerrectoradoIcon, InspectionIcon, CitacionIcon, LeccionarioIcon, ClipboardDocumentCheckIcon, ArchiveBoxIcon, ClipboardListIcon, GraduationCapIcon, FingerPrintIcon, SparklesIcon, IdentificationIcon, BookOpenIcon } from '../icons/Icons';
 import { AMAUTA_LOGO } from '../../branding';
 import AmautaLogo from '../branding/AmautaLogo';
 
@@ -42,11 +42,15 @@ const Sidebar: React.FC<SidebarProps> = ({ currentPage, setCurrentPage, isSideba
   const roleLinks = {
     [Role.SuperAdmin]: [
         ...commonLinks,
+        { page: 'matriculas', icon: <IdentificationIcon className="h-6 w-6" />, text: 'Matrículas & MOGAC' },
+        { page: 'library', icon: <BookOpenIcon className="h-6 w-6" />, text: 'Biblioteca Escolar' },
         { page: 'curriculum_repository', icon: <ArchiveBoxIcon className="h-6 w-6" />, text: 'Malla Curricular Maestra' },
         { page: 'resource_bank', icon: <SparklesIcon className="h-6 w-6" />, text: 'Banco Global' },
     ],
     [Role.InstitutionAdmin]: [
       ...commonLinks,
+      { page: 'matriculas', icon: <IdentificationIcon className="h-6 w-6" />, text: 'Matrículas & MOGAC' },
+      { page: 'library', icon: <BookOpenIcon className="h-6 w-6" />, text: 'Biblioteca Escolar' },
       { page: 'hris', icon: <UsersIcon className="h-6 w-6" />, text: 'Talento Humano' },
       { page: 'students', icon: <UsersIcon className="h-6 w-6" />, text: 'Alumnos' },
       { page: 'attendance', icon: <AttendanceIcon className="h-6 w-6" />, text: 'Asistencia General' },
@@ -64,6 +68,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentPage, setCurrentPage, isSideba
     ],
     [Role.Teacher]: [
       ...commonLinks,
+      { page: 'library', icon: <BookOpenIcon className="h-6 w-6" />, text: 'Biblioteca Escolar' },
       { page: 'schedule', icon: <CalendarIcon className="h-6 w-6" />, text: 'Mi Horario' },
       { page: 'leccionario', icon: <LeccionarioIcon className="h-6 w-6" />, text: 'Leccionario' },
       { page: 'gradebook', icon: <ClipboardListIcon className="h-6 w-6" />, text: 'Registro Docente' },
@@ -78,6 +83,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentPage, setCurrentPage, isSideba
     ],
     [Role.Parent]: [
       ...commonLinks,
+      { page: 'matriculas', icon: <IdentificationIcon className="h-6 w-6" />, text: 'Matrícula & Datos' },
       { page: 'attendance', icon: <AttendanceIcon className="h-6 w-6" />, text: 'Asistencia Hijo/a' },
       { page: 'activities', icon: <ActivityIcon className="h-6 w-6" />, text: 'Actividades Hijo/a' },
       { page: 'citaciones', icon: <CitacionIcon className="h-6 w-6" />, text: 'Citas y Citaciones' },
@@ -115,6 +121,8 @@ const Sidebar: React.FC<SidebarProps> = ({ currentPage, setCurrentPage, isSideba
     ],
     [Role.Vicerrector]: [ 
         { page: 'vicerrector_dashboard', icon: <VicerrectoradoIcon className="h-6 w-6" />, text: 'Dashboard Vicerrectorado' }, 
+        { page: 'matriculas', icon: <IdentificationIcon className="h-6 w-6" />, text: 'Matrículas & MOGAC' },
+        { page: 'library', icon: <BookOpenIcon className="h-6 w-6" />, text: 'Biblioteca Escolar' },
         { page: 'curricular_planning', icon: <ClipboardDocumentCheckIcon className="h-6 w-6" />, text: 'Planificación Curricular' }, 
         { page: 'curriculum_repository', icon: <ArchiveBoxIcon className="h-6 w-6" />, text: 'Consulta Curricular' }, // Solo consulta
         { page: 'resource_bank', icon: <ArchiveBoxIcon className="h-6 w-6" />, text: 'Banco de Recursos' }, 
@@ -130,10 +138,18 @@ const Sidebar: React.FC<SidebarProps> = ({ currentPage, setCurrentPage, isSideba
     ],
     [Role.Rector]: [ 
       { page: 'dashboard', icon: <DashboardIcon className="h-6 w-6" />, text: 'Dashboard' }, 
+      { page: 'matriculas', icon: <IdentificationIcon className="h-6 w-6" />, text: 'Matrículas & MOGAC' },
+      { page: 'library', icon: <BookOpenIcon className="h-6 w-6" />, text: 'Biblioteca Escolar' },
       { page: 'hris', icon: <UsersIcon className="h-6 w-6" />, text: 'Talento Humano' }, 
       { page: 'communications', icon: <ChatBubbleIcon className="h-6 w-6" />, text: 'Comunicaciones & Chat' },
       { page: 'citaciones', icon: <CitacionIcon className="h-6 w-6" />, text: 'Citas Institucionales' },
       { page: 'manage', icon: <ManageIcon className="h-6 w-6" />, text: 'Gestión Centro' }
+    ],
+    [Role.Librarian]: [
+      ...commonLinks,
+      { page: 'library', icon: <BookOpenIcon className="h-6 w-6" />, text: 'Biblioteca Escolar' },
+      { page: 'communications', icon: <ChatBubbleIcon className="h-6 w-6" />, text: 'Comunicaciones & Chat' },
+      { page: 'citaciones', icon: <CitacionIcon className="h-6 w-6" />, text: 'Citas y Préstamos' }
     ],
   };
 
