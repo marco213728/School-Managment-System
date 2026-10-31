@@ -1,7 +1,9 @@
 import express from "express";
 import path from "path";
 import fs from "fs";
+import { GoogleGenAI } from "@google/genai";
 import { MotorOptimizadorHorarios } from "./lib/scheduler.ts";
+import { generatePedagogicalFallback } from "./lib/aiFallbackGenerator.ts";
 
 async function startServer() {
   const app = express();
@@ -18,6 +20,51 @@ async function startServer() {
   });
   app.get("/health", (_req, res) => {
     res.status(200).send("OK");
+  });
+
+  // Endpoint Seguro de Generación con Inteligencia Artificial (Gemini API Proxy)
+  app.post("/api/ai/generate", async (req, res) => {
+    const { prompt, systemInstruction, responseMimeType, model } = req.body;
+    if (!prompt) {
+      return res.status(400).json({ error: "El prompt es requerido." });
+    }
+
+    const apiKey = process.env.GEMINI_API_KEY || process.env.API_KEY || "";
+    const targetModel = model && model !== 'gemini-3-flash-preview' ? model : 'gemini-2.5-flash';
+
+    if (apiKey) {
+      try {
+        const ai = new GoogleGenAI({ apiKey });
+        const config: any = {};
+        if (responseMimeType) {
+          config.responseMimeType = responseMimeType;
+        }
+        if (systemInstruction) {
+          config.systemInstruction = systemInstruction;
+        }
+
+        const response = await ai.models.generateContent({
+          model: targetModel,
+          contents: prompt,
+          config: Object.keys(config).length > 0 ? config : undefined,
+        });
+
+        if (response && response.text) {
+          return res.json({ success: true, text: response.text });
+        }
+      } catch (err: any) {
+        console.warn("Aviso al invocar Gemini API en servidor:", err?.message || err);
+      }
+    }
+
+    // Fallback curricular estructurado garantizado en caso de clave ausente o en mantenimiento
+    console.log("Generando respuesta curricular pedagógica de contingencia...");
+    const fallbackText = generatePedagogicalFallback(prompt, responseMimeType);
+    return res.json({
+      success: true,
+      text: fallbackText,
+      warning: "Generado con motor curricular asistido. Para activar el modelo neural en tiempo real, verifique o actualice su clave Gemini en el panel Settings > Secrets de AI Studio.",
+    });
   });
 
   // API endpoint para inicializar el algoritmo asíncronamente

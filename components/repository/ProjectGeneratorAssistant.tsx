@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { GoogleGenAI } from '@google/genai';
+import { generateWithAi } from '../../lib/aiService';
 import { SparklesIcon, CloseIcon, PlusIcon, TrashIcon, CheckCircleIcon, ArchiveBoxIcon } from '../icons/Icons';
 import { ResourceRepositoryItem, Subject, ResourcePhase, Competency, CurricularInsertion } from '../../types';
 import { GRADE_LEVELS, AREAS_OF_KNOWLEDGE, COMPETENCIES, CURRICULAR_INSERTIONS } from '../../constants';
@@ -66,18 +66,17 @@ const ProjectGeneratorAssistant: React.FC<ProjectGeneratorAssistantProps> = ({ i
         `;
 
         try {
-            const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-            const response = await ai.models.generateContent({ 
-                model: 'gemini-3-flash-preview', 
-                contents: prompt,
-                config: { responseMimeType: 'application/json' }
+            const response = await generateWithAi({
+                prompt,
+                responseMimeType: 'application/json',
+                model: 'gemini-2.5-flash',
             });
             
             const json = JSON.parse(response.text || '{}');
             setGeneratedData(json);
-        } catch (e) {
+        } catch (e: any) {
             console.error(e);
-            alert('Error al generar el proyecto con IA.');
+            alert(`Aviso: ${e?.message || 'Error al procesar la solicitud con IA.'}`);
         } finally {
             setIsLoading(false);
         }

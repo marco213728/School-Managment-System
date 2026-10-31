@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { GoogleGenAI } from '@google/genai';
+import { generateWithAi } from '../../lib/aiService';
 import { TicketIcon, CloseIcon, PrinterIcon, CheckCircleIcon } from '../icons/Icons';
 import { ResourceRepositoryItem, User } from '../../types';
 
@@ -42,16 +42,14 @@ const ExitTicketGenerator: React.FC<ExitTicketGeneratorProps> = ({ isOpen, onClo
         `;
 
         try {
-            // Updated GoogleGenAI initialization and fixed model name
-            const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-            const response = await ai.models.generateContent({ 
-                model: 'gemini-3-flash-preview', 
-                contents: prompt 
+            const response = await generateWithAi({
+                prompt,
+                model: 'gemini-2.5-flash',
             });
             setGeneratedContent(response.text || 'No se pudo generar el contenido.');
-        } catch (e) {
+        } catch (e: any) {
             console.error(e);
-            setError('Error al conectar con la IA. Verifique su conexión o intente más tarde.');
+            setError(`Aviso: ${e?.message || 'Error al conectar con la IA. Verifique su conexión o intente más tarde.'}`);
         } finally {
             setIsLoading(false);
         }

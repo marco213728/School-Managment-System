@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { GoogleGenAI } from '@google/genai';
+import { generateWithAi } from '../../lib/aiService';
 import { SparklesIcon, CloseIcon, PlusIcon, TrashIcon, CheckCircleIcon } from '../icons/Icons';
 import { Rubric, RubricCriteria, RubricLevel, RubricDescriptor } from '../../types';
 import { GRADE_LEVELS } from '../../constants';
@@ -71,20 +71,18 @@ const RubricGeneratorAssistant: React.FC<RubricGeneratorAssistantProps> = ({ isO
         `;
 
         try {
-            // Updated GoogleGenAI initialization and fixed model name
-            const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-            const response = await ai.models.generateContent({ 
-                model: 'gemini-3-flash-preview', 
-                contents: prompt,
-                config: { responseMimeType: 'application/json' }
+            const response = await generateWithAi({
+                prompt,
+                responseMimeType: 'application/json',
+                model: 'gemini-2.5-flash',
             });
             
             const json = JSON.parse(response.text || '{}');
             parseAiResponse(json);
 
-        } catch (e) {
+        } catch (e: any) {
             console.error(e);
-            alert('Error al generar la rúbrica con IA.');
+            alert(`Aviso: ${e?.message || 'Error al generar la rúbrica con IA.'}`);
         } finally {
             setIsLoading(false);
         }

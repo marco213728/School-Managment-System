@@ -1,6 +1,6 @@
 
 import React, { useState, useMemo } from 'react';
-import { GoogleGenAI } from '@google/genai';
+import { generateWithAi } from '../../lib/aiService';
 import { PeiDimensionAnalysis, StandardDimension, PeiFodaEntry, PeiStrategy } from '../../types';
 import { PlusIcon, TrashIcon, SparklesIcon, CheckCircleIcon, AlertTriangleIcon, CloseIcon } from '../icons/Icons';
 
@@ -95,11 +95,10 @@ const PeiFodaMatrix: React.FC<PeiFodaMatrixProps> = ({ dimensionAnalysis, onUpda
         `;
 
         try {
-            const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-            const response = await ai.models.generateContent({ 
-                model: 'gemini-3-flash-preview', 
-                contents: prompt,
-                config: { responseMimeType: 'application/json' }
+            const response = await generateWithAi({
+                prompt,
+                responseMimeType: 'application/json',
+                model: 'gemini-2.5-flash',
             });
             const suggestions = JSON.parse(response.text || '{}');
             
@@ -111,9 +110,9 @@ const PeiFodaMatrix: React.FC<PeiFodaMatrixProps> = ({ dimensionAnalysis, onUpda
             }));
 
             onUpdate({ ...dimensionAnalysis, strategies: [...dimensionAnalysis.strategies, ...newStrats] });
-        } catch (e) {
+        } catch (e: any) {
             console.error(e);
-            alert("Error al conectar con la IA.");
+            alert(`Aviso: ${e?.message || 'Error al conectar con la IA.'}`);
         } finally {
             setIsLoadingAi(false);
         }

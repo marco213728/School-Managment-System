@@ -1,6 +1,6 @@
 
 import React, { useState, useMemo } from 'react';
-import { GoogleGenAI } from '@google/genai';
+import { generateWithAi } from '../../lib/aiService';
 import { AssessmentIcon, CloseIcon, PrinterIcon, CheckCircleIcon, SparklesIcon, SearchIcon } from '../icons/Icons';
 import { ResourceRepositoryItem, User, Dcd, Subject } from '../../types';
 
@@ -122,19 +122,17 @@ const AssessmentGenerator: React.FC<AssessmentGeneratorProps> = ({ isOpen, onClo
         `;
 
         try {
-            // Updated GoogleGenAI initialization and fixed model name
-            const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-            const response = await ai.models.generateContent({ 
-                model: 'gemini-3-flash-preview', 
-                contents: prompt 
+            const response = await generateWithAi({
+                prompt,
+                model: 'gemini-2.5-flash',
             });
             
             // Clean up Markdown code blocks if present
             const cleanText = response.text?.replace(/```html/g, '').replace(/```/g, '') || 'Error al generar contenido.';
             setGeneratedContent(cleanText);
-        } catch (e) {
+        } catch (e: any) {
             console.error(e);
-            setError('Error al conectar con la IA. Verifique su conexión o intente más tarde.');
+            setError(`Aviso: ${e?.message || 'Error al conectar con la IA. Verifique su conexión o intente más tarde.'}`);
         } finally {
             setIsLoading(false);
         }

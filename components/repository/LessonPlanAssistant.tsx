@@ -1,6 +1,6 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
-import { GoogleGenAI } from '@google/genai';
+import { generateWithAi } from '../../lib/aiService';
 import { SparklesIcon, CloseIcon, PrinterIcon, ClipboardDocumentCheckIcon, SearchIcon } from '../icons/Icons';
 import { ResourceRepositoryItem, MicroPlan, Subject, Class, Dcd } from '../../types';
 
@@ -87,15 +87,14 @@ const LessonPlanAssistant: React.FC<LessonPlanAssistantProps> = ({
         `;
 
         try {
-            const ai = new GoogleGenAI({ apiKey: process.env.API_KEY! });
-            const response = await ai.models.generateContent({ 
-                model: 'gemini-3-flash-preview', 
-                contents: prompt 
+            const response = await generateWithAi({
+                prompt,
+                model: 'gemini-2.5-flash',
             });
             setGeneratedPlan(response.text || 'No se pudo generar el plan.');
-        } catch (e) {
+        } catch (e: any) {
             console.error(e);
-            setGeneratedPlan('Error al conectar con la IA. Por favor intente más tarde.');
+            setGeneratedPlan(`Aviso: ${e?.message || 'Error al conectar con la IA. Por favor intente más tarde.'}`);
         } finally {
             setIsLoading(false);
         }

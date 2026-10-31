@@ -1,6 +1,6 @@
 
 import React, { useState, useMemo, useContext, useEffect } from 'react';
-import { GoogleGenAI } from '@google/genai';
+import { generateWithAi } from '../lib/aiService';
 import { MicroPlan, Class, Subject, Student, User, Role, CurricularPlanStatus, AdaptacionCurricular, Dcd, EvaluationCriterion, EvaluationIndicator } from '../types';
 import { UserContext, InstitutionContext } from '../contexts/UserContext';
 import { PlusIcon, EditIcon, CloseIcon, CheckCircleIcon, ClockIcon, ExclamationTriangleIcon, PencilSquareIcon, PrinterIcon, SparklesIcon, UsersIcon, ClipboardListIcon, TrashIcon, SearchIcon } from '../components/icons/Icons';
@@ -122,14 +122,21 @@ const AiGeneratorModal: React.FC<AiGeneratorModalProps> = ({ isOpen, onClose, on
             }
         `;
         try {
-            // Updated GoogleGenAI initialization and fixed model name
-            const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-            const response = await ai.models.generateContent({ model: 'gemini-3-flash-preview', contents: prompt, config: { responseMimeType: 'application/json' } });
+            const response = await generateWithAi({
+                prompt,
+                responseMimeType: 'application/json',
+                model: 'gemini-2.5-flash',
+            });
             const json = JSON.parse(response.text || '{}');
             setGeneratedRep(json.representation || '');
             setGeneratedAct(json.actionExpression || '');
             setGeneratedEng(json.engagement || '');
-        } catch (e) { console.error(e); setError('Error al generar. Intente de nuevo.'); } finally { setIsLoading(false); }
+        } catch (e: any) { 
+            console.error(e); 
+            setError(`Aviso: ${e?.message || 'Error al generar. Intente de nuevo.'}`); 
+        } finally { 
+            setIsLoading(false); 
+        }
     };
     if (!isOpen) return null;
     return <div className="fixed inset-0 bg-black bg-opacity-50 z-[70] flex justify-center items-center p-4" onClick={onClose}><div className="bg-white rounded-lg shadow-xl w-full max-w-3xl max-h-[90vh] flex flex-col" onClick={e => e.stopPropagation()}><header className="p-4 border-b flex justify-between items-center"><h2 className="text-xl font-bold text-gray-800 flex items-center gap-2"><SparklesIcon className="h-6 w-6 text-primary-600" />Asistente DUA con IA</h2><button onClick={onClose}><CloseIcon className="h-6 w-6" /></button></header><main className="p-6 overflow-y-auto space-y-4"><div className="grid grid-cols-1 md:grid-cols-2 gap-4"><div><label className="block text-sm font-medium">Enfoque</label><input value="Diseño Universal para el Aprendizaje" disabled className="w-full p-2 border rounded bg-gray-100 text-sm"/></div><div><label className="block text-sm font-medium">Competencia</label><select value={competency} onChange={e => setCompetency(e.target.value)} className="w-full p-2 border rounded text-sm"><option>Comunicacional</option><option>Lógico-Matemática</option><option>Digital</option><option>Socioemocional</option></select></div></div><textarea value={context} onChange={e => setContext(e.target.value)} placeholder="Contexto del aula (ej. recursos limitados, estudiantes visuales...)" className="w-full p-2 border rounded text-sm" rows={2}></textarea><div className="text-center"><button onClick={handleGenerate} disabled={isLoading} className="px-6 py-2 bg-primary-600 text-white rounded font-semibold disabled:bg-gray-400">{isLoading ? 'Generando...' : 'Generar Estrategias DUA'}</button></div>
